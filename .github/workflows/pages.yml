@@ -27,11 +27,10 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
-      # enablement: true turns GitHub Pages on for the repo if it isn't
-      # already, using the Actions token (no manual settings toggle needed).
+      # Reads the Pages config. Pages must already be enabled with
+      # "GitHub Actions" as the source (Settings → Pages) — enabling it via
+      # the Actions token is not permitted for this repo's integration.
       - uses: actions/configure-pages@v5
-        with:
-          enablement: true
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
