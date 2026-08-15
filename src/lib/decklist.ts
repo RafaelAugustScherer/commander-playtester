@@ -55,9 +55,12 @@ export function parseDecklist(raw: string): ParsedDecklist {
 
 const COMMANDER_HEADER = /^commanders?\b/i;
 const IGNORED_HEADER = /^(sideboard|maybeboard|considering|tokens?|planes?)\b/i;
-const MAIN_HEADER = /^(deck|mainboard|creatures?|lands?|instants?|sorceries|artifacts?|enchantments?|planeswalkers?|other|nonlands?)\b/i;
+const MAIN_HEADER =
+  /^(deck|mainboard|creatures?|lands?|instants?|sorceries|artifacts?|enchantments?|planeswalkers?|other|nonlands?)\b/i;
 
-function detectSectionHeader(line: string): "main" | "commander" | "ignored" | null {
+function detectSectionHeader(
+  line: string,
+): "main" | "commander" | "ignored" | null {
   // A header has no leading quantity and no set/collector metadata.
   if (/^\d+\s*x?\s+/i.test(line)) return null;
   if (COMMANDER_HEADER.test(line)) return "commander";

@@ -1,4 +1,9 @@
-import type { Card, DecklistEntry, ParsedDecklist, ResolvedDeck } from "./types";
+import type {
+  Card,
+  DecklistEntry,
+  ParsedDecklist,
+  ResolvedDeck,
+} from "./types";
 import { classifyRoles } from "./roles";
 
 const SCRYFALL_COLLECTION_URL = "https://api.scryfall.com/cards/collection";
@@ -109,7 +114,7 @@ export async function fetchCards(
 }
 
 /** Look a resolved card up by requested name, tolerant of case + DFC front. */
-function lookup(cards: Map<string, Card>, name: string): Card | undefined {
+export function lookup(cards: Map<string, Card>, name: string): Card | undefined {
   const direct = cards.get(name.toLowerCase());
   if (direct) return direct;
   // DFC / split: requested "Front" but Scryfall returned "Front // Back".

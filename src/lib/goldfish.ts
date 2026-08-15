@@ -177,14 +177,22 @@ function simulateGame(
   manaByTurn: number[];
   rampByTurn3: boolean;
 } {
-  const { hand, mulligans } = drawOpeningHand(library, rng, config.maxMulligans);
+  const { hand, mulligans } = drawOpeningHand(
+    library,
+    rng,
+    config.maxMulligans,
+  );
   const openingLands = hand.filter(isLand).length;
 
   // Build the rest of the library as a draw pile (exclude the opening hand).
   const deck = shuffle([...library], rng);
   const drawPile = removeHandFromPile(deck, hand);
 
-  const state: GameState = { hand: [...hand], battlefieldLands: 0, rampMana: 0 };
+  const state: GameState = {
+    hand: [...hand],
+    battlefieldLands: 0,
+    rampMana: 0,
+  };
   const landDropByTurn: boolean[] = [];
   const manaByTurn: number[] = [];
   let rampByTurn3 = false;

@@ -1,4 +1,5 @@
 import type { GoldfishResult } from "../lib/goldfish";
+import { useI18n } from "../i18n/I18nContext";
 
 function pct(x: number): string {
   return `${(x * 100).toFixed(1)}%`;
@@ -18,6 +19,7 @@ function tone(value: number, good: number, bad: number): string {
 }
 
 export function GoldfishReport({ result }: { result: GoldfishResult }) {
+  const { t } = useI18n();
   const { composition: c } = result;
   const maxMana = Math.max(...result.avgManaByTurn, 1);
   const maxCurve = Math.max(...c.curve, 1);
@@ -25,39 +27,41 @@ export function GoldfishReport({ result }: { result: GoldfishResult }) {
   return (
     <div>
       <div className="panel">
-        <h2>Consistência (goldfishing)</h2>
+        <h2>{t("goldfish.title")}</h2>
         <p className="hint">
-          {result.iterations.toLocaleString()} partidas simuladas · {result.turns}{" "}
-          turnos cada · mão inicial com mulligan de Londres.
+          {t("goldfish.subtitle", {
+            iters: result.iterations.toLocaleString(),
+            turns: result.turns,
+          })}
         </p>
         <div className="stat-grid">
           <Stat
-            label="Terrenos na mão inicial"
+            label={t("goldfish.openingLands")}
             value={result.avgOpeningLands.toFixed(2)}
             className={tone(result.avgOpeningLands, 3.2, 2.4)}
           />
           <Stat
-            label="Taxa de mulligan"
+            label={t("goldfish.mulliganRate")}
             value={pct(result.mulliganRate)}
             className={tone(result.mulliganRate, 0.2, 0.4)}
           />
           <Stat
-            label="Mana screw (≤1 terreno)"
+            label={t("goldfish.screw")}
             value={pct(result.screwRate)}
             className={tone(result.screwRate, 0.05, 0.15)}
           />
           <Stat
-            label="Flood (≥6 terrenos)"
+            label={t("goldfish.flood")}
             value={pct(result.floodRate)}
             className={tone(result.floodRate, 0.03, 0.1)}
           />
           <Stat
-            label="Ramp até o turno 3"
+            label={t("goldfish.rampT3")}
             value={pct(result.rampByTurn3Rate)}
             className={tone(result.rampByTurn3Rate, 0.6, 0.35)}
           />
           <Stat
-            label="Mulligans médios"
+            label={t("goldfish.avgMull")}
             value={result.avgMulligans.toFixed(2)}
             className={tone(result.avgMulligans, 0.3, 0.7)}
           />
@@ -65,13 +69,13 @@ export function GoldfishReport({ result }: { result: GoldfishResult }) {
       </div>
 
       <div className="panel">
-        <h3>Mana disponível por turno</h3>
+        <h3>{t("goldfish.manaPerTurn")}</h3>
         <table>
           <thead>
             <tr>
-              <th>Turno</th>
-              <th>Mana média</th>
-              <th>Land drop</th>
+              <th>{t("goldfish.colTurn")}</th>
+              <th>{t("goldfish.colAvgMana")}</th>
+              <th>{t("goldfish.colLandDrop")}</th>
               <th style={{ width: "40%" }} />
             </tr>
           </thead>
@@ -96,20 +100,20 @@ export function GoldfishReport({ result }: { result: GoldfishResult }) {
       </div>
 
       <div className="panel">
-        <h3>Composição do deck</h3>
+        <h3>{t("goldfish.composition")}</h3>
         <div className="stat-grid">
-          <Stat label="Cartas (99)" value={String(c.librarySize)} />
-          <Stat label="Terrenos" value={String(c.lands)} />
-          <Stat label="Ramp" value={String(c.ramp)} />
-          <Stat label="Card draw" value={String(c.draw)} />
-          <Stat label="Interação/removal" value={String(c.removal)} />
+          <Stat label={t("goldfish.compCards")} value={String(c.librarySize)} />
+          <Stat label={t("goldfish.compLands")} value={String(c.lands)} />
+          <Stat label={t("goldfish.compRamp")} value={String(c.ramp)} />
+          <Stat label={t("goldfish.compDraw")} value={String(c.draw)} />
+          <Stat label={t("goldfish.compRemoval")} value={String(c.removal)} />
           <Stat
-            label="MV médio (não-terreno)"
+            label={t("goldfish.compAvgMv")}
             value={c.avgNonlandManaValue.toFixed(2)}
           />
         </div>
 
-        <h3 style={{ marginTop: "1.25rem" }}>Curva de mana</h3>
+        <h3 style={{ marginTop: "1.25rem" }}>{t("goldfish.curve")}</h3>
         <table>
           <tbody>
             {c.curve.map((count, mv) => (

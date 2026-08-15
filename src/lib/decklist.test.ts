@@ -43,7 +43,9 @@ describe("parseDecklist", () => {
   });
 
   it("ignores sideboard/maybeboard sections", () => {
-    const parsed = parseDecklist("Deck\n1 Sol Ring\n\nMaybeboard\n1 Mana Crypt");
+    const parsed = parseDecklist(
+      "Deck\n1 Sol Ring\n\nMaybeboard\n1 Mana Crypt",
+    );
     expect(parsed.mainboard).toEqual([{ quantity: 1, name: "Sol Ring" }]);
   });
 

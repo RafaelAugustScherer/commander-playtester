@@ -153,3 +153,549 @@ th {
 .spinner {
   color: var(--muted);
 }
+
+.app__header--row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.tabs {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.tab {
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.45rem 1rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.tab--active {
+  background: var(--panel-2);
+  color: var(--text);
+  border-color: var(--accent);
+}
+
+.panel__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.panel__head h2 {
+  margin: 0;
+}
+
+.field {
+  display: block;
+  margin-bottom: 1rem;
+}
+
+.field__label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 0.3rem;
+}
+
+.input {
+  width: 100%;
+  background: var(--panel-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.55rem 0.7rem;
+  font-size: 0.95rem;
+}
+
+.btn--sm {
+  padding: 0.35rem 0.7rem;
+  font-size: 0.8rem;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.deck-list {
+  list-style: none;
+  padding: 0;
+  margin: 0.5rem 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.deck-list__item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.75rem 1rem;
+}
+
+.deck-list__info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.2rem;
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+  flex: 1;
+}
+
+.deck-list__name {
+  color: var(--text);
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.deck-list__meta {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.deck-list__actions {
+  display: flex;
+  gap: 0.4rem;
+  flex-shrink: 0;
+}
+
+.seg {
+  display: inline-flex;
+  gap: 0.3rem;
+  flex-wrap: wrap;
+}
+
+.seg__btn {
+  background: var(--panel-2);
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.45rem 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.seg__btn--active {
+  color: var(--text);
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 18%, var(--panel-2));
+}
+
+.opponent-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.5rem;
+}
+
+.field-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 1rem;
+}
+
+.checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.spike-log {
+  margin-top: 1rem;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.75rem;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  max-height: 440px;
+  overflow: auto;
+  white-space: pre-wrap;
+  color: var(--text);
+}
+
+/* ── Board ─────────────────────────────────────────────────────── */
+.board__status {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.5rem 0.9rem;
+  margin-bottom: 0.75rem;
+  font-size: 0.9rem;
+}
+.board__turn {
+  font-weight: 700;
+}
+.board__phase {
+  color: var(--accent);
+  font-weight: 600;
+}
+.board__active {
+  color: var(--muted);
+}
+.board__winner {
+  color: var(--good);
+  font-weight: 700;
+}
+
+/* Opponents share a row on top; the player's seat sits centered below. */
+.board__opponents {
+  display: grid;
+  gap: 0.6rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-bottom: 0.6rem;
+}
+.board__opponents--n1 {
+  grid-template-columns: minmax(0, 1fr);
+  max-width: 64%;
+  margin-left: auto;
+  margin-right: auto;
+}
+.board__opponents--n2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.board__opponents--n3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.board__self {
+  display: flex;
+  justify-content: center;
+}
+.board__self .seat {
+  width: 100%;
+}
+
+.seat {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.6rem 0.7rem;
+  min-height: 120px;
+}
+.seat__field {
+  position: relative;
+}
+/* The player's playmat: larger surface, larger cards. */
+.seat--you {
+  background: color-mix(in srgb, var(--accent) 7%, var(--panel-2));
+  padding: 0.8rem 1rem 1rem;
+}
+.seat--you .seat__name {
+  font-size: 1.1rem;
+}
+.seat--you .seat__life {
+  font-size: 2rem;
+}
+.seat--you {
+  border-color: var(--accent);
+}
+.seat--active {
+  box-shadow: 0 0 0 2px var(--accent) inset;
+}
+.seat--out {
+  opacity: 0.5;
+}
+.seat--won {
+  border-color: var(--good);
+  box-shadow: 0 0 0 2px var(--good) inset;
+}
+
+.seat__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+.seat__id {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.seat__name {
+  font-weight: 700;
+  font-size: 0.95rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.seat__tag {
+  margin-left: 0.4rem;
+  font-size: 0.65rem;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  padding: 0 0.4rem;
+  vertical-align: middle;
+}
+.seat__commander {
+  font-size: 0.75rem;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.seat__life {
+  font-size: 1.6rem;
+  font-weight: 800;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.seat__zones {
+  display: flex;
+  gap: 0.6rem;
+  font-size: 0.75rem;
+  color: var(--muted);
+  margin: 0.35rem 0;
+}
+.seat__cmd {
+  display: flex;
+  gap: 0.3rem;
+  margin-bottom: 0.35rem;
+}
+.seat__row {
+  display: flex;
+  gap: 0.4rem;
+  align-items: flex-start;
+  margin-top: 0.3rem;
+}
+.seat__row--muted {
+  opacity: 0.75;
+}
+.seat__row-label {
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  width: 58px;
+  flex-shrink: 0;
+  padding-top: 0.2rem;
+}
+.seat__cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.card {
+  position: relative;
+  border-radius: 4px;
+  overflow: hidden;
+}
+.card--tapped {
+  transform: rotate(10deg);
+  opacity: 0.85;
+}
+.card--text {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  padding: 0.12rem 0.35rem;
+  font-size: 0.66rem;
+  max-width: 96px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: flex;
+  gap: 0.3rem;
+  align-items: center;
+}
+.card__img {
+  width: 44px;
+  height: auto;
+  display: block;
+  border-radius: 4px;
+}
+.card__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.card__pt {
+  font-weight: 700;
+  color: var(--accent);
+  font-size: 0.62rem;
+}
+.card__img + .card__pt {
+  position: absolute;
+  right: 1px;
+  bottom: 1px;
+  background: rgba(0, 0, 0, 0.75);
+  border-radius: 3px;
+  padding: 0 2px;
+}
+
+.play-controls {
+  border-color: var(--accent);
+}
+.chip--btn {
+  cursor: pointer;
+  color: var(--text);
+  font-weight: 600;
+}
+.chip--btn:hover {
+  border-color: var(--accent);
+}
+
+/* ── Header nav + language switcher ────────────────────────────── */
+.app__nav {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+.lang {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.2rem 0.35rem;
+}
+.lang__globe {
+  font-size: 0.85rem;
+  margin: 0 0.15rem;
+}
+.lang__btn {
+  background: transparent;
+  color: var(--muted);
+  border: none;
+  border-radius: 999px;
+  padding: 0.2rem 0.55rem;
+  font-weight: 700;
+  font-size: 0.78rem;
+  letter-spacing: 0.03em;
+}
+.lang__btn--active {
+  background: var(--accent);
+  color: #0b1020;
+}
+
+/* ── Player playmat: larger cards ──────────────────────────────── */
+.seat--you .card__img {
+  width: 74px;
+}
+.seat--you .seat__cmd .card__img {
+  width: 90px;
+}
+.seat--you .card--text {
+  max-width: 128px;
+  font-size: 0.72rem;
+  padding: 0.2rem 0.45rem;
+}
+.seat--you .seat__row-label {
+  width: 72px;
+  font-size: 0.66rem;
+}
+.seat--you .seat__cards {
+  gap: 0.35rem;
+}
+
+/* ── Draggable hand cards ──────────────────────────────────────── */
+.card--draggable {
+  cursor: grab;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 55%, transparent);
+}
+.card--draggable:active {
+  cursor: grabbing;
+}
+.card--unplayable {
+  opacity: 0.5;
+}
+
+/* ── Drag-to-play drop slots ───────────────────────────────────── */
+.droplane {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem;
+  background: color-mix(in srgb, var(--bg) 78%, transparent);
+  border-radius: 8px;
+  z-index: 5;
+}
+.slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  min-width: 92px;
+  min-height: 76px;
+  padding: 0.5rem 0.75rem;
+  border: 2px dashed var(--border);
+  border-radius: 10px;
+  color: var(--muted);
+}
+.slot__icon {
+  font-size: 1.3rem;
+  line-height: 1;
+}
+.slot__label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.slot--ok {
+  border-color: var(--accent);
+  color: var(--text);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+.slot--no {
+  opacity: 0.4;
+}
+
+/* ── Hover card preview ────────────────────────────────────────── */
+.card-preview {
+  position: fixed;
+  z-index: 50;
+  pointer-events: none;
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.55);
+}
+.card-preview__img {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 10px;
+}
+.card-preview__text {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.75rem 0.9rem;
+}
+.card-preview__name {
+  font-weight: 700;
+  font-size: 1rem;
+}
+.card-preview__pt {
+  color: var(--accent);
+  font-weight: 700;
+  margin-top: 0.35rem;
+}
