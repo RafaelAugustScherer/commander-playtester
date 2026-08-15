@@ -1,0 +1,105 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+// Web Worker hosting the phase-rs engine. A full game is minutes of
+// single-threaded compute, so it lives off the main thread. One worker holds
+// one engine instance (the WASM state is a thread-local); matches run
+// sequentially by re-initializing between them.
+
+import init, {
+  init_panic_hook,
+  load_card_database,
+  getFormatRegistry,
+  initialize_game,
+  get_game_state,
+  get_filtered_game_state,
+  get_ai_action_proposal,
+  submit_ai_action_proposal,
+  get_legal_actions_js,
+  submit_action,
+} from "./vendor/engine_wasm.js";
+
+const BASE = import.meta.env.BASE_URL;
+
+let started = false;
+let dbLoaded = false;
+let commanderConfig: any = null;
+
+async function ensureStarted(): Promise<void> {
+  if (started) return;
+  await init({ module_or_path: `${BASE}engine/engine_wasm_bg.wasm` });
+  init_panic_hook();
+  started = true;
+}
+
+async function ensureDb(): Promise<void> {
+  if (dbLoaded) return;
+  const text = await (await fetch(`${BASE}engine/card-data.json`)).text();
+  load_card_database(text);
+  const reg = getFormatRegistry();
+  const list = Array.isArray(reg) ? reg : [];
+  commanderConfig = list.find((f: any) => f?.format === "Commander")?.default_config;
+  dbLoaded = true;
+}
+
+async function handle(cmd: string, args: any): Promise<any> {
+  switch (cmd) {
+    case "ready": {
+      await ensureStarted();
+      await ensureDb();
+      return { commanderConfig };
+    }
+    case "initGame": {
+      const { deckData, formatConfig, matchConfig, playerCount, firstPlayer, seed } =
+        args;
+      return initialize_game(
+        deckData,
+        seed,
+        formatConfig ?? commanderConfig,
+        matchConfig ?? { match_type: "Bo1" },
+        playerCount,
+        firstPlayer,
+      );
+    }
+    case "state": {
+      return typeof args?.viewer === "number"
+        ? get_filtered_game_state(args.viewer)
+        : get_game_state();
+    }
+    case "aiStep": {
+      const { difficulty, player, wantState } = args;
+      const proposal = get_ai_action_proposal(difficulty, player ?? 0);
+      if (!proposal) {
+        return { applied: false, state: get_game_state() };
+      }
+      submit_ai_action_proposal(proposal.token, proposal.actor, proposal.action);
+      return {
+        applied: true,
+        actionType: proposal.action?.type,
+        state: wantState ? get_game_state() : null,
+      };
+    }
+    case "legalActions": {
+      return get_legal_actions_js();
+    }
+    case "humanAction": {
+      const { actor, action } = args;
+      const res = submit_action(actor, action);
+      return { result: res, state: get_game_state() };
+    }
+    default:
+      throw new Error(`unknown engine command: ${cmd}`);
+  }
+}
+
+self.onmessage = async (e: MessageEvent) => {
+  const { id, cmd, args } = e.data ?? {};
+  try {
+    const result = await handle(cmd, args);
+    (self as any).postMessage({ id, ok: true, result });
+  } catch (err) {
+    (self as any).postMessage({
+      id,
+      ok: false,
+      error: err instanceof Error ? err.message : String(err),
+    });
+  }
+};

@@ -33,9 +33,11 @@ function isRamp(
 ): boolean {
   // Mana rocks / dorks: a non-land permanent that taps for mana.
   const producesMana = input.producedMana.length > 0;
-  const tapsForMana = /\{t\}[^.]*add \{/.test(text) || /add \{[wubrgc]/.test(text);
+  const tapsForMana =
+    /\{t\}[^.]*add \{/.test(text) || /add \{[wubrgc]/.test(text);
   const isCheapPermanent =
-    /Artifact|Creature|Enchantment/.test(input.typeLine) && input.manaValue <= 4;
+    /Artifact|Creature|Enchantment/.test(input.typeLine) &&
+    input.manaValue <= 4;
 
   if (isCheapPermanent && (producesMana || tapsForMana)) return true;
 

@@ -15,3 +15,7 @@ coverage
 logs
 *.log
 npm-debug.log*
+
+# phase-rs engine runtime assets (large; fetched via scripts/fetch-engine, not committed)
+public/engine/card-data.json
+public/engine/engine_wasm_bg.wasm
