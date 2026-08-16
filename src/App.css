@@ -802,3 +802,43 @@ th {
   font-weight: 700;
   margin-top: 0.35rem;
 }
+
+/* ── Searchable select (combobox) ──────────────────────────────── */
+.combobox {
+  position: relative;
+  width: 100%;
+  max-width: 280px;
+}
+.combobox__list {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 20;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  max-height: 240px;
+  overflow-y: auto;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+}
+.combobox__option {
+  padding: 0.4rem 0.6rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.combobox__option--active {
+  background: color-mix(in srgb, var(--accent) 18%, var(--panel-2));
+}
+.combobox__empty {
+  padding: 0.4rem 0.6rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+}

@@ -44,6 +44,7 @@ import { toBoardView, type BoardView, type SeatMeta } from "../board/boardView";
 import { abilitiesBySource } from "../sim/decisions/abilities";
 import { aggregate } from "../analysis/matchStats";
 import { fetchCardsCached } from "../lib/scryfallCache";
+import { SearchableSelect } from "../components/SearchableSelect";
 import { useI18n } from "../i18n/I18nContext";
 import { phaseLabel, type Lang } from "../i18n/messages";
 
@@ -1000,17 +1001,13 @@ export function RunView({
                 </p>
               )}
               <div className="import__row">
-                <select
-                  className="input"
+                <SearchableSelect
+                  options={creatureTypeTurn.prompt.options}
                   value={creatureTypePick}
-                  onChange={(e) => setCreatureTypePick(e.target.value)}
-                >
-                  {creatureTypeTurn.prompt.options.map((ct) => (
-                    <option key={ct} value={ct}>
-                      {ct}
-                    </option>
-                  ))}
-                </select>
+                  onChange={setCreatureTypePick}
+                  placeholder={t("creatureType.search")}
+                  emptyLabel={t("select.noResults")}
+                />
               </div>
               {creatureTypeTurn.prompt.aiChoice && (
                 <p className="hint">
