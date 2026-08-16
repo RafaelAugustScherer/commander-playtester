@@ -4,6 +4,10 @@
   padding: 2rem 1.25rem 4rem;
 }
 
+.app--wide {
+  max-width: 1400px;
+}
+
 .app__header {
   margin-bottom: 1.5rem;
 }
@@ -333,34 +337,37 @@ th {
   color: var(--text);
 }
 
-/* ── Board ─────────────────────────────────────────────────────── */
-.board__status {
+/* ── Match status header (lives in the persistent play-controls panel) ── */
+.match-status {
+  margin: 0;
   display: flex;
-  align-items: center;
-  gap: 0.75rem;
+  align-items: baseline;
   flex-wrap: wrap;
-  background: var(--panel-2);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 0.5rem 0.9rem;
-  margin-bottom: 0.75rem;
-  font-size: 0.9rem;
+  gap: 0.4rem 0.7rem;
+  font-size: 1.35rem;
+  line-height: 1.2;
 }
-.board__turn {
-  font-weight: 700;
+.match-status__turn {
+  font-weight: 800;
 }
-.board__phase {
+.match-status__phase {
   color: var(--accent);
-  font-weight: 600;
-}
-.board__active {
-  color: var(--muted);
-}
-.board__winner {
-  color: var(--good);
   font-weight: 700;
+}
+.match-status__active {
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+.control-title {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin: 0.4rem 0 0.15rem;
+  font-size: 1rem;
 }
 
+/* ── Board ─────────────────────────────────────────────────────── */
 /* Opponents share a row on top; the player's seat sits centered below. */
 .board__opponents {
   display: grid;
@@ -622,6 +629,102 @@ th {
 }
 .card--unplayable {
   opacity: 0.5;
+}
+
+/* ── Click-to-target selection ─────────────────────────────────── */
+.card--targetable {
+  cursor: pointer;
+  box-shadow: 0 0 0 2px var(--warn);
+}
+.card--targetable:hover {
+  box-shadow: 0 0 0 3px var(--warn);
+}
+.card--targeted {
+  box-shadow: 0 0 0 3px var(--good);
+}
+.seat--targetable {
+  cursor: pointer;
+  box-shadow: 0 0 0 2px var(--warn) inset;
+}
+.seat--targetable:hover {
+  box-shadow: 0 0 0 3px var(--warn) inset;
+}
+.seat--targeted {
+  box-shadow: 0 0 0 3px var(--good) inset;
+}
+
+/* ── Click-to-activate abilities ───────────────────────────────── */
+.card--activatable {
+  cursor: pointer;
+  box-shadow: 0 0 0 2px var(--accent);
+}
+.card--activatable:hover {
+  box-shadow: 0 0 0 3px var(--accent);
+}
+
+/* ── Combat: declare attackers ─────────────────────────────────── */
+.card--attacker {
+  cursor: pointer;
+  box-shadow: 0 0 0 2px var(--warn);
+}
+.card--attacker:hover {
+  box-shadow: 0 0 0 3px var(--warn);
+}
+.card--attacking {
+  cursor: pointer;
+  box-shadow: 0 0 0 3px var(--good);
+}
+.seat--defender {
+  cursor: pointer;
+  box-shadow: 0 0 0 2px var(--warn) inset;
+}
+.seat--defender:hover {
+  box-shadow: 0 0 0 3px var(--warn) inset;
+}
+
+/* ── Combat: declare blockers ──────────────────────────────────── */
+.card--blocker {
+  cursor: pointer;
+  box-shadow: 0 0 0 2px var(--warn);
+}
+.card--blocker:hover {
+  box-shadow: 0 0 0 3px var(--warn);
+}
+.card--block-selected {
+  cursor: pointer;
+  box-shadow: 0 0 0 3px var(--accent);
+}
+.card--blocking {
+  box-shadow: 0 0 0 3px var(--good);
+}
+.card--block-target {
+  cursor: pointer;
+  box-shadow: 0 0 0 2px var(--warn);
+}
+.card--block-target:hover {
+  box-shadow: 0 0 0 3px var(--warn);
+}
+
+/* ── Mana: tap a source, and the floating reserve ──────────────── */
+.card--mana-source {
+  cursor: pointer;
+  box-shadow: 0 0 0 2px var(--accent);
+}
+.card--mana-source:hover {
+  box-shadow: 0 0 0 3px var(--accent);
+}
+.seat__life-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-shrink: 0;
+}
+.seat__mana {
+  display: inline-flex;
+  gap: 0.05rem;
+  font-size: 0.8rem;
+  line-height: 1;
+  letter-spacing: -0.05em;
 }
 
 /* ── Drag-to-play drop slots ───────────────────────────────────── */

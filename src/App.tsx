@@ -20,8 +20,10 @@ export function App() {
   const [playDeck, setPlayDeck] = useState<SavedDeck | null>(null);
   const [runConfig, setRunConfig] = useState<RunConfig | null>(null);
 
+  const wide = view === "play" && !!playDeck && !!runConfig;
+
   return (
-    <div className="app">
+    <div className={`app${wide ? " app--wide" : ""}`}>
       <header className="app__header app__header--row">
         <div>
           <h1>Commander Playtester</h1>

@@ -3,8 +3,18 @@ import type {
   AiDifficulty,
   EngineDeckList,
   GameStateEnvelope,
+  WaitingFor,
 } from "../engine/types";
 import { actingPlayer, isEngineError } from "../engine/types";
+import {
+  parseAttackersPrompt,
+  type AttackersPrompt,
+} from "./decisions/attackers";
+import {
+  parseBlockersPrompt,
+  type BlockersPrompt,
+} from "./decisions/blockers";
+import { parseManaPrompt, type ManaPrompt } from "./decisions/mana";
 
 export interface MatchResult {
   matchIndex: number;
@@ -29,6 +39,106 @@ export interface LegalActions {
 /** A human's choice at a priority window: play an action, or let the AI act. */
 export type HumanChoice = { action: unknown } | { ai: true };
 
+/** A single legal target: an object on the board, or a player seat. */
+export type TargetRef = { Object: number } | { Player: number };
+
+export interface TargetSlot {
+  legalTargets: TargetRef[];
+  optional: boolean;
+}
+
+/** A target-selection prompt the human must answer while playing manually. */
+export interface TargetPrompt {
+  kind: string;
+  player: number;
+  description: string;
+  /** One slot per target the spell/ability needs, filled in order. */
+  slots: TargetSlot[];
+  /** MultiTargetSelection: choose between min and max from a single pool. */
+  multi: boolean;
+  min: number;
+  max: number;
+}
+
+const TARGET_KINDS = new Set([
+  "TargetSelection",
+  "TriggerTargetSelection",
+  "MultiTargetSelection",
+]);
+
+function toTargetRef(t: unknown): TargetRef | null {
+  if (typeof t === "number") return { Object: t };
+  if (t && typeof t === "object") {
+    const o = t as Record<string, unknown>;
+    if (typeof o.Object === "number") return { Object: o.Object };
+    if (typeof o.Player === "number") return { Player: o.Player };
+  }
+  return null;
+}
+
+function toTargetRefs(arr: unknown): TargetRef[] {
+  if (!Array.isArray(arr)) return [];
+  return arr.map(toTargetRef).filter((r): r is TargetRef => r !== null);
+}
+
+/** Read a target-selection waiting_for into a prompt, or null if it isn't one. */
+export function parseTargetPrompt(
+  wf: WaitingFor | undefined,
+): TargetPrompt | null {
+  if (!wf || !TARGET_KINDS.has(wf.type)) return null;
+  const d = wf.data ?? {};
+  const player = typeof d.player === "number" ? d.player : 0;
+  const description = typeof d.description === "string" ? d.description : "";
+
+  if (wf.type === "MultiTargetSelection") {
+    const legalTargets = toTargetRefs(d.legal_targets);
+    if (legalTargets.length === 0) return null;
+    const min = typeof d.min_targets === "number" ? d.min_targets : 1;
+    const max =
+      typeof d.max_targets === "number" ? d.max_targets : legalTargets.length;
+    return {
+      kind: wf.type,
+      player,
+      description,
+      multi: true,
+      min,
+      max,
+      slots: [{ legalTargets, optional: min === 0 }],
+    };
+  }
+
+  let slots: TargetSlot[] = Array.isArray(d.target_slots)
+    ? // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      d.target_slots.map((s: any) => ({
+        legalTargets: toTargetRefs(s?.legal_targets),
+        optional: !!s?.optional,
+      }))
+    : [];
+  if (slots.length === 0) {
+    const cur = toTargetRefs(d.selection?.current_legal_targets);
+    if (cur.length > 0) slots = [{ legalTargets: cur, optional: false }];
+  }
+  slots = slots.filter((s) => s.legalTargets.length > 0);
+  if (slots.length === 0) return null;
+  return {
+    kind: wf.type,
+    player,
+    description,
+    multi: false,
+    min: slots.length,
+    max: slots.length,
+    slots,
+  };
+}
+
+/** Build the engine action that submits chosen targets. */
+export function selectTargetsAction(targets: TargetRef[]): {
+  type: string;
+  data: { targets: TargetRef[] };
+} {
+  return { type: "SelectTargets", data: { targets } };
+}
+
 /** The engine rejected a deck at game start; carries the raw reasons. */
 export class DeckRejectedError extends Error {
   constructor(public reasons: string[]) {
@@ -46,6 +156,26 @@ export interface DriverCallbacks {
   requestHumanAction?: (
     env: GameStateEnvelope,
     legal: LegalActions,
+  ) => Promise<HumanChoice>;
+  /** Called when the human must choose targets for a spell/ability/trigger. */
+  requestHumanTargets?: (
+    env: GameStateEnvelope,
+    prompt: TargetPrompt,
+  ) => Promise<HumanChoice>;
+  /** Called when the human must declare attackers in their combat. */
+  requestHumanAttackers?: (
+    env: GameStateEnvelope,
+    prompt: AttackersPrompt,
+  ) => Promise<HumanChoice>;
+  /** Called when the human must declare blockers against an attack. */
+  requestHumanBlockers?: (
+    env: GameStateEnvelope,
+    prompt: BlockersPrompt,
+  ) => Promise<HumanChoice>;
+  /** Called when the human must choose a mana source or color while paying. */
+  requestHumanMana?: (
+    env: GameStateEnvelope,
+    prompt: ManaPrompt,
   ) => Promise<HumanChoice>;
 }
 
@@ -226,8 +356,27 @@ export class MatchRunner {
       }
 
       const acting = actingPlayer(wf);
+      const humanNonPriority = acting === humanSeat && wf?.type !== "Priority";
       const humanPriority =
         acting === humanSeat && wf?.type === "Priority" && !!cb.requestHumanAction;
+      const humanTargets =
+        humanNonPriority && cb.requestHumanTargets ? parseTargetPrompt(wf) : null;
+      const humanAttackers =
+        humanNonPriority && cb.requestHumanAttackers
+          ? parseAttackersPrompt(wf)
+          : null;
+      const humanBlockers =
+        humanNonPriority && cb.requestHumanBlockers
+          ? parseBlockersPrompt(wf)
+          : null;
+      const humanMana =
+        humanNonPriority && cb.requestHumanMana ? parseManaPrompt(wf) : null;
+
+      // Run the human's choice: play their action, or hand this decision to the AI.
+      const applyChoice = async (choice: HumanChoice): Promise<void> => {
+        if ("action" in choice) await engine.humanAction(humanSeat, choice.action);
+        else await engine.aiStep(opts.difficulty, humanSeat, false);
+      };
 
       if (humanPriority) {
         const legal: LegalActions = await engine.legalActions();
@@ -236,11 +385,35 @@ export class MatchRunner {
           stopped = true;
           break;
         }
-        if ("action" in choice) {
-          await engine.humanAction(humanSeat, choice.action);
-        } else {
-          await engine.aiStep(opts.difficulty, humanSeat, false);
+        await applyChoice(choice);
+      } else if (humanTargets) {
+        const choice = await cb.requestHumanTargets!(env, humanTargets);
+        if (this.aborted) {
+          stopped = true;
+          break;
         }
+        await applyChoice(choice);
+      } else if (humanAttackers) {
+        const choice = await cb.requestHumanAttackers!(env, humanAttackers);
+        if (this.aborted) {
+          stopped = true;
+          break;
+        }
+        await applyChoice(choice);
+      } else if (humanBlockers) {
+        const choice = await cb.requestHumanBlockers!(env, humanBlockers);
+        if (this.aborted) {
+          stopped = true;
+          break;
+        }
+        await applyChoice(choice);
+      } else if (humanMana) {
+        const choice = await cb.requestHumanMana!(env, humanMana);
+        if (this.aborted) {
+          stopped = true;
+          break;
+        }
+        await applyChoice(choice);
       } else {
         // AI seats, and the human's non-priority sub-decisions, are AI-driven.
         const res = await engine.aiStep(opts.difficulty, acting, false);
