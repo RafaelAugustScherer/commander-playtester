@@ -36,6 +36,10 @@ import {
   tapManaSourceAction,
   type ManaPrompt,
 } from "../sim/decisions/mana";
+import {
+  chooseOptionAction,
+  type CreatureTypePrompt,
+} from "../sim/decisions/creatureType";
 import { toBoardView, type BoardView, type SeatMeta } from "../board/boardView";
 import { abilitiesBySource } from "../sim/decisions/abilities";
 import { aggregate } from "../analysis/matchStats";
@@ -122,6 +126,11 @@ interface ManaTurn {
   resolve: (choice: HumanChoice) => void;
 }
 
+interface CreatureTypeTurn {
+  prompt: CreatureTypePrompt & { aiChoice: string | null };
+  resolve: (choice: HumanChoice) => void;
+}
+
 /** Runs a configured series of matches and renders the live board + results. */
 export function RunView({
   config,
@@ -155,6 +164,9 @@ export function RunView({
   const [blockAssign, setBlockAssign] = useState<Map<number, number>>(new Map());
   const [selectedBlocker, setSelectedBlocker] = useState<number | null>(null);
   const [manaTurn, setManaTurn] = useState<ManaTurn | null>(null);
+  const [creatureTypeTurn, setCreatureTypeTurn] =
+    useState<CreatureTypeTurn | null>(null);
+  const [creatureTypePick, setCreatureTypePick] = useState("");
   const [passingTurn, setPassingTurn] = useState(false);
   const runnerRef = useRef<MatchRunner | null>(null);
 
@@ -293,6 +305,21 @@ export function RunView({
                   },
                 });
               }),
+            requestHumanCreatureType: (_env, prompt) =>
+              new Promise<HumanChoice>((resolve) => {
+                if (cancelled) {
+                  resolve({ ai: true });
+                  return;
+                }
+                setCreatureTypePick(prompt.aiChoice ?? prompt.options[0] ?? "");
+                setCreatureTypeTurn({
+                  prompt,
+                  resolve: (choice) => {
+                    setCreatureTypeTurn(null);
+                    resolve(choice);
+                  },
+                });
+              }),
           },
         );
         runnerRef.current = runner;
@@ -417,10 +444,10 @@ export function RunView({
 
   // Any other decision that needs the human pauses the pass-turn flow.
   useEffect(() => {
-    if (passingTurn && (targeting || manaTurn || blockingTurn)) {
+    if (passingTurn && (targeting || manaTurn || blockingTurn || creatureTypeTurn)) {
       setPassingTurn(false);
     }
-  }, [passingTurn, targeting, manaTurn, blockingTurn]);
+  }, [passingTurn, targeting, manaTurn, blockingTurn, creatureTypeTurn]);
 
   // Map draggable hand cards to their play actions for the current window.
   const play: PlayInteraction | undefined = useMemo(() => {
@@ -955,6 +982,60 @@ export function RunView({
                   onClick={() => manaTurn.resolve({ ai: true })}
                 >
                   {t("mana.letAi")}
+                </button>
+              </div>
+            </>
+          )}
+
+          {creatureTypeTurn && (
+            <>
+              <div className="control-title">
+                <strong>{t("creatureType.title")}</strong>
+              </div>
+              {creatureTypeTurn.prompt.sourceName && (
+                <p className="hint">
+                  {t("creatureType.source", {
+                    name: creatureTypeTurn.prompt.sourceName,
+                  })}
+                </p>
+              )}
+              <div className="import__row">
+                <select
+                  className="input"
+                  value={creatureTypePick}
+                  onChange={(e) => setCreatureTypePick(e.target.value)}
+                >
+                  {creatureTypeTurn.prompt.options.map((ct) => (
+                    <option key={ct} value={ct}>
+                      {ct}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              {creatureTypeTurn.prompt.aiChoice && (
+                <p className="hint">
+                  {t("creatureType.aiHint", {
+                    choice: creatureTypeTurn.prompt.aiChoice,
+                  })}
+                </p>
+              )}
+              <div className="import__row">
+                <button
+                  className="btn"
+                  disabled={!creatureTypePick}
+                  onClick={() =>
+                    creatureTypeTurn.resolve({
+                      action: chooseOptionAction(creatureTypePick),
+                    })
+                  }
+                >
+                  {t("creatureType.confirm")}
+                </button>
+                <button
+                  className="btn btn--ghost"
+                  onClick={() => creatureTypeTurn.resolve({ ai: true })}
+                >
+                  {t("creatureType.letAi")}
                 </button>
               </div>
             </>

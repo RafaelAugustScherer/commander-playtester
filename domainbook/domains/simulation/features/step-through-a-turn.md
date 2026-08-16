@@ -52,6 +52,12 @@ Example: Paying with a specific source
   When the engine asks how to pay
   Then you choose which land or color to tap
   And unspent mana is held as a reserve shown beside your life
+
+Example: Naming a creature type
+  Given a card you play asks you to name a creature type
+  When the engine asks for the type
+  Then you pick one from the valid types, pre-selected with the AI's suggestion
+  And you may instead let the AI choose for you
 ```
 
 ## Rule: Pass turn advances your own turn and stops when an opponent acts

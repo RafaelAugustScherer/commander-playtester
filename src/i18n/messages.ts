@@ -186,6 +186,18 @@ export const messages = {
   "mana.color.Green": { pt: "Verde", en: "Green" },
   "mana.color.Colorless": { pt: "Incolor", en: "Colorless" },
 
+  "creatureType.title": {
+    pt: "Escolher tipo de criatura",
+    en: "Choose a creature type",
+  },
+  "creatureType.source": {
+    pt: "{name} pede um tipo de criatura.",
+    en: "{name} asks for a creature type.",
+  },
+  "creatureType.aiHint": { pt: "Sugestão da IA: {choice}", en: "AI suggestion: {choice}" },
+  "creatureType.confirm": { pt: "Confirmar", en: "Confirm" },
+  "creatureType.letAi": { pt: "IA decide", en: "Let the AI decide" },
+
   "report.title": { pt: "Resultado da série", en: "Series result" },
   "report.newSetup": { pt: "Nova configuração", en: "New setup" },
   "report.winRateDeck": { pt: "Win rate (seu deck)", en: "Win rate (your deck)" },

@@ -15,6 +15,10 @@ import {
   type BlockersPrompt,
 } from "./decisions/blockers";
 import { parseManaPrompt, type ManaPrompt } from "./decisions/mana";
+import {
+  parseCreatureTypePrompt,
+  type CreatureTypePrompt,
+} from "./decisions/creatureType";
 
 export interface MatchResult {
   matchIndex: number;
@@ -176,6 +180,11 @@ export interface DriverCallbacks {
   requestHumanMana?: (
     env: GameStateEnvelope,
     prompt: ManaPrompt,
+  ) => Promise<HumanChoice>;
+  /** Called when the human must choose a creature type; `aiChoice` is the AI's pick. */
+  requestHumanCreatureType?: (
+    env: GameStateEnvelope,
+    prompt: CreatureTypePrompt & { aiChoice: string | null },
   ) => Promise<HumanChoice>;
 }
 
@@ -371,6 +380,10 @@ export class MatchRunner {
           : null;
       const humanMana =
         humanNonPriority && cb.requestHumanMana ? parseManaPrompt(wf) : null;
+      const humanCreatureType =
+        humanNonPriority && cb.requestHumanCreatureType
+          ? parseCreatureTypePrompt(wf)
+          : null;
 
       // Run the human's choice: play their action, or hand this decision to the AI.
       const applyChoice = async (choice: HumanChoice): Promise<void> => {
@@ -409,6 +422,18 @@ export class MatchRunner {
         await applyChoice(choice);
       } else if (humanMana) {
         const choice = await cb.requestHumanMana!(env, humanMana);
+        if (this.aborted) {
+          stopped = true;
+          break;
+        }
+        await applyChoice(choice);
+      } else if (humanCreatureType) {
+        const hint = await engine.aiProposal(opts.difficulty, humanSeat);
+        const suggested = hint?.action?.data?.choice;
+        const choice = await cb.requestHumanCreatureType!(env, {
+          ...humanCreatureType,
+          aiChoice: typeof suggested === "string" ? suggested : null,
+        });
         if (this.aborted) {
           stopped = true;
           break;

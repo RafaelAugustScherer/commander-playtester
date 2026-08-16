@@ -8,6 +8,14 @@ Security as H3s, each of them a bullet list.
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-08-16
+
+### Added
+
+- Choose a creature type: when a card asks you for one (a tribal land entering, a
+  lord naming a type), pick it from a dropdown pre-selected with the AI's
+  suggestion, with the same "AI decides" escape as the other manual decisions.
+
 ## [0.1.1] - 2026-08-16
 
 ### Added
