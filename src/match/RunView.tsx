@@ -6,16 +6,42 @@ import { buildDeckList } from "../engine/deckPayload";
 import {
   MatchRunner,
   DeckRejectedError,
+  selectTargetsAction,
   type MatchResult,
   type LegalActions,
   type HumanChoice,
+  type TargetPrompt,
+  type TargetRef,
 } from "../sim/driver";
-import { Board, type PlayInteraction } from "../board/Board";
+import {
+  Board,
+  type PlayInteraction,
+  type TargetInteraction,
+  type AbilityInteraction,
+  type AttackInteraction,
+  type BlockInteraction,
+  type ManaInteraction,
+} from "../board/Board";
+import {
+  declareAttackersAction,
+  type AttackersPrompt,
+  type AttackTargetRef,
+} from "../sim/decisions/attackers";
+import {
+  declareBlockersAction,
+  type BlockersPrompt,
+} from "../sim/decisions/blockers";
+import {
+  chooseManaColorAction,
+  tapManaSourceAction,
+  type ManaPrompt,
+} from "../sim/decisions/mana";
 import { toBoardView, type BoardView, type SeatMeta } from "../board/boardView";
+import { abilitiesBySource } from "../sim/decisions/abilities";
 import { aggregate } from "../analysis/matchStats";
 import { fetchCardsCached } from "../lib/scryfallCache";
 import { useI18n } from "../i18n/I18nContext";
-import type { Lang } from "../i18n/messages";
+import { phaseLabel, type Lang } from "../i18n/messages";
 
 type Phase = "loading" | "running" | "done" | "error";
 type Speed = "slow" | "normal" | "fast";
@@ -69,6 +95,30 @@ function uniqueNames(decks: SavedDeck[]): string[] {
 
 interface HumanTurn {
   legal: LegalActions;
+  /** True when this priority window is on the human's own turn. */
+  myTurn: boolean;
+  /** True when an opponent has something on the stack awaiting the human. */
+  opponentActed: boolean;
+  resolve: (choice: HumanChoice) => void;
+}
+
+interface TargetTurn {
+  prompt: TargetPrompt;
+  resolve: (choice: HumanChoice) => void;
+}
+
+interface AttackTurn {
+  prompt: AttackersPrompt;
+  resolve: (choice: HumanChoice) => void;
+}
+
+interface BlockTurn {
+  prompt: BlockersPrompt;
+  resolve: (choice: HumanChoice) => void;
+}
+
+interface ManaTurn {
+  prompt: ManaPrompt;
   resolve: (choice: HumanChoice) => void;
 }
 
@@ -93,6 +143,19 @@ export function RunView({
   const [speed, setSpeed] = useState<Speed>("normal");
   const [humanTurn, setHumanTurn] = useState<HumanTurn | null>(null);
   const [dragging, setDragging] = useState<number | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [abilityPick, setAbilityPick] = useState<{ objId: number; actions: any[] } | null>(null);
+  const [targeting, setTargeting] = useState<TargetTurn | null>(null);
+  const [chosen, setChosen] = useState<TargetRef[]>([]);
+  const [attacking, setAttacking] = useState<AttackTurn | null>(null);
+  const [attacks, setAttacks] = useState<Map<number, AttackTargetRef>>(
+    new Map(),
+  );
+  const [blockingTurn, setBlockingTurn] = useState<BlockTurn | null>(null);
+  const [blockAssign, setBlockAssign] = useState<Map<number, number>>(new Map());
+  const [selectedBlocker, setSelectedBlocker] = useState<number | null>(null);
+  const [manaTurn, setManaTurn] = useState<ManaTurn | null>(null);
+  const [passingTurn, setPassingTurn] = useState(false);
   const runnerRef = useRef<MatchRunner | null>(null);
 
   const seatMeta: SeatMeta[] = useMemo(
@@ -138,21 +201,94 @@ export function RunView({
               if (!cancelled) setBoard(toBoardView(env, seatMeta));
             },
             onMatchStart: (m) => {
-              if (!cancelled) setCurrentMatch(m);
+              if (!cancelled) {
+                setCurrentMatch(m);
+                setPassingTurn(false);
+              }
             },
             onMatchEnd: (r) => {
               if (!cancelled) setResults((prev) => [...prev, r]);
             },
-            requestHumanAction: (_env, legal) =>
+            requestHumanAction: (env, legal) =>
               new Promise<HumanChoice>((resolve) => {
                 if (cancelled) {
                   resolve({ ai: true });
                   return;
                 }
+                const st = env.state;
+                const stack = st.stack ?? [];
                 setHumanTurn({
                   legal,
+                  myTurn: st.active_player === 0,
+                  opponentActed: stack.some(
+                    (id) => (st.objects?.[id]?.controller ?? -1) !== 0,
+                  ),
                   resolve: (choice) => {
                     setHumanTurn(null);
+                    resolve(choice);
+                  },
+                });
+              }),
+            requestHumanTargets: (_env, prompt) =>
+              new Promise<HumanChoice>((resolve) => {
+                if (cancelled) {
+                  resolve({ ai: true });
+                  return;
+                }
+                setChosen([]);
+                setTargeting({
+                  prompt,
+                  resolve: (choice) => {
+                    setTargeting(null);
+                    setChosen([]);
+                    resolve(choice);
+                  },
+                });
+              }),
+            requestHumanAttackers: (_env, prompt) =>
+              new Promise<HumanChoice>((resolve) => {
+                if (cancelled) {
+                  resolve({ ai: true });
+                  return;
+                }
+                setAttacks(new Map());
+                setAttacking({
+                  prompt,
+                  resolve: (choice) => {
+                    setAttacking(null);
+                    setAttacks(new Map());
+                    resolve(choice);
+                  },
+                });
+              }),
+            requestHumanBlockers: (_env, prompt) =>
+              new Promise<HumanChoice>((resolve) => {
+                if (cancelled) {
+                  resolve({ ai: true });
+                  return;
+                }
+                setBlockAssign(new Map());
+                setSelectedBlocker(null);
+                setBlockingTurn({
+                  prompt,
+                  resolve: (choice) => {
+                    setBlockingTurn(null);
+                    setBlockAssign(new Map());
+                    setSelectedBlocker(null);
+                    resolve(choice);
+                  },
+                });
+              }),
+            requestHumanMana: (_env, prompt) =>
+              new Promise<HumanChoice>((resolve) => {
+                if (cancelled) {
+                  resolve({ ai: true });
+                  return;
+                }
+                setManaTurn({
+                  prompt,
+                  resolve: (choice) => {
+                    setManaTurn(null);
                     resolve(choice);
                   },
                 });
@@ -205,9 +341,10 @@ export function RunView({
     runnerRef.current?.setPace(PACE_MS[s]);
   }
 
-  // Reset any in-flight drag when the priority window changes.
+  // Reset any in-flight drag / ability pick when the priority window changes.
   useEffect(() => {
     setDragging(null);
+    setAbilityPick(null);
   }, [humanTurn]);
 
   // Space bar passes priority during the human's turn.
@@ -223,6 +360,67 @@ export function RunView({
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [humanTurn]);
+
+  // Begin auto-advancing through the rest of your own turn.
+  function beginPassTurn(ht: HumanTurn) {
+    setPassingTurn(true);
+    const pass = findPass(ht.legal.actions ?? []);
+    ht.resolve(pass ? { action: pass } : { ai: true });
+  }
+
+  // Enter starts "pass turn" during your own turn; Esc stops it.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Enter" && humanTurn?.myTurn && !passingTurn) {
+        e.preventDefault();
+        setPassingTurn(true);
+        const pass = findPass(humanTurn.legal.actions ?? []);
+        humanTurn.resolve(pass ? { action: pass } : { ai: true });
+      } else if (e.key === "Escape" && passingTurn) {
+        e.preventDefault();
+        setPassingTurn(false);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [humanTurn, passingTurn]);
+
+  // While passing the turn, auto-pass each priority window until the turn ends
+  // or an opponent puts something on the stack (then pause so the user sees it).
+  useEffect(() => {
+    if (!passingTurn || !humanTurn) return;
+    if (!humanTurn.myTurn || humanTurn.opponentActed) {
+      setPassingTurn(false);
+      return;
+    }
+    const pass = findPass(humanTurn.legal.actions ?? []);
+    if (!pass) {
+      setPassingTurn(false);
+      return;
+    }
+    const id = setTimeout(
+      () => humanTurn.resolve({ action: pass }),
+      Math.max(180, PACE_MS[speed]),
+    );
+    return () => clearTimeout(id);
+  }, [passingTurn, humanTurn, speed]);
+
+  // Passing the turn skips your own combat (no attackers).
+  useEffect(() => {
+    if (!passingTurn || !attacking) return;
+    const id = setTimeout(
+      () => attacking.resolve({ action: declareAttackersAction([]) }),
+      Math.max(180, PACE_MS[speed]),
+    );
+    return () => clearTimeout(id);
+  }, [passingTurn, attacking, speed]);
+
+  // Any other decision that needs the human pauses the pass-turn flow.
+  useEffect(() => {
+    if (passingTurn && (targeting || manaTurn || blockingTurn)) {
+      setPassingTurn(false);
+    }
+  }, [passingTurn, targeting, manaTurn, blockingTurn]);
 
   // Map draggable hand cards to their play actions for the current window.
   const play: PlayInteraction | undefined = useMemo(() => {
@@ -246,6 +444,172 @@ export function RunView({
   }, [humanTurn, dragging]);
 
   const hasPlayable = (play?.playableIds.size ?? 0) > 0;
+
+  // Group ActivateAbility actions by their source permanent for click-to-activate.
+  const ability: AbilityInteraction | undefined = useMemo(() => {
+    if (!humanTurn) return undefined;
+    const map = abilitiesBySource(humanTurn.legal.actions);
+    if (map.size === 0) return undefined;
+    return {
+      objectIds: new Set(map.keys()),
+      onActivate: (objId: number) => {
+        const list = map.get(objId);
+        if (!list || list.length === 0) return;
+        if (list.length === 1) humanTurn.resolve({ action: list[0] });
+        else setAbilityPick({ objId, actions: list });
+      },
+    };
+  }, [humanTurn]);
+
+  // Highlight legal targets for the current slot and collect the human's picks.
+  const target: TargetInteraction | undefined = useMemo(() => {
+    if (!targeting) return undefined;
+    const { prompt } = targeting;
+    const slotIdx = prompt.multi
+      ? 0
+      : Math.min(chosen.length, prompt.slots.length - 1);
+    const pool = prompt.slots[slotIdx]?.legalTargets ?? [];
+
+    const chosenObjIds = new Set<number>();
+    const chosenSeats = new Set<number>();
+    for (const tr of chosen) {
+      if ("Object" in tr) chosenObjIds.add(tr.Object);
+      else chosenSeats.add(tr.Player);
+    }
+
+    const objectIds = new Set<number>();
+    const playerSeats = new Set<number>();
+    for (const tr of pool) {
+      if ("Object" in tr) {
+        if (prompt.multi && chosenObjIds.has(tr.Object)) continue;
+        objectIds.add(tr.Object);
+      } else {
+        if (prompt.multi && chosenSeats.has(tr.Player)) continue;
+        playerSeats.add(tr.Player);
+      }
+    }
+
+    const pick = (ref: TargetRef) => {
+      const next = [...chosen, ref];
+      const done = prompt.multi
+        ? next.length >= prompt.max
+        : next.length >= prompt.slots.length;
+      if (done) targeting.resolve({ action: selectTargetsAction(next) });
+      else setChosen(next);
+    };
+
+    return {
+      objectIds,
+      playerSeats,
+      chosenObjIds,
+      chosenSeats,
+      onChooseObject: (id) => pick({ Object: id }),
+      onChoosePlayer: (seat) => pick({ Player: seat }),
+    };
+  }, [targeting, chosen]);
+
+  const targetOptional = targeting
+    ? targeting.prompt.multi
+      ? targeting.prompt.min === 0
+      : (targeting.prompt.slots[
+          Math.min(chosen.length, targeting.prompt.slots.length - 1)
+        ]?.optional ?? false)
+    : false;
+  const canConfirmMulti =
+    !!targeting && targeting.prompt.multi && chosen.length >= targeting.prompt.min;
+
+  // Toggle attackers and (in multiplayer) aim them at a defending player.
+  const attack: AttackInteraction | undefined = useMemo(() => {
+    if (!attacking) return undefined;
+    const { prompt } = attacking;
+    const attackerIds = new Set(prompt.attackers.map((a) => a.attackerId));
+    const declaredIds = new Set(attacks.keys());
+    const allDefenders = new Set<number>();
+    for (const a of prompt.attackers) {
+      for (const tgt of a.targets) {
+        if (tgt?.type === "Player") allDefenders.add(tgt.data);
+      }
+    }
+    return {
+      attackerIds,
+      declaredIds,
+      onToggleAttacker: (id: number) => {
+        setAttacks((prev) => {
+          const next = new Map(prev);
+          if (next.has(id)) {
+            next.delete(id);
+          } else {
+            const opt = prompt.attackers.find((a) => a.attackerId === id);
+            if (opt?.targets[0] !== undefined) next.set(id, opt.targets[0]);
+          }
+          return next;
+        });
+      },
+      // Only offer a defender choice when there's a real one to make.
+      defenderSeats:
+        declaredIds.size > 0 && allDefenders.size > 1
+          ? allDefenders
+          : new Set<number>(),
+      onChooseDefender: (seat: number) => {
+        setAttacks((prev) => {
+          const next = new Map(prev);
+          for (const id of next.keys()) {
+            const opt = prompt.attackers.find((a) => a.attackerId === id);
+            const t = opt?.targets.find(
+              (x) => x?.type === "Player" && x?.data === seat,
+            );
+            if (t !== undefined) next.set(id, t);
+          }
+          return next;
+        });
+      },
+    };
+  }, [attacking, attacks]);
+
+  // Pick a blocker, then click the attacker it should block.
+  const block: BlockInteraction | undefined = useMemo(() => {
+    if (!blockingTurn) return undefined;
+    const { prompt } = blockingTurn;
+    return {
+      blockerIds: new Set(prompt.blockers.keys()),
+      assignedIds: new Set(blockAssign.keys()),
+      selectedBlocker,
+      assignableAttackerIds:
+        selectedBlocker !== null
+          ? new Set(prompt.blockers.get(selectedBlocker) ?? [])
+          : new Set<number>(),
+      onSelectBlocker: (id: number) => {
+        if (blockAssign.has(id)) {
+          setBlockAssign((prev) => {
+            const next = new Map(prev);
+            next.delete(id);
+            return next;
+          });
+          setSelectedBlocker(null);
+        } else {
+          setSelectedBlocker((cur) => (cur === id ? null : id));
+        }
+      },
+      onAssignAttacker: (attackerId: number) => {
+        if (selectedBlocker === null) return;
+        setBlockAssign((prev) => new Map(prev).set(selectedBlocker, attackerId));
+        setSelectedBlocker(null);
+      },
+    };
+  }, [blockingTurn, blockAssign, selectedBlocker]);
+
+  // Tap one of your sources when the engine asks which to use for a payment.
+  const mana: ManaInteraction | undefined = useMemo(() => {
+    if (!manaTurn || manaTurn.prompt.kind !== "source") return undefined;
+    const { prompt } = manaTurn;
+    return {
+      sourceIds: new Set(prompt.sources.map((s) => s.objectId)),
+      onTapSource: (objId: number) => {
+        const src = prompt.sources.find((s) => s.objectId === objId);
+        if (src) manaTurn.resolve({ action: tapManaSourceAction(src) });
+      },
+    };
+  }, [manaTurn]);
 
   return (
     <div>
@@ -316,38 +680,300 @@ export function RunView({
         )}
       </section>
 
-      {humanTurn && (
+      {board && (
         <section className="panel play-controls">
           <div className="panel__head">
-            <h3 style={{ margin: 0 }}>{t("turn.title")}</h3>
-            <span className="hint">{t("turn.spaceHint")}</span>
+            <h2 className="match-status">
+              {board.gameOver ? (
+                board.winner === null ? (
+                  t("board.draw")
+                ) : (
+                  t("board.winner", {
+                    name:
+                      board.seats[board.winner]?.name ||
+                      t("board.player", { n: board.winner + 1 }),
+                  })
+                )
+              ) : (
+                <>
+                  <span className="match-status__turn">
+                    {t("board.turn", { n: board.turn })}
+                  </span>
+                  <span className="match-status__phase">
+                    {phaseLabel(lang, board.phase)}
+                  </span>
+                  <span className="match-status__active">
+                    {t("board.activeTurn", {
+                      name:
+                        board.seats[board.activePlayer]?.name ||
+                        t("board.player", { n: board.activePlayer + 1 }),
+                    })}
+                  </span>
+                </>
+              )}
+            </h2>
+            {humanTurn && (
+              <span className="hint">
+                {humanTurn.myTurn ? t("turn.keyHints") : t("turn.spaceHint")}
+              </span>
+            )}
           </div>
-          <p className="hint">
-            {hasPlayable ? t("turn.dragHint") : t("turn.nothingToPlay")}
-          </p>
-          <div className="import__row">
-            <button
-              className="btn"
-              onClick={() => {
-                const pass = findPass(humanTurn.legal.actions ?? []);
-                humanTurn.resolve(pass ? { action: pass } : { ai: true });
-              }}
-            >
-              {t("turn.pass")}
-            </button>
-            <button
-              className="btn btn--ghost"
-              onClick={() => humanTurn.resolve({ ai: true })}
-            >
-              {t("turn.letAi")}
-            </button>
-          </div>
+
+          {humanTurn && passingTurn && (
+            <>
+              <p className="hint">{t("turn.passingTurn")}</p>
+              <div className="import__row">
+                <button
+                  className="btn btn--ghost"
+                  onClick={() => setPassingTurn(false)}
+                >
+                  {t("turn.stopPass")}
+                </button>
+              </div>
+            </>
+          )}
+
+          {humanTurn && !passingTurn && (
+            <>
+              {hasPlayable && <p className="hint">{t("turn.dragHint")}</p>}
+              {ability && <p className="hint">{t("turn.abilityHint")}</p>}
+              {!hasPlayable && !ability && (
+                <p className="hint">{t("turn.nothingToPlay")}</p>
+              )}
+              {abilityPick && (
+                <div className="import__row">
+                  {abilityPick.actions.map((a, i) => (
+                    <button
+                      key={i}
+                      className="btn"
+                      onClick={() => humanTurn.resolve({ action: a })}
+                    >
+                      {t("turn.abilityN", {
+                        n: (a.data?.ability_index ?? i) + 1,
+                      })}
+                    </button>
+                  ))}
+                  <button
+                    className="btn btn--ghost"
+                    onClick={() => setAbilityPick(null)}
+                  >
+                    {t("turn.cancel")}
+                  </button>
+                </div>
+              )}
+              <div className="import__row">
+                <button
+                  className="btn"
+                  onClick={() => {
+                    const pass = findPass(humanTurn.legal.actions ?? []);
+                    humanTurn.resolve(pass ? { action: pass } : { ai: true });
+                  }}
+                >
+                  {t("turn.pass")}
+                </button>
+                {humanTurn.myTurn && (
+                  <button
+                    className="btn"
+                    onClick={() => beginPassTurn(humanTurn)}
+                  >
+                    {t("turn.passTurn")}
+                  </button>
+                )}
+                <button
+                  className="btn btn--ghost"
+                  onClick={() => humanTurn.resolve({ ai: true })}
+                >
+                  {t("turn.letAi")}
+                </button>
+              </div>
+            </>
+          )}
+
+          {targeting && (
+            <>
+              <div className="control-title">
+                <strong>{t("target.title")}</strong>
+                {targeting.prompt.multi && (
+                  <span className="hint">
+                    {t("target.progress", {
+                      n: chosen.length,
+                      min: targeting.prompt.min,
+                      max: targeting.prompt.max,
+                    })}
+                  </span>
+                )}
+              </div>
+              <p className="hint">
+                {targeting.prompt.description || t("target.generic")}
+              </p>
+              <p className="hint">{t("target.instruction")}</p>
+              <div className="import__row">
+                {canConfirmMulti && (
+                  <button
+                    className="btn"
+                    onClick={() =>
+                      targeting.resolve({ action: selectTargetsAction(chosen) })
+                    }
+                  >
+                    {t("target.confirm")}
+                  </button>
+                )}
+                {targetOptional && (
+                  <button
+                    className="btn btn--ghost"
+                    onClick={() =>
+                      targeting.resolve({ action: selectTargetsAction(chosen) })
+                    }
+                  >
+                    {t("target.none")}
+                  </button>
+                )}
+                <button
+                  className="btn btn--ghost"
+                  onClick={() => targeting.resolve({ ai: true })}
+                >
+                  {t("target.letAi")}
+                </button>
+              </div>
+            </>
+          )}
+
+          {attacking && (
+            <>
+              <div className="control-title">
+                <strong>{t("attack.title")}</strong>
+                <span className="hint">
+                  {t("attack.count", { n: attacks.size })}
+                </span>
+              </div>
+              <p className="hint">{t("attack.instruction")}</p>
+              {attack && attack.defenderSeats.size > 0 && (
+                <p className="hint">{t("attack.defenderHint")}</p>
+              )}
+              <div className="import__row">
+                <button
+                  className="btn"
+                  disabled={attacks.size === 0}
+                  onClick={() =>
+                    attacking.resolve({
+                      action: declareAttackersAction([...attacks.entries()]),
+                    })
+                  }
+                >
+                  {t("attack.confirm")}
+                </button>
+                <button
+                  className="btn btn--ghost"
+                  onClick={() =>
+                    attacking.resolve({ action: declareAttackersAction([]) })
+                  }
+                >
+                  {t("attack.none")}
+                </button>
+                <button
+                  className="btn btn--ghost"
+                  onClick={() => attacking.resolve({ ai: true })}
+                >
+                  {t("attack.letAi")}
+                </button>
+              </div>
+            </>
+          )}
+
+          {blockingTurn && (
+            <>
+              <div className="control-title">
+                <strong>{t("block.title")}</strong>
+                <span className="hint">
+                  {t("block.count", { n: blockAssign.size })}
+                </span>
+              </div>
+              <p className="hint">
+                {selectedBlocker !== null
+                  ? t("block.chooseAttacker")
+                  : t("block.chooseBlocker")}
+              </p>
+              <div className="import__row">
+                <button
+                  className="btn"
+                  onClick={() =>
+                    blockingTurn.resolve({
+                      action: declareBlockersAction([...blockAssign.entries()]),
+                    })
+                  }
+                >
+                  {t("block.confirm")}
+                </button>
+                <button
+                  className="btn btn--ghost"
+                  onClick={() =>
+                    blockingTurn.resolve({ action: declareBlockersAction([]) })
+                  }
+                >
+                  {t("block.none")}
+                </button>
+                <button
+                  className="btn btn--ghost"
+                  onClick={() => blockingTurn.resolve({ ai: true })}
+                >
+                  {t("block.letAi")}
+                </button>
+              </div>
+            </>
+          )}
+
+          {manaTurn && (
+            <>
+              <div className="control-title">
+                <strong>{t("mana.title")}</strong>
+              </div>
+              {manaTurn.prompt.kind === "color" ? (
+                <>
+                  <p className="hint">{t("mana.chooseColor")}</p>
+                  <div className="import__row">
+                    {manaTurn.prompt.options.map((color) => (
+                      <button
+                        key={color}
+                        className="btn"
+                        onClick={() =>
+                          manaTurn.resolve({
+                            action: chooseManaColorAction(color),
+                          })
+                        }
+                      >
+                        {t(`mana.color.${color}` as Parameters<typeof t>[0])}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <p className="hint">{t("mana.chooseSource")}</p>
+              )}
+              <div className="import__row">
+                <button
+                  className="btn btn--ghost"
+                  onClick={() => manaTurn.resolve({ ai: true })}
+                >
+                  {t("mana.letAi")}
+                </button>
+              </div>
+            </>
+          )}
         </section>
       )}
 
       {board && (
         <section className="panel">
-          <Board view={board} images={images} play={play} />
+          <Board
+            view={board}
+            images={images}
+            play={play}
+            target={target}
+            ability={ability}
+            attack={attack}
+            block={block}
+            mana={mana}
+          />
         </section>
       )}
 

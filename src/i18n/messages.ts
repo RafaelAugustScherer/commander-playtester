@@ -113,6 +113,78 @@ export const messages = {
   "turn.pass": { pt: "Passar (espaço)", en: "Pass (space)" },
   "turn.letAi": { pt: "IA joga por mim", en: "Let the AI play" },
   "turn.nothingToPlay": { pt: "Nada para jogar agora — passe a vez.", en: "Nothing to play right now — pass." },
+  "turn.abilityHint": {
+    pt: "Clique em uma permanente destacada para ativar uma habilidade.",
+    en: "Click a highlighted permanent to activate an ability.",
+  },
+  "turn.abilityN": { pt: "Habilidade {n}", en: "Ability {n}" },
+  "turn.cancel": { pt: "Cancelar", en: "Cancel" },
+  "turn.keyHints": {
+    pt: "Espaço = prioridade · Enter = passar turno",
+    en: "Space = priority · Enter = pass turn",
+  },
+  "turn.passTurn": { pt: "Passar turno (Enter)", en: "Pass turn (Enter)" },
+  "turn.passingTurn": {
+    pt: "Passando o turno… (Esc para parar)",
+    en: "Passing turn… (Esc to stop)",
+  },
+  "turn.stopPass": { pt: "Parar", en: "Stop" },
+
+  "target.title": { pt: "Escolha o alvo", en: "Choose a target" },
+  "target.generic": { pt: "Selecione um alvo válido.", en: "Select a valid target." },
+  "target.instruction": {
+    pt: "Clique em um alvo destacado no tabuleiro.",
+    en: "Click a highlighted target on the board.",
+  },
+  "target.progress": { pt: "Selecionados: {n} (mín {min}, máx {max})", en: "Selected: {n} (min {min}, max {max})" },
+  "target.confirm": { pt: "Confirmar alvos", en: "Confirm targets" },
+  "target.none": { pt: "Sem alvo", en: "No target" },
+  "target.letAi": { pt: "IA escolhe por mim", en: "Let the AI choose" },
+
+  "attack.title": { pt: "Declarar atacantes", en: "Declare attackers" },
+  "attack.count": { pt: "{n} atacando", en: "{n} attacking" },
+  "attack.instruction": {
+    pt: "Clique nas suas criaturas destacadas para atacar.",
+    en: "Click your highlighted creatures to attack.",
+  },
+  "attack.defenderHint": {
+    pt: "Clique em um oponente destacado para direcionar os atacantes.",
+    en: "Click a highlighted opponent to aim your attackers.",
+  },
+  "attack.confirm": { pt: "Confirmar ataque", en: "Confirm attack" },
+  "attack.none": { pt: "Sem ataque", en: "No attack" },
+  "attack.letAi": { pt: "IA decide o combate", en: "Let the AI attack" },
+
+  "block.title": { pt: "Declarar bloqueadores", en: "Declare blockers" },
+  "block.count": { pt: "{n} bloqueando", en: "{n} blocking" },
+  "block.chooseBlocker": {
+    pt: "Clique em uma criatura sua para bloquear.",
+    en: "Click one of your creatures to block with.",
+  },
+  "block.chooseAttacker": {
+    pt: "Agora clique no atacante que ela vai bloquear.",
+    en: "Now click the attacker it will block.",
+  },
+  "block.confirm": { pt: "Confirmar bloqueios", en: "Confirm blocks" },
+  "block.none": { pt: "Não bloquear", en: "No blocks" },
+  "block.letAi": { pt: "IA decide o combate", en: "Let the AI block" },
+
+  "mana.title": { pt: "Pagamento de mana", en: "Mana payment" },
+  "mana.chooseColor": {
+    pt: "Escolha a cor de mana a produzir.",
+    en: "Choose which color of mana to produce.",
+  },
+  "mana.chooseSource": {
+    pt: "Clique em uma fonte destacada para tocá-la.",
+    en: "Click a highlighted source to tap it.",
+  },
+  "mana.letAi": { pt: "IA paga por mim", en: "Let the AI pay" },
+  "mana.color.White": { pt: "Branco", en: "White" },
+  "mana.color.Blue": { pt: "Azul", en: "Blue" },
+  "mana.color.Black": { pt: "Preto", en: "Black" },
+  "mana.color.Red": { pt: "Vermelho", en: "Red" },
+  "mana.color.Green": { pt: "Verde", en: "Green" },
+  "mana.color.Colorless": { pt: "Incolor", en: "Colorless" },
 
   "report.title": { pt: "Resultado da série", en: "Series result" },
   "report.newSetup": { pt: "Nova configuração", en: "New setup" },

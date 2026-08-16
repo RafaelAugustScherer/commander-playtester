@@ -3,7 +3,7 @@ import type { MouseEvent as ReactMouseEvent } from "react";
 import type { GameObject } from "../engine/types";
 import type { BoardView, SeatView } from "./boardView";
 import { useI18n } from "../i18n/I18nContext";
-import { phaseLabel, categoryLabel } from "../i18n/messages";
+import { categoryLabel } from "../i18n/messages";
 
 /** Play-mode interaction for the human's seat: drag a hand card to a slot. */
 export interface PlayInteraction {
@@ -15,6 +15,150 @@ export interface PlayInteraction {
   /** Play the hand card with this object id (drag dropped on a valid slot). */
   onPlay: (objId: number) => void;
 }
+
+/** Target-selection interaction: click a legal target object or player. */
+export interface TargetInteraction {
+  /** Object ids that are legal targets for the current slot. */
+  objectIds: Set<number>;
+  /** Player seats that are legal targets for the current slot. */
+  playerSeats: Set<number>;
+  /** Object ids already chosen (highlighted as selected). */
+  chosenObjIds: Set<number>;
+  /** Player seats already chosen. */
+  chosenSeats: Set<number>;
+  onChooseObject: (id: number) => void;
+  onChoosePlayer: (seat: number) => void;
+}
+
+function targetProps(
+  o: GameObject,
+  target?: TargetInteraction,
+): { targetable?: boolean; targeted?: boolean; onChoose?: () => void } {
+  if (!target) return {};
+  if (target.objectIds.has(o.id)) {
+    return {
+      targetable: true,
+      targeted: target.chosenObjIds.has(o.id),
+      onChoose: () => target.onChooseObject(o.id),
+    };
+  }
+  if (target.chosenObjIds.has(o.id)) return { targeted: true };
+  return {};
+}
+
+/** Ability activation: click one of your permanents to activate an ability. */
+export interface AbilityInteraction {
+  /** Object ids of your permanents with at least one activatable ability. */
+  objectIds: Set<number>;
+  onActivate: (objId: number) => void;
+}
+
+function abilityProps(
+  o: GameObject,
+  ability?: AbilityInteraction,
+): { activatable?: boolean; onActivate?: () => void } {
+  if (!ability || !ability.objectIds.has(o.id)) return {};
+  return { activatable: true, onActivate: () => ability.onActivate(o.id) };
+}
+
+/** Declare-attackers interaction: toggle your creatures, aim at a defender. */
+export interface AttackInteraction {
+  /** Your creatures that may attack (click to toggle). */
+  attackerIds: Set<number>;
+  /** Attackers currently declared (highlighted). */
+  declaredIds: Set<number>;
+  onToggleAttacker: (id: number) => void;
+  /** Opponent seats you may aim declared attackers at (multiplayer choice). */
+  defenderSeats: Set<number>;
+  onChooseDefender: (seat: number) => void;
+}
+
+function attackProps(
+  o: GameObject,
+  attack?: AttackInteraction,
+): { attacker?: boolean; attacking?: boolean; onToggleAttack?: () => void } {
+  if (!attack || !attack.attackerIds.has(o.id)) return {};
+  return {
+    attacker: true,
+    attacking: attack.declaredIds.has(o.id),
+    onToggleAttack: () => attack.onToggleAttacker(o.id),
+  };
+}
+
+/** Declare-blockers interaction: pick a blocker, then the attacker it blocks. */
+export interface BlockInteraction {
+  /** Your creatures that may block (click to select). */
+  blockerIds: Set<number>;
+  /** Blockers already assigned to an attacker (highlighted). */
+  assignedIds: Set<number>;
+  /** The blocker awaiting an attacker, or null. */
+  selectedBlocker: number | null;
+  onSelectBlocker: (id: number) => void;
+  /** Attacker ids the selected blocker may block (highlighted while selecting). */
+  assignableAttackerIds: Set<number>;
+  onAssignAttacker: (attackerId: number) => void;
+}
+
+/** Props for the human's own creatures (candidate blockers). */
+function blockerProps(
+  o: GameObject,
+  block?: BlockInteraction,
+): {
+  blocker?: boolean;
+  blocking?: boolean;
+  blockSelected?: boolean;
+  onSelectBlock?: () => void;
+} {
+  if (!block || !block.blockerIds.has(o.id)) return {};
+  return {
+    blocker: true,
+    blocking: block.assignedIds.has(o.id),
+    blockSelected: block.selectedBlocker === o.id,
+    onSelectBlock: () => block.onSelectBlocker(o.id),
+  };
+}
+
+/** Props for an opponent's attacking creatures (assignment targets). */
+function blockTargetProps(
+  o: GameObject,
+  block?: BlockInteraction,
+): { blockTarget?: boolean; onAssignBlock?: () => void } {
+  if (
+    !block ||
+    block.selectedBlocker === null ||
+    !block.assignableAttackerIds.has(o.id)
+  ) {
+    return {};
+  }
+  return {
+    blockTarget: true,
+    onAssignBlock: () => block.onAssignAttacker(o.id),
+  };
+}
+
+/** Mana-payment interaction: tap one of your sources to pay. */
+export interface ManaInteraction {
+  /** Object ids of your permanents that can be tapped for the current payment. */
+  sourceIds: Set<number>;
+  onTapSource: (objId: number) => void;
+}
+
+function manaProps(
+  o: GameObject,
+  mana?: ManaInteraction,
+): { manaSource?: boolean; onTapSource?: () => void } {
+  if (!mana || !mana.sourceIds.has(o.id)) return {};
+  return { manaSource: true, onTapSource: () => mana.onTapSource(o.id) };
+}
+
+const MANA_PIP: Record<string, string> = {
+  White: "⚪",
+  Blue: "🔵",
+  Black: "⚫",
+  Red: "🔴",
+  Green: "🟢",
+  Colorless: "◇",
+};
 
 const PERMANENT_TYPES = [
   "Land",
@@ -67,15 +211,24 @@ export function Board({
   view,
   images,
   play,
+  target,
+  ability,
+  attack,
+  block,
+  mana,
 }: {
   view: BoardView;
   images?: Record<string, string>;
   play?: PlayInteraction;
+  target?: TargetInteraction;
+  ability?: AbilityInteraction;
+  attack?: AttackInteraction;
+  block?: BlockInteraction;
+  mana?: ManaInteraction;
 }) {
-  const { t, lang } = useI18n();
+  const { t } = useI18n();
   const [preview, setPreview] = useState<Preview | null>(null);
 
-  const active = view.seats[view.activePlayer];
   const you = view.seats.find((s) => s.seat === 0);
   const opponents = view.seats.filter((s) => s.seat !== 0);
 
@@ -84,27 +237,6 @@ export function Board({
 
   return (
     <div className="board">
-      <div className="board__status">
-        <span className="board__turn">{t("board.turn", { n: view.turn })}</span>
-        <span className="board__phase">{phaseLabel(lang, view.phase)}</span>
-        {!view.gameOver && active && (
-          <span className="board__active">
-            {t("board.activeTurn", { name: seatName(active) })}
-          </span>
-        )}
-        {view.gameOver && (
-          <span className="board__winner">
-            {view.winner === null
-              ? t("board.draw")
-              : t("board.winner", {
-                  name:
-                    view.seats[view.winner]?.name ||
-                    t("board.player", { n: view.winner + 1 }),
-                })}
-          </span>
-        )}
-      </div>
-
       <div className={`board__opponents board__opponents--n${opponents.length}`}>
         {opponents.map((seat) => (
           <Seat
@@ -116,6 +248,9 @@ export function Board({
             winner={view.winner}
             images={images}
             onHover={onHover}
+            target={target}
+            attack={attack}
+            block={block}
           />
         ))}
       </div>
@@ -131,6 +266,11 @@ export function Board({
             images={images}
             onHover={onHover}
             play={play}
+            target={target}
+            ability={ability}
+            attack={attack}
+            block={block}
+            mana={mana}
           />
         </div>
       )}
@@ -149,6 +289,11 @@ function Seat({
   images,
   onHover,
   play,
+  target,
+  ability,
+  attack,
+  block,
+  mana,
 }: {
   seat: SeatView;
   you: boolean;
@@ -158,15 +303,26 @@ function Seat({
   images?: Record<string, string>;
   onHover?: (p: Preview | null) => void;
   play?: PlayInteraction;
+  target?: TargetInteraction;
+  ability?: AbilityInteraction;
+  attack?: AttackInteraction;
+  block?: BlockInteraction;
+  mana?: ManaInteraction;
 }) {
   const { t } = useI18n();
   const won = gameOver && winner === seat.seat;
+  const seatTargetable = target?.playerSeats.has(seat.seat) ?? false;
+  const seatTargeted = target?.chosenSeats.has(seat.seat) ?? false;
+  const seatDefender = attack?.defenderSeats.has(seat.seat) ?? false;
   const cls = [
     "seat",
     you ? "seat--you" : "",
     seat.isActive && !gameOver ? "seat--active" : "",
     seat.isEliminated ? "seat--out" : "",
     won ? "seat--won" : "",
+    seatTargetable ? "seat--targetable" : "",
+    seatTargeted ? "seat--targeted" : "",
+    seatDefender ? "seat--defender" : "",
   ]
     .filter(Boolean)
     .join(" ");
@@ -175,8 +331,14 @@ function Seat({
     ? seat.hand.find((o) => o.id === play.dragging)
     : undefined;
 
+  const seatClick = seatTargetable
+    ? () => target!.onChoosePlayer(seat.seat)
+    : seatDefender
+      ? () => attack!.onChooseDefender(seat.seat)
+      : undefined;
+
   return (
-    <div className={cls}>
+    <div className={cls} onClick={seatClick}>
       <div className="seat__head">
         <div className="seat__id">
           <span className="seat__name">
@@ -185,7 +347,20 @@ function Seat({
           </span>
           <span className="seat__commander">{seat.commander}</span>
         </div>
-        <div className="seat__life">{seat.isEliminated ? "💀" : seat.life}</div>
+        <div className="seat__life-wrap">
+          {seat.manaPool.length > 0 && (
+            <span className="seat__mana" title="Mana disponível">
+              {seat.manaPool.map((pip) => (
+                <span key={pip.color} className="seat__mana-pip">
+                  {(MANA_PIP[pip.color] ?? "◇").repeat(pip.count)}
+                </span>
+              ))}
+            </span>
+          )}
+          <span className="seat__life">
+            {seat.isEliminated ? "💀" : seat.life}
+          </span>
+        </div>
       </div>
 
       <div className="seat__zones">
@@ -199,20 +374,30 @@ function Seat({
         {seat.commanders.length > 0 && (
           <div className="seat__cmd">
             {seat.commanders.map((c) => (
-              <Card key={c.id} obj={c} images={images} onHover={onHover} />
+              <Card
+                key={c.id}
+                obj={c}
+                images={images}
+                onHover={onHover}
+                {...targetProps(c, target)}
+                {...abilityProps(c, ability)}
+                {...attackProps(c, you ? attack : undefined)}
+                {...(you ? blockerProps(c, block) : blockTargetProps(c, block))}
+                {...manaProps(c, you ? mana : undefined)}
+              />
             ))}
           </div>
         )}
 
-        <Row label={t("board.rowCreatures")} cards={seat.creatures} images={images} onHover={onHover} />
-        <Row label={t("board.rowOthers")} cards={seat.others} images={images} onHover={onHover} />
-        <Row label={t("board.rowLands")} cards={seat.lands} images={images} onHover={onHover} />
+        <Row label={t("board.rowCreatures")} cards={seat.creatures} images={images} onHover={onHover} target={target} ability={ability} attack={you ? attack : undefined} block={block} you={you} mana={you ? mana : undefined} />
+        <Row label={t("board.rowOthers")} cards={seat.others} images={images} onHover={onHover} target={target} ability={ability} mana={you ? mana : undefined} />
+        <Row label={t("board.rowLands")} cards={seat.lands} images={images} onHover={onHover} target={target} ability={ability} mana={you ? mana : undefined} />
 
         {play && dragCard && <DropLane card={dragCard} play={play} />}
       </div>
 
       {seat.hand.length > 0 && (
-        <HandRow seat={seat} images={images} onHover={onHover} play={play} />
+        <HandRow seat={seat} images={images} onHover={onHover} play={play} target={target} />
       )}
     </div>
   );
@@ -254,11 +439,13 @@ function HandRow({
   images,
   onHover,
   play,
+  target,
 }: {
   seat: SeatView;
   images?: Record<string, string>;
   onHover?: (p: Preview | null) => void;
   play?: PlayInteraction;
+  target?: TargetInteraction;
 }) {
   const { t } = useI18n();
   return (
@@ -284,6 +471,7 @@ function HandRow({
                   : undefined
               }
               onDragEnd={play ? () => play.setDragging(null) : undefined}
+              {...targetProps(o, target)}
             />
           );
         })}
@@ -297,11 +485,23 @@ function Row({
   cards,
   images,
   onHover,
+  target,
+  ability,
+  attack,
+  block,
+  you,
+  mana,
 }: {
   label: string;
   cards: GameObject[];
   images?: Record<string, string>;
   onHover?: (p: Preview | null) => void;
+  target?: TargetInteraction;
+  ability?: AbilityInteraction;
+  attack?: AttackInteraction;
+  block?: BlockInteraction;
+  you?: boolean;
+  mana?: ManaInteraction;
 }) {
   if (cards.length === 0) return null;
   return (
@@ -309,7 +509,17 @@ function Row({
       <span className="seat__row-label">{label}</span>
       <div className="seat__cards">
         {cards.map((o) => (
-          <Card key={o.id} obj={o} images={images} onHover={onHover} />
+          <Card
+            key={o.id}
+            obj={o}
+            images={images}
+            onHover={onHover}
+            {...targetProps(o, target)}
+            {...abilityProps(o, ability)}
+            {...attackProps(o, attack)}
+            {...(you ? blockerProps(o, block) : blockTargetProps(o, block))}
+            {...manaProps(o, mana)}
+          />
         ))}
       </div>
     </div>
@@ -324,6 +534,22 @@ function Card({
   playable,
   onDragStart,
   onDragEnd,
+  targetable,
+  targeted,
+  onChoose,
+  activatable,
+  onActivate,
+  attacker,
+  attacking,
+  onToggleAttack,
+  blocker,
+  blocking,
+  blockSelected,
+  onSelectBlock,
+  blockTarget,
+  onAssignBlock,
+  manaSource,
+  onTapSource,
 }: {
   obj: GameObject;
   images?: Record<string, string>;
@@ -332,6 +558,22 @@ function Card({
   playable?: boolean;
   onDragStart?: () => void;
   onDragEnd?: () => void;
+  targetable?: boolean;
+  targeted?: boolean;
+  onChoose?: () => void;
+  activatable?: boolean;
+  onActivate?: () => void;
+  attacker?: boolean;
+  attacking?: boolean;
+  onToggleAttack?: () => void;
+  blocker?: boolean;
+  blocking?: boolean;
+  blockSelected?: boolean;
+  onSelectBlock?: () => void;
+  blockTarget?: boolean;
+  onAssignBlock?: () => void;
+  manaSource?: boolean;
+  onTapSource?: () => void;
 }) {
   const url = obj.name ? images?.[obj.name.toLowerCase()] : undefined;
   const isCreature = obj.card_types?.core_types?.includes("Creature") ?? false;
@@ -340,6 +582,16 @@ function Card({
     obj.tapped ? "card--tapped" : "",
     draggable ? "card--draggable" : "",
     playable === false ? "card--unplayable" : "",
+    targetable ? "card--targetable" : "",
+    targeted ? "card--targeted" : "",
+    activatable ? "card--activatable" : "",
+    attacker ? "card--attacker" : "",
+    attacking ? "card--attacking" : "",
+    blocker ? "card--blocker" : "",
+    blocking ? "card--blocking" : "",
+    blockSelected ? "card--block-selected" : "",
+    blockTarget ? "card--block-target" : "",
+    manaSource ? "card--mana-source" : "",
   ]
     .filter(Boolean)
     .join(" ");
@@ -361,12 +613,26 @@ function Card({
     </span>
   ) : null;
 
+  const click =
+    onChoose ??
+    onActivate ??
+    onToggleAttack ??
+    onSelectBlock ??
+    onAssignBlock ??
+    onTapSource;
   const common = {
     className: url ? cls : `${cls} card--text`,
     title: obj.name,
     draggable,
     onMouseEnter: enter,
     onMouseLeave: leave,
+    onClick: click
+      ? (e: ReactMouseEvent) => {
+          e.stopPropagation();
+          leave();
+          click();
+        }
+      : undefined,
     onDragStart,
     onDragEnd: onDragEnd
       ? () => {
@@ -394,7 +660,7 @@ function Card({
 
 /** Fixed-position enlarged card shown beside the hovered card. */
 function CardPreview({ preview }: { preview: Preview }) {
-  const width = 260;
+  const width = 312;
   const height = Math.round(width / 0.716);
   const { rect } = preview;
   const vw = typeof window !== "undefined" ? window.innerWidth : 1280;

@@ -1,4 +1,5 @@
 import type { GameObject, GameStateEnvelope } from "../engine/types";
+import { readManaPool, type ManaPip } from "../sim/decisions/mana";
 
 export interface SeatView {
   seat: number;
@@ -6,6 +7,8 @@ export interface SeatView {
   commander: string;
   life: number;
   poison: number;
+  /** Floating (unspent) mana in this player's pool. */
+  manaPool: ManaPip[];
   handCount: number;
   /** Revealed hand cards (empty when hidden). */
   hand: GameObject[];
@@ -64,7 +67,8 @@ export function toBoardView(
     const commanders = all.filter(
       (o) => o.is_commander && o.owner === seat && o.zone === "Command",
     );
-    const hand = all.filter((o) => o.zone === "Hand" && o.owner === seat);
+    const handZone = all.filter((o) => o.zone === "Hand" && o.owner === seat);
+    const hand = handZone.filter((o) => !o.face_down);
 
     return {
       seat,
@@ -72,7 +76,8 @@ export function toBoardView(
       commander: meta[seat]?.commander ?? "",
       life: p.life,
       poison: p.poison_counters ?? 0,
-      handCount: p.hand?.length ?? hand.length,
+      manaPool: readManaPool(p),
+      handCount: p.hand?.length ?? handZone.length,
       hand,
       librarySize: p.library?.length ?? 0,
       graveyardSize: p.graveyard?.length ?? 0,
@@ -86,8 +91,12 @@ export function toBoardView(
   });
 
   const gameOver = st.waiting_for?.type === "GameOver";
+  const turnNumber = st.turn_number ?? 0;
+  const playerCount = st.players.length || 1;
+  const round =
+    turnNumber < 1 ? turnNumber : Math.floor((turnNumber - 1) / playerCount) + 1;
   return {
-    turn: st.turn_number ?? 0,
+    turn: round,
     phase: st.phase ?? "",
     activePlayer: st.active_player ?? 0,
     gameOver,
