@@ -38,6 +38,37 @@ Example: The engine refuses an illegal play
   Then the engine rejects it and the board is unchanged
 ```
 
+## Rule: You decide only where the engine asks, and any such choice can be handed to the AI
+
+```gherkin
+Example: Declaring attackers on your combat
+  Given it is your combat and you control a creature that can attack
+  When the engine asks you to declare attackers
+  Then you choose which creatures attack and whom
+  And you may instead let the AI declare for you
+
+Example: Paying with a specific source
+  Given you cast a spell and more than one source could pay for it
+  When the engine asks how to pay
+  Then you choose which land or color to tap
+  And unspent mana is held as a reserve shown beside your life
+```
+
+## Rule: Pass turn advances your own turn and stops when an opponent acts
+
+```gherkin
+Example: Passing skips to the end of your turn
+  Given it is your turn
+  When you choose pass turn (Enter)
+  Then your remaining phases advance without prompting you
+  And your combat is skipped with no attackers
+
+Example: An opponent acting pauses the pass
+  Given you are passing your turn
+  When an opponent puts something on the stack
+  Then the pass stops and control returns to you
+```
+
 ## Open Questions
 
 - Whether play and watch share one driver with the human as a swappable controller.
