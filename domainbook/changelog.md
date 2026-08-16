@@ -8,7 +8,34 @@ Security as H3s, each of them a bullet list.
 
 ## [Unreleased]
 
-## [0.1.0-alpha.1] - 2026-08-16
+## [0.1.1] - 2026-08-16
+
+### Added
+
+- Manual play decisions, each with an "AI decides" escape: activate an ability of
+  a permanent you control, declare attackers on your combat, declare blockers when
+  attacked, and choose which land or color pays for a spell when the payment has a
+  real choice. Unspent mana is held as a reserve shown beside your life.
+- Pass turn (Enter): on your own turn, auto-advance through your remaining phases
+  — skipping your combat — and pause when an opponent puts something on the stack,
+  so you can watch it happen.
+
+### Changed
+
+- The turn / phase / active-player status lives in one persistent play-controls
+  panel header — larger, and no longer flickering when you pass with space.
+- The turn counter counts rounds: it advances once every seat has taken a turn,
+  not after each individual player-turn.
+- The hover card preview is roughly 20% larger.
+- An opponent's hand section is dropped entirely while their hand is hidden (no
+  "Hidden Card" placeholders); the hand count still shows.
+
+### Fixed
+
+- The pre- and post-combat main phases now show their localized names instead of
+  the raw engine identifier.
+
+## [0.1.0] - 2026-08-15
 
 ### Added
 
@@ -23,13 +50,6 @@ Security as H3s, each of them a bullet list.
 - Play mode drag-to-play: drag a hand card onto dashed, type-labeled battlefield
   slots (land, creature, artifact…) that appear while dragging, in place of the
   earlier action buttons.
-- Manual play decisions, each with an "AI decides" escape: activate an ability of
-  a permanent you control, declare attackers on your combat, declare blockers when
-  attacked, and choose which land or color pays for a spell when the payment has a
-  real choice. Unspent mana is held as a reserve shown beside your life.
-- Pass turn (Enter): on your own turn, auto-advance through your remaining phases
-  — skipping your combat — and pause when an opponent puts something on the stack,
-  so you can watch it happen.
 - Hover any card to see an enlarged, readable copy beside it.
 - Interface language switch (Portuguese / English), always visible in the header
   and remembered across sessions.
@@ -40,20 +60,8 @@ Security as H3s, each of them a bullet list.
 
 - Board layout centers the player's seat at the bottom and renders it larger than
   the opponents', which share the top row.
-- The turn / phase / active-player status lives in one persistent play-controls
-  panel header — larger, and no longer flickering when you pass with space.
-- The turn counter counts rounds: it advances once every seat has taken a turn,
-  not after each individual player-turn.
-- The hover card preview is roughly 20% larger.
-- An opponent's hand section is dropped entirely while their hand is hidden (no
-  "Hidden Card" placeholders); the hand count still shows.
 - Engine sourcing pinned to a prebuilt snapshot instead of a from-source build;
   `TDR-0001` and `ADR-0001` updated to match.
-
-### Fixed
-
-- The pre- and post-combat main phases now show their localized names instead of
-  the raw engine identifier.
 
 ### Removed
 
