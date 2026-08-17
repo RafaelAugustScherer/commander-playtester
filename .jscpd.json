@@ -1,0 +1,21 @@
+{
+  "_comment": "Duplication floor — set to current ceiling + margin. Tighten over time. Paths are passed positionally on the CLI (npm run duplication) because jscpd's `path` config field is unreliable.",
+  "threshold": 7,
+  "reporters": ["console", "threshold"],
+  "absolute": true,
+  "gitignore": true,
+  "ignore": [
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/build/**",
+    "**/coverage/**",
+    "**/__tests__/**",
+    "**/__fixtures__/**",
+    "**/*.{test,spec}.{ts,tsx}",
+    "**/test/**",
+    ".claude/**"
+  ],
+  "min-tokens": 60,
+  "min-lines": 6,
+  "format": ["typescript", "tsx"]
+}
