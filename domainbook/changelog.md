@@ -8,6 +8,18 @@ Security as H3s, each of them a bullet list.
 
 ## [Unreleased]
 
+## [0.1.3] - 2026-08-16
+
+### Added
+
+- Stack & game-log sidebar: a collapsible drawer showing the current stack and a
+  running, engine-sourced log of the game's events (`follow-the-game`).
+
+### Changed
+
+- Every UI icon is now drawn from lucide-react instead of emoji, for consistent
+  rendering across platforms (`board/ADR-0001`).
+
 ## [0.1.2] - 2026-08-16
 
 ### Added

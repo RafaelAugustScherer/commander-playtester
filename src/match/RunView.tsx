@@ -41,6 +41,8 @@ import {
   type CreatureTypePrompt,
 } from "../sim/decisions/creatureType";
 import { toBoardView, type BoardView, type SeatMeta } from "../board/boardView";
+import { GameSidebar, type LoggedEntry } from "../board/GameSidebar";
+import type { LogEntry } from "../engine/types";
 import { abilitiesBySource } from "../sim/decisions/abilities";
 import { aggregate } from "../analysis/matchStats";
 import { fetchCardsCached } from "../lib/scryfallCache";
@@ -169,7 +171,18 @@ export function RunView({
     useState<CreatureTypeTurn | null>(null);
   const [creatureTypePick, setCreatureTypePick] = useState("");
   const [passingTurn, setPassingTurn] = useState(false);
+  const [logEntries, setLogEntries] = useState<LoggedEntry[]>([]);
+  const [sidebarOpen, setSidebarOpen] = useState<boolean>(() => {
+    const saved = localStorage.getItem("sidebarOpen");
+    if (saved != null) return saved === "1";
+    return window.matchMedia("(min-width: 900px)").matches;
+  });
+  const logIdRef = useRef(0);
   const runnerRef = useRef<MatchRunner | null>(null);
+
+  useEffect(() => {
+    localStorage.setItem("sidebarOpen", sidebarOpen ? "1" : "0");
+  }, [sidebarOpen]);
 
   const seatMeta: SeatMeta[] = useMemo(
     () =>
@@ -217,10 +230,24 @@ export function RunView({
               if (!cancelled) {
                 setCurrentMatch(m);
                 setPassingTurn(false);
+                setLogEntries([]);
               }
             },
             onMatchEnd: (r) => {
               if (!cancelled) setResults((prev) => [...prev, r]);
+            },
+            onLogEntries: (entries: LogEntry[]) => {
+              if (cancelled) return;
+              const tagged = entries.map((entry) => ({
+                id: logIdRef.current++,
+                entry,
+              }));
+              setLogEntries((prev) => {
+                const next = prev.concat(tagged);
+                return next.length > 800
+                  ? next.slice(next.length - 800)
+                  : next;
+              });
             },
             requestHumanAction: (env, legal) =>
               new Promise<HumanChoice>((resolve) => {
@@ -668,6 +695,12 @@ export function RunView({
                 <button className="btn btn--ghost btn--sm" onClick={togglePause}>
                   {paused ? t("run.resume") : t("run.pause")}
                 </button>
+                <button
+                  className="btn btn--ghost btn--sm"
+                  onClick={() => setSidebarOpen((v) => !v)}
+                >
+                  {sidebarOpen ? t("sidebar.hide") : t("sidebar.show")}
+                </button>
               </>
             )}
             <button
@@ -708,6 +741,8 @@ export function RunView({
         )}
       </section>
 
+      <div className="run-layout">
+        <div className="run-main">
       {board && (
         <section className="panel play-controls">
           <div className="panel__head">
@@ -1054,6 +1089,19 @@ export function RunView({
           />
         </section>
       )}
+        </div>
+        {board && (
+          <GameSidebar
+            stack={board.stack}
+            log={logEntries}
+            images={images}
+            humanSeat={config.mode === "play" ? 0 : null}
+            revealAll={config.revealHands || config.mode === "watch"}
+            open={sidebarOpen}
+            onToggle={() => setSidebarOpen((v) => !v)}
+          />
+        )}
+      </div>
 
       {phase === "done" && (
         <RunReport

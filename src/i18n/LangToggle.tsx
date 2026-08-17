@@ -1,3 +1,4 @@
+import { Globe } from "lucide-react";
 import { LANGS, LANG_LABEL } from "./messages";
 import { useI18n } from "./I18nContext";
 
@@ -7,7 +8,7 @@ export function LangToggle() {
   return (
     <div className="lang" role="group" aria-label={t("lang.aria")}>
       <span className="lang__globe" aria-hidden>
-        🌐
+        <Globe size={14} />
       </span>
       {LANGS.map((l) => (
         <button

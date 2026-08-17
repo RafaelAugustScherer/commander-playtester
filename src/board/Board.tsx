@@ -1,5 +1,21 @@
 import { useState } from "react";
 import type { MouseEvent as ReactMouseEvent } from "react";
+import {
+  Biohazard,
+  Circle,
+  Cog,
+  Hand,
+  Layers,
+  PawPrint,
+  Skull,
+  Sparkles,
+  Square,
+  Swords,
+  Trees,
+  Wand2,
+  Zap,
+  type LucideIcon,
+} from "lucide-react";
 import type { GameObject } from "../engine/types";
 import type { BoardView, SeatView } from "./boardView";
 import { useI18n } from "../i18n/I18nContext";
@@ -151,13 +167,13 @@ function manaProps(
   return { manaSource: true, onTapSource: () => mana.onTapSource(o.id) };
 }
 
-const MANA_PIP: Record<string, string> = {
-  White: "⚪",
-  Blue: "🔵",
-  Black: "⚫",
-  Red: "🔴",
-  Green: "🟢",
-  Colorless: "◇",
+const MANA_COLOR: Record<string, string> = {
+  White: "#efe9c8",
+  Blue: "#4a90e2",
+  Black: "#6b7280",
+  Red: "#ef4444",
+  Green: "#38a169",
+  Colorless: "#9aa2b1",
 };
 
 const PERMANENT_TYPES = [
@@ -168,14 +184,14 @@ const PERMANENT_TYPES = [
   "Planeswalker",
   "Battle",
 ];
-const SLOT_ICON: Record<string, string> = {
-  Land: "🌄",
-  Creature: "🐾",
-  Artifact: "⚙️",
-  Enchantment: "✨",
-  Planeswalker: "🔮",
-  Battle: "⚔️",
-  Spell: "🎇",
+const SLOT_ICON: Record<string, LucideIcon> = {
+  Land: Trees,
+  Creature: PawPrint,
+  Artifact: Cog,
+  Enchantment: Sparkles,
+  Planeswalker: Wand2,
+  Battle: Swords,
+  Spell: Zap,
 };
 
 function coreTypes(o: GameObject): string[] {
@@ -350,24 +366,40 @@ function Seat({
         <div className="seat__life-wrap">
           {seat.manaPool.length > 0 && (
             <span className="seat__mana" title="Mana disponível">
-              {seat.manaPool.map((pip) => (
-                <span key={pip.color} className="seat__mana-pip">
-                  {(MANA_PIP[pip.color] ?? "◇").repeat(pip.count)}
-                </span>
-              ))}
+              {seat.manaPool.map((pip) => {
+                const color = MANA_COLOR[pip.color] ?? MANA_COLOR.Colorless;
+                return Array.from({ length: pip.count }, (_, i) => (
+                  <Circle
+                    key={`${pip.color}-${i}`}
+                    size={11}
+                    color={color}
+                    fill={color}
+                  />
+                ));
+              })}
             </span>
           )}
           <span className="seat__life">
-            {seat.isEliminated ? "💀" : seat.life}
+            {seat.isEliminated ? <Skull size={22} /> : seat.life}
           </span>
         </div>
       </div>
 
       <div className="seat__zones">
-        <span>🂠 {seat.handCount}</span>
-        <span>📚 {seat.librarySize}</span>
-        <span>⚰️ {seat.graveyardSize}</span>
-        {seat.poison > 0 && <span>☠️ {seat.poison}</span>}
+        <span>
+          <Hand size={13} /> {seat.handCount}
+        </span>
+        <span>
+          <Layers size={13} /> {seat.librarySize}
+        </span>
+        <span>
+          <Skull size={13} /> {seat.graveyardSize}
+        </span>
+        {seat.poison > 0 && (
+          <span>
+            <Biohazard size={13} /> {seat.poison}
+          </span>
+        )}
       </div>
 
       <div className="seat__field">
@@ -409,6 +441,7 @@ function DropLane({ card, play }: { card: GameObject; play: PlayInteraction }) {
     <div className="droplane">
       {slotsFor(card).map((cat) => {
         const ok = slotAccepts(cat, card);
+        const SlotIcon = SLOT_ICON[cat] ?? Square;
         return (
           <div
             key={cat}
@@ -424,7 +457,7 @@ function DropLane({ card, play }: { card: GameObject; play: PlayInteraction }) {
             }}
           >
             <span className="slot__icon" aria-hidden>
-              {SLOT_ICON[cat] ?? "▢"}
+              <SlotIcon size={22} />
             </span>
             <span className="slot__label">{categoryLabel(lang, cat)}</span>
           </div>
