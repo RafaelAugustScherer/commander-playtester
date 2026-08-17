@@ -30,9 +30,27 @@ async function ensureStarted(): Promise<void> {
   started = true;
 }
 
+// The card database ships gzipped (~16 MiB) to stay under GitHub Pages'
+// per-file limit and keep the download small. Fetch and inflate it here.
+// If a host transparently decodes the gzip (Content-Encoding), the bytes are
+// already plain JSON — detected via the gzip magic — so we use them directly.
+async function fetchCardData(): Promise<string> {
+  const res = await fetch(`${BASE}engine/card-data.json.gz`);
+  if (!res.ok) {
+    throw new Error(`card-data fetch failed: HTTP ${res.status}`);
+  }
+  const bytes = new Uint8Array(await res.arrayBuffer());
+  const isGzip = bytes.length > 2 && bytes[0] === 0x1f && bytes[1] === 0x8b;
+  if (!isGzip) return new TextDecoder().decode(bytes);
+  const stream = new Response(bytes).body!.pipeThrough(
+    new DecompressionStream("gzip"),
+  );
+  return await new Response(stream).text();
+}
+
 async function ensureDb(): Promise<void> {
   if (dbLoaded) return;
-  const text = await (await fetch(`${BASE}engine/card-data.json`)).text();
+  const text = await fetchCardData();
   load_card_database(text);
   const reg = getFormatRegistry();
   const list = Array.isArray(reg) ? reg : [];

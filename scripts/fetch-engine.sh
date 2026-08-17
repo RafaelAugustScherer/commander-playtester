@@ -3,6 +3,10 @@
 # commit: the compiled WASM (~28 MiB) and the card database (~95 MiB). These
 # land in public/engine/ where the app loads them at runtime.
 #
+# The card database is stored gzipped (card-data.json.gz, ~16 MiB): the raw
+# JSON exceeds GitHub Pages' ~100 MB per-file limit and is slow to download,
+# so the engine worker decompresses it at runtime via DecompressionStream.
+#
 # Pinned to the phase-rs v0.55.0 web build. The wasm-bindgen glue
 # (src/engine/vendor/engine_wasm.js) is committed and must match this WASM.
 #
@@ -34,5 +38,10 @@ if [ "$size" -lt 10000000 ]; then
   echo "ERROR: card-data.json looks too small ($size bytes); download failed." >&2
   exit 1
 fi
+
+# Compress for the web and drop the raw copy (see header): produces
+# card-data.json.gz and removes card-data.json.
+echo "Compressing → $DEST/card-data.json.gz"
+gzip -9 -f "$DEST/card-data.json"
 
 echo "Done. Engine assets ready in public/engine/."

@@ -49,11 +49,13 @@ npm run lint      # lint
 
 ### Engine assets
 
-The compiled WASM (`engine_wasm_bg.wasm`, ~28 MiB) and card database
-(`card-data.json`, ~95 MiB) are too large to commit, so they are git-ignored and
+The compiled WASM (`engine_wasm_bg.wasm`, ~28 MiB) and card database (fetched as
+`card-data.json`, ~95 MiB) are too large to commit, so they are git-ignored and
 fetched by `scripts/fetch-engine.sh` (run via `npm run fetch-engine`) into
-`public/engine/`. The wasm-bindgen glue that pairs with them
-(`src/engine/vendor/engine_wasm.js`) **is** committed.
+`public/engine/`. The card database is stored gzipped as `card-data.json.gz`
+(~16 MiB) — the raw JSON exceeds GitHub Pages' per-file limit, so the engine
+worker decompresses it at runtime via `DecompressionStream`. The wasm-bindgen
+glue that pairs with them (`src/engine/vendor/engine_wasm.js`) **is** committed.
 
 The fetch script pins the phase-rs **v0.55.0** web build. Those CDN URLs are
 content-hashed and may eventually 404 as phase-rs ships new builds; if that
