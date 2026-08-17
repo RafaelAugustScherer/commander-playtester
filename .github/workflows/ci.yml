@@ -17,5 +17,7 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run typecheck
+      - name: Duplication (jscpd)
+        run: npm run duplication
       - run: npm test
       - run: npm run build
