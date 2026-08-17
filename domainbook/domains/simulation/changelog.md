@@ -7,3 +7,10 @@ release was pulled, holding Added, Changed, Deprecated, Removed, Fixed or
 Security as H3s, each of them a bullet list.
 
 ## [Unreleased]
+
+### Changed
+
+- The `engine adapter` now loads the card database gzipped
+  (`card-data.json.gz`) and inflates it at runtime via `DecompressionStream`,
+  cutting the download from ~100 MB to ~16 MB and keeping the asset under
+  GitHub Pages' per-file limit.

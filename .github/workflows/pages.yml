@@ -26,6 +26,12 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
+      # Fetch the vendored phase-rs engine assets (WASM + card database) into
+      # public/engine/ so they get bundled into dist/. They are git-ignored and
+      # not present in a fresh checkout, so without this the deployed site 404s
+      # on engine_wasm_bg.wasm and the browser reports
+      # "Failed to execute 'compile' on 'WebAssembly': HTTP status code is not ok".
+      - run: npm run fetch-engine
       - run: npm run build
       # Reads the Pages config. Pages must already be enabled with
       # "GitHub Actions" as the source (Settings → Pages) — enabling it via
