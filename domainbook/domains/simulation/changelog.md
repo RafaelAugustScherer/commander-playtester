@@ -26,3 +26,11 @@ Security as H3s, each of them a bullet list.
   (`card-data.json.gz`) and inflates it at runtime via `DecompressionStream`,
   cutting the download from ~100 MB to ~16 MB and keeping the asset under
   GitHub Pages' per-file limit.
+
+### Fixed
+
+- The `engine adapter` worker no longer 404s the WASM and card database under
+  a subpath deploy (e.g. GitHub Pages project sites). A relative `BASE_URL`
+  (`./`) resolved against the worker's own `/assets/` location instead of the
+  app root; the main thread now resolves it against the page URL and passes the
+  absolute base to the worker on `ready`.
