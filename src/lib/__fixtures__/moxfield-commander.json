@@ -1,0 +1,25 @@
+{
+  "name": "Atraxa Superfriends",
+  "format": "commander",
+  "boards": {
+    "mainboard": {
+      "count": 2,
+      "cards": {
+        "aa1": { "quantity": 1, "card": { "name": "Sol Ring" } },
+        "aa2": { "quantity": 1, "card": { "name": "Arcane Signet" } }
+      }
+    },
+    "commanders": {
+      "count": 1,
+      "cards": {
+        "cc1": { "quantity": 1, "card": { "name": "Atraxa, Praetors' Voice" } }
+      }
+    },
+    "maybeboard": {
+      "count": 1,
+      "cards": {
+        "mm1": { "quantity": 1, "card": { "name": "Rhystic Study" } }
+      }
+    }
+  }
+}

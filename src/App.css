@@ -46,6 +46,19 @@
   flex-wrap: wrap;
 }
 
+.import-url {
+  display: flex;
+  gap: 0.5rem;
+  align-items: stretch;
+}
+.import-url .input {
+  flex: 1 1 auto;
+}
+.import-url .btn {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
 .btn {
   background: var(--accent);
   color: #0b1020;

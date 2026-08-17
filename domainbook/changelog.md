@@ -8,6 +8,12 @@ Security as H3s, each of them a bullet list.
 
 ## [Unreleased]
 
+### Added
+
+- Import a deck from its Moxfield or Archidekt URL: paste the link and its
+  commander and cards fill the editor, ready to review and save
+  (`import-from-a-url`, `deck-library/ADR-0001`).
+
 ## [0.1.3] - 2026-08-16
 
 ### Added

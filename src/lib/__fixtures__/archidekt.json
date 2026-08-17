@@ -1,0 +1,82 @@
+{
+  "name": "Fun With Fungus",
+  "categories": [
+    {
+      "name": "Commander",
+      "includedInDeck": true
+    },
+    {
+      "name": "Maybeboard",
+      "includedInDeck": false
+    }
+  ],
+  "cards": [
+    {
+      "quantity": 1,
+      "categories": [
+        "Commander"
+      ],
+      "card": {
+        "oracleCard": {
+          "name": "Thelon of Havenwood"
+        }
+      }
+    },
+    {
+      "quantity": 1,
+      "categories": null,
+      "card": {
+        "oracleCard": {
+          "name": "Mana Crypt"
+        }
+      }
+    },
+    {
+      "quantity": 1,
+      "categories": null,
+      "card": {
+        "oracleCard": {
+          "name": "Spread the Sickness"
+        }
+      }
+    },
+    {
+      "quantity": 1,
+      "categories": null,
+      "card": {
+        "oracleCard": {
+          "name": "Plaguemaw Beast"
+        }
+      }
+    },
+    {
+      "quantity": 1,
+      "categories": null,
+      "card": {
+        "oracleCard": {
+          "name": "Contagion Engine"
+        }
+      }
+    },
+    {
+      "quantity": 1,
+      "categories": null,
+      "card": {
+        "oracleCard": {
+          "name": "Contagion Clasp"
+        }
+      }
+    },
+    {
+      "quantity": 1,
+      "categories": [
+        "Maybeboard"
+      ],
+      "card": {
+        "oracleCard": {
+          "name": "Llanowar Elves"
+        }
+      }
+    }
+  ]
+}

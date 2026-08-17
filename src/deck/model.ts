@@ -38,7 +38,7 @@ export function isHundredCards(deck: SavedDeck): boolean {
 }
 
 /** Serialize a deck back into paste-able decklist text (round-trips the parser). */
-export function deckToText(deck: SavedDeck): string {
+export function deckToText(deck: Pick<SavedDeck, "commanders" | "mainboard">): string {
   const line = (e: DecklistEntry) => `${e.quantity} ${e.name}`;
   const parts: string[] = [];
   if (deck.commanders.length > 0) {

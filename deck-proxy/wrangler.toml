@@ -1,0 +1,8 @@
+name = "commander-playtester-deck-proxy"
+main = "worker.js"
+compatibility_date = "2026-08-01"
+
+# Moxfield only answers requests with a User-Agent they've approved. Request one
+# at support@moxfield.com, then set it as a secret:
+#   wrangler secret put MOXFIELD_USER_AGENT
+# Archidekt needs no special header.
