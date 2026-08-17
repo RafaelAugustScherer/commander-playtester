@@ -77,6 +77,11 @@ async function handle(cmd: string, args: any): Promise<any> {
         state: wantState ? get_game_state() : null,
       };
     }
+    case "aiProposal": {
+      const { difficulty, player } = args;
+      const proposal = get_ai_action_proposal(difficulty, player ?? 0);
+      return { action: proposal?.action ?? null };
+    }
     case "legalActions": {
       return get_legal_actions_js();
     }

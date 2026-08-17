@@ -91,6 +91,14 @@ export class EngineClient {
     return this.req("humanAction", { actor, action });
   }
 
+  /** The action the AI would take for `player` right now, without applying it. */
+  aiProposal(
+    difficulty: AiDifficulty,
+    player: number,
+  ): Promise<{ action: any }> {
+    return this.req("aiProposal", { difficulty, player });
+  }
+
   terminate(): void {
     this.worker.terminate();
     this.pending.clear();
