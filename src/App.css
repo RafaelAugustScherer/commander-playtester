@@ -465,6 +465,8 @@ th {
   text-overflow: ellipsis;
 }
 .seat__life {
+  display: inline-flex;
+  align-items: center;
   font-size: 1.6rem;
   font-weight: 800;
   line-height: 1;
@@ -472,10 +474,16 @@ th {
 }
 .seat__zones {
   display: flex;
+  align-items: center;
   gap: 0.6rem;
   font-size: 0.75rem;
   color: var(--muted);
   margin: 0.35rem 0;
+}
+.seat__zones span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
 }
 .seat__cmd {
   display: flex;
@@ -581,7 +589,9 @@ th {
   padding: 0.2rem 0.35rem;
 }
 .lang__globe {
-  font-size: 0.85rem;
+  display: inline-flex;
+  align-items: center;
+  color: var(--muted);
   margin: 0 0.15rem;
 }
 .lang__btn {
@@ -721,10 +731,10 @@ th {
 }
 .seat__mana {
   display: inline-flex;
-  gap: 0.05rem;
+  align-items: center;
+  gap: 0.1rem;
   font-size: 0.8rem;
   line-height: 1;
-  letter-spacing: -0.05em;
 }
 
 /* ── Drag-to-play drop slots ───────────────────────────────────── */
@@ -755,7 +765,9 @@ th {
   color: var(--muted);
 }
 .slot__icon {
-  font-size: 1.3rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   line-height: 1;
 }
 .slot__label {
@@ -844,26 +856,38 @@ th {
 }
 
 /* ── Stack & game-log sidebar ──────────────────────────────────── */
+:root {
+  --sidebar-w: 340px;
+}
 .run-layout {
-  display: flex;
-  gap: 1.25rem;
-  align-items: flex-start;
+  position: relative;
 }
 .run-main {
-  flex: 1 1 auto;
   min-width: 0;
 }
+/* Drawer glued to the right edge; slides in and out. */
 .game-sidebar {
-  flex: 0 0 330px;
-  position: sticky;
-  top: 1rem;
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: var(--sidebar-w);
+  z-index: 60;
   display: flex;
   flex-direction: column;
-  max-height: calc(100vh - 2rem);
   background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  overflow: hidden;
+  border-left: 1px solid var(--border);
+  transform: translateX(100%);
+  transition: transform 0.25s ease;
+}
+.game-sidebar--open {
+  transform: translateX(0);
+}
+/* Reserve room on desktop so the board isn't hidden behind the open drawer. */
+@media (min-width: 900px) {
+  .app:has(.game-sidebar--open) {
+    padding-right: calc(1.25rem + var(--sidebar-w));
+  }
 }
 .game-sidebar__head {
   display: flex;
@@ -872,8 +896,41 @@ th {
   padding: 0.75rem 1rem;
   border-bottom: 1px solid var(--border);
 }
-.sidebar-backdrop {
-  display: none;
+.game-sidebar__toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 6px;
+}
+.game-sidebar__toggle:hover {
+  color: var(--text);
+  background: var(--panel-2);
+}
+/* Reopen handle that peeks in from the right edge when the drawer is closed. */
+.sidebar-tab {
+  position: fixed;
+  top: 96px;
+  right: 0;
+  z-index: 55;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-right: none;
+  border-radius: 8px 0 0 8px;
+  padding: 0.5rem 0.35rem;
+  color: var(--text);
+  cursor: pointer;
+  box-shadow: -2px 0 8px rgba(0, 0, 0, 0.15);
+}
+.sidebar-tab:hover {
+  color: var(--accent);
 }
 .sidebar-section {
   padding: 0.75rem 1rem;
@@ -929,6 +986,10 @@ th {
   gap: 0.4rem;
   max-height: 220px;
   overflow-y: auto;
+  scrollbar-width: none;
+}
+.stack-list::-webkit-scrollbar {
+  display: none;
 }
 .stack-card {
   display: flex;
@@ -974,6 +1035,10 @@ th {
   overflow-y: auto;
   padding-right: 0.25rem;
   padding-bottom: 0.75rem;
+  scrollbar-width: none;
+}
+.log-scroll::-webkit-scrollbar {
+  display: none;
 }
 .log-turn {
   position: sticky;
@@ -1005,7 +1070,7 @@ th {
 }
 .log-row__head {
   display: flex;
-  align-items: baseline;
+  align-items: flex-start;
   gap: 0.35rem;
   width: 100%;
   background: transparent;
@@ -1021,12 +1086,18 @@ th {
   opacity: 1;
 }
 .log-row__chevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: 0.8rem;
+  height: 1.15rem;
   flex-shrink: 0;
   color: var(--muted);
-  font-size: 0.7rem;
 }
 .log-row__icon {
+  display: inline-flex;
+  align-items: center;
+  height: 1.15rem;
   flex-shrink: 0;
   color: var(--muted);
 }
@@ -1088,21 +1159,9 @@ th {
 }
 
 @media (max-width: 899px) {
-  .sidebar-backdrop {
-    display: block;
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.5);
-    z-index: 59;
-  }
   .game-sidebar {
-    position: fixed;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    width: min(90vw, 360px);
-    max-height: 100vh;
-    border-radius: 0;
-    z-index: 60;
+    left: 0;
+    width: auto;
+    border-left: none;
   }
 }

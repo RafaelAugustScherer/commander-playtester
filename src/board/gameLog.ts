@@ -1,27 +1,13 @@
 import type { LogEntry, LogSegment } from "../engine/types";
 
-export const CATEGORY_ICON: Record<string, string> = {
-  Turn: "⏱",
-  Zone: "↪",
-  Combat: "⚔",
-  Mana: "◈",
-  Life: "♥",
-  Stack: "≡",
-  Trigger: "✦",
-  Destroy: "☠",
-  Token: "◉",
-  Special: "★",
-  State: "·",
-};
-
-export function categoryIcon(category: string): string {
-  return CATEGORY_ICON[category] ?? "·";
-}
-
-/** Curated view drops phase/step markers and the priority-pass firehose. */
 export function isCurated(entry: LogEntry): boolean {
-  if (entry.presentation.importance === "Context") return false;
-  if (entry.category === "Turn" && entry.presentation.importance === "Detail") {
+  const { importance, visibility } = entry.presentation;
+  if (importance === "Context") return false;
+  if (entry.category === "Turn" && importance === "Detail") return false;
+  if (entry.category === "State") return false;
+  if (entry.category === "Mana") return false;
+  if (entry.category === "Special" && importance === "Detail") return false;
+  if (entry.category === "Zone" && visibility === "HiddenInformation") {
     return false;
   }
   return true;

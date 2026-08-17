@@ -41,17 +41,24 @@ Example: Turns and phases group the history
 Example: Curated by default
   Given the default log view
   Then routine priority passes and phase markers are hidden
+  And tapping and untapping, mana added and spent, and card draws are hidden
   When I turn on the detailed view
   Then every engine line is shown
 ```
 
-## Rule: The sidebar starts open on desktop and collapsed on mobile
+## Rule: The sidebar is a drawer glued to the right edge
 
 ```gherkin
-Example: Small screens keep the board visible
-  Given a narrow, mobile-width screen
-  Then the sidebar starts collapsed and opens as an overlay
-  And on a desktop screen it starts docked open
+Example: Sliding the drawer open and closed
+  Given the sidebar
+  Then it is glued to the right edge and slides in and out from an arrow tab
+  And on desktop it reserves board space while open
+  And on a narrow, mobile-width screen it covers the full screen while open
+
+Example: Its state is remembered
+  Given a desktop screen
+  Then the drawer starts open
+  And on a mobile-width screen it starts collapsed
   And the choice is remembered
 ```
 

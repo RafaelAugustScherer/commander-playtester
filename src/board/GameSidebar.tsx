@@ -1,8 +1,24 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  ArrowRightLeft,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  Copy,
+  Flag,
+  Gem,
+  Heart,
+  Layers,
+  RotateCw,
+  Skull,
+  Star,
+  Swords,
+  Zap,
+  type LucideIcon,
+} from "lucide-react";
 import type { GameObject, LogEntry, LogSegment } from "../engine/types";
 import { useI18n } from "../i18n/I18nContext";
 import {
-  categoryIcon,
   entryCards,
   entryText,
   isCurated,
@@ -25,6 +41,20 @@ interface GameSidebarProps {
   open: boolean;
   onToggle: () => void;
 }
+
+const CATEGORY_ICON: Record<string, LucideIcon> = {
+  Turn: Flag,
+  Zone: ArrowRightLeft,
+  Combat: Swords,
+  Mana: Gem,
+  Life: Heart,
+  Stack: Layers,
+  Trigger: Zap,
+  Destroy: Skull,
+  Token: Copy,
+  Special: Star,
+  State: RotateCw,
+};
 
 const MANA_ABBR: Record<string, string> = {
   White: "W",
@@ -65,8 +95,6 @@ export function GameSidebar({
     if (el && atBottom.current) el.scrollTop = el.scrollHeight;
   }, [visible.length, open]);
 
-  if (!open) return null;
-
   const stackTopFirst = [...stack].reverse();
 
   function toggle(id: number) {
@@ -80,16 +108,28 @@ export function GameSidebar({
 
   return (
     <>
-      <div className="sidebar-backdrop" onClick={onToggle} />
-      <aside className="game-sidebar" aria-label={t("sidebar.title")}>
+      {!open && (
+        <button
+          className="sidebar-tab"
+          onClick={onToggle}
+          aria-label={t("sidebar.show")}
+        >
+          <ChevronLeft size={20} />
+        </button>
+      )}
+      <aside
+        className={`game-sidebar ${open ? "game-sidebar--open" : ""}`}
+        aria-label={t("sidebar.title")}
+        aria-hidden={!open}
+      >
         <div className="game-sidebar__head">
           <strong>{t("sidebar.title")}</strong>
           <button
-            className="chip chip--btn"
+            className="game-sidebar__toggle"
             onClick={onToggle}
             aria-label={t("sidebar.hide")}
           >
-            ✕
+            <ChevronRight size={18} />
           </button>
         </div>
 
@@ -108,19 +148,21 @@ export function GameSidebar({
                 const name = o.name ?? "";
                 const img = name ? images?.[name.toLowerCase()] : undefined;
                 return (
-                <li key={o.id} className="stack-card">
-                  {img ? (
-                    <img className="stack-card__img" src={img} alt={name} />
-                  ) : (
-                    <div className="stack-card__img stack-card__img--none" />
-                  )}
-                  <div className="stack-card__meta">
-                    <span className="stack-card__name">{name}</span>
-                    {i === 0 && stackTopFirst.length > 1 && (
-                      <span className="stack-card__tag">{t("sidebar.stackTop")}</span>
+                  <li key={o.id} className="stack-card">
+                    {img ? (
+                      <img className="stack-card__img" src={img} alt={name} />
+                    ) : (
+                      <div className="stack-card__img stack-card__img--none" />
                     )}
-                  </div>
-                </li>
+                    <div className="stack-card__meta">
+                      <span className="stack-card__name">{name}</span>
+                      {i === 0 && stackTopFirst.length > 1 && (
+                        <span className="stack-card__tag">
+                          {t("sidebar.stackTop")}
+                        </span>
+                      )}
+                    </div>
+                  </li>
                 );
               })}
             </ul>
@@ -191,6 +233,7 @@ function LogRow({
   const cards = entryCards(entry);
   const hasCard = cards.length > 0;
   const tone = entry.presentation.tone.toLowerCase();
+  const Icon = CATEGORY_ICON[entry.category] ?? Star;
   return (
     <div className={`log-row log-row--${tone}`}>
       <button
@@ -201,10 +244,11 @@ function LogRow({
         title={entryText(entry)}
       >
         <span className="log-row__chevron">
-          {hasCard ? (expanded ? "▾" : "▸") : ""}
+          {hasCard &&
+            (expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />)}
         </span>
         <span className="log-row__icon" aria-hidden>
-          {categoryIcon(entry.category)}
+          <Icon size={13} />
         </span>
         <span className="log-row__msg">
           {entry.segments.map((s, i) => (
