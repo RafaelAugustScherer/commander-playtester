@@ -10,6 +10,7 @@ code:
   - src/deck/**
   - src/lib/decklist.ts
   - src/lib/scryfall.ts
+  - src/lib/deckImport.ts
 ---
 
 ## Purpose
@@ -53,6 +54,11 @@ actually play, so `match setup` always has legal, playable decks to choose from.
   implemented — is asked of phase-rs. A card can be Commander-legal yet unplayable.
 - The existing `src/lib/decklist.ts` parser and `src/lib/scryfall.ts` resolver are
   reused rather than rewritten.
+- A deck may also be brought in by its Moxfield or Archidekt URL, which is fetched
+  and turned into the same pasted-decklist text the author would otherwise type.
+  This does not walk back `ADR-0004`: the user still supplies one deck they chose,
+  and no field of decks is curated or browsed. The deck sites block cross-origin
+  browser calls, so the fetch goes through a proxy (`deck-proxy/`).
 
 ## Assumptions
 

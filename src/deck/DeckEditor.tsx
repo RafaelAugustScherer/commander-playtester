@@ -1,6 +1,11 @@
 import { useMemo, useState } from "react";
 import { parseDecklist } from "../lib/decklist";
 import { SAMPLE_DECK } from "../lib/sampleDeck";
+import {
+  importDeck,
+  DeckImportError,
+  type ImportErrorKind,
+} from "../lib/deckImport";
 import type { SavedDeck } from "./model";
 import { deckToText } from "./model";
 import { useI18n } from "../i18n/I18nContext";
@@ -8,6 +13,15 @@ import { useI18n } from "../i18n/I18nContext";
 function newId(): string {
   return crypto.randomUUID();
 }
+
+const IMPORT_ERROR_KEY = {
+  "not-a-url": "import.errNotAUrl",
+  unsupported: "import.errUnsupported",
+  "no-id": "import.errNoId",
+  network: "import.errNetwork",
+  "not-found": "import.errNotFound",
+  empty: "import.errEmpty",
+} as const satisfies Record<ImportErrorKind, string>;
 
 /** Create or edit a named deck from pasted decklist text. */
 export function DeckEditor({
@@ -22,6 +36,27 @@ export function DeckEditor({
   const { t } = useI18n();
   const [name, setName] = useState(initial?.name ?? "");
   const [text, setText] = useState(initial ? deckToText(initial) : "");
+  const [url, setUrl] = useState("");
+  const [importing, setImporting] = useState(false);
+  const [importError, setImportError] = useState<string | null>(null);
+  const [importDone, setImportDone] = useState<string | null>(null);
+
+  async function handleImport() {
+    setImporting(true);
+    setImportError(null);
+    setImportDone(null);
+    try {
+      const deck = await importDeck(url);
+      setText(deckToText(deck));
+      setName((prev) => prev.trim() || deck.name);
+      setImportDone(t("import.done", { name: deck.name }));
+    } catch (err) {
+      const kind = err instanceof DeckImportError ? err.kind : "network";
+      setImportError(t(IMPORT_ERROR_KEY[kind]));
+    } finally {
+      setImporting(false);
+    }
+  }
 
   const parsed = useMemo(() => parseDecklist(text), [text]);
   const commanderCount = parsed.commanders.reduce((n, e) => n + e.quantity, 0);
@@ -44,6 +79,41 @@ export function DeckEditor({
   return (
     <section className="panel">
       <h2>{initial ? t("editor.editTitle") : t("editor.newTitle")}</h2>
+
+      <label className="field">
+        <span className="field__label">{t("import.label")}</span>
+        <div className="import-url">
+          <input
+            className="input"
+            type="url"
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            placeholder={t("import.placeholder")}
+            spellCheck={false}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && url.trim() && !importing) {
+                e.preventDefault();
+                void handleImport();
+              }
+            }}
+          />
+          <button
+            type="button"
+            className="btn"
+            onClick={() => void handleImport()}
+            disabled={importing || url.trim() === ""}
+          >
+            {importing ? t("import.importing") : t("import.button")}
+          </button>
+        </div>
+        <p className="hint">{t("import.hint")}</p>
+        {importError && <p className="error">{importError}</p>}
+        {importDone && !importError && (
+          <p className="hint" style={{ color: "var(--good)" }}>
+            {importDone}
+          </p>
+        )}
+      </label>
 
       <label className="field">
         <span className="field__label">{t("editor.nameLabel")}</span>

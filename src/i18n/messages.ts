@@ -52,6 +52,46 @@ export const messages = {
   "editor.cancel": { pt: "Cancelar", en: "Cancel" },
   "editor.loadSample": { pt: "Carregar exemplo", en: "Load example" },
 
+  "import.label": { pt: "Importar de uma URL", en: "Import from a URL" },
+  "import.placeholder": {
+    pt: "Cole uma URL de deck do Moxfield ou Archidekt",
+    en: "Paste a Moxfield or Archidekt deck URL",
+  },
+  "import.button": { pt: "Importar", en: "Import" },
+  "import.importing": { pt: "Importando…", en: "Importing…" },
+  "import.hint": {
+    pt: "Decks públicos ou não listados do Moxfield e Archidekt.",
+    en: "Public or unlisted decks from Moxfield and Archidekt.",
+  },
+  "import.done": {
+    pt: 'Importado "{name}" — revise e salve.',
+    en: 'Imported "{name}" — review and save.',
+  },
+  "import.errNotAUrl": {
+    pt: "Isso não é uma URL do Moxfield, Archidekt ou Ligamagic.",
+    en: "That's not a Moxfield, Archidekt, or Ligamagic URL.",
+  },
+  "import.errUnsupported": {
+    pt: "Decks do Ligamagic não podem ser importados automaticamente — abra o deck, exporte a lista e cole acima.",
+    en: "Ligamagic decks can't be imported automatically — open the deck, export the list, and paste it above.",
+  },
+  "import.errNoId": {
+    pt: "Não encontrei o id do deck nessa URL.",
+    en: "Couldn't find a deck id in that URL.",
+  },
+  "import.errNetwork": {
+    pt: "Não consegui acessar o deck. O proxy de importação pode estar fora do ar (veja deck-proxy/README).",
+    en: "Couldn't reach the deck. The import proxy may be down (see deck-proxy/README).",
+  },
+  "import.errNotFound": {
+    pt: "Deck não encontrado. Verifique se é público ou não listado.",
+    en: "Deck not found. Make sure it's public or unlisted.",
+  },
+  "import.errEmpty": {
+    pt: "Nenhuma carta encontrada nesse deck.",
+    en: "No cards found in that deck.",
+  },
+
   "detail.resolving": { pt: "Resolvendo cartas no Scryfall…", en: "Resolving cards on Scryfall…" },
   "detail.noneResolved": { pt: "Nenhuma carta resolvida. Confira a lista.", en: "No cards resolved. Check the list." },
   "detail.simulating": { pt: "Simulando aberturas…", en: "Simulating opening hands…" },

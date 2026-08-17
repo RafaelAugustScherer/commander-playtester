@@ -1,0 +1,24 @@
+{
+  "name": "CloudFlare Hammer",
+  "format": "modern",
+  "boards": {
+    "mainboard": {
+      "count": 60,
+      "cards": {
+        "EbPg6": { "quantity": 3, "card": { "name": "Plains" } },
+        "LzdO8": { "quantity": 1, "card": { "name": "Shadowspear" } },
+        "k9z24": { "quantity": 4, "card": { "name": "Colossus Hammer" } },
+        "EbJJ0": { "quantity": 4, "card": { "name": "Sigarda's Aid" } },
+        "YxQ6G": { "quantity": 4, "card": { "name": "Stoneforge Mystic" } }
+      }
+    },
+    "commanders": { "count": 0, "cards": {} },
+    "sideboard": {
+      "count": 4,
+      "cards": {
+        "YelzP": { "quantity": 1, "card": { "name": "Grafdigger's Cage" } },
+        "Y845w": { "quantity": 3, "card": { "name": "Spell Pierce" } }
+      }
+    }
+  }
+}
