@@ -57,9 +57,19 @@ fetched by `scripts/fetch-engine.sh` (run via `npm run fetch-engine`) into
 worker decompresses it at runtime via `DecompressionStream`. The wasm-bindgen
 glue that pairs with them (`src/engine/vendor/engine_wasm.js`) **is** committed.
 
-The fetch script pins the phase-rs **v0.55.0** web build. Those CDN URLs are
-content-hashed and may eventually 404 as phase-rs ships new builds; if that
-happens, rebuild the matching assets from source at the pinned tag. See
+The pinned version, download URLs, and expected SHA-256 digests all live in one
+place — [`src/engine/vendor/engine-manifest.json`](src/engine/vendor/engine-manifest.json)
+(currently phase-rs **v0.55.0**). `fetch-engine.sh` reads it and verifies each
+asset's digest, so the glue + WASM + card-data always stay a matched set. The CDN
+URLs are content-hashed and may eventually 404 as phase-rs ships new builds; the
+manifest supports a durable `mirror.base` fallback (`scripts/mirror-engine.sh`),
+and `scripts/build-engine-from-source.sh` rebuilds from the pinned tag as a last
+resort.
+
+**Upgrading the engine:** follow [`docs/engine-upgrade.md`](docs/engine-upgrade.md),
+or run the `phase-rs-upgrade` agent, which performs the runbook end-to-end
+(including wiring up any new player interactions). `npm run engine-smoke` boots the
+real WASM and runs a full match to `GameOver` as the post-upgrade gate. See also
 [`domainbook/decisions/`](domainbook/decisions) and
 [`domainbook/debt/`](domainbook/debt).
 
