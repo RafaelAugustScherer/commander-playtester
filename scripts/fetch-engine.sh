@@ -3,45 +3,95 @@
 # commit: the compiled WASM (~28 MiB) and the card database (~95 MiB). These
 # land in public/engine/ where the app loads them at runtime.
 #
+# The pinned version, download URLs, and expected SHA-256 digests all live in
+# ONE place — src/engine/vendor/engine-manifest.json. This script reads that
+# manifest, downloads each asset, and verifies its digest before use, so the
+# glue + WASM + card-data always stay a matched set. To bump the engine, edit
+# the manifest (see docs/engine-upgrade.md), not this script.
+#
 # The card database is stored gzipped (card-data.json.gz, ~16 MiB): the raw
 # JSON exceeds GitHub Pages' ~100 MB per-file limit and is slow to download,
 # so the engine worker decompresses it at runtime via DecompressionStream.
 #
-# Pinned to the phase-rs v0.55.0 web build. The wasm-bindgen glue
-# (src/engine/vendor/engine_wasm.js) is committed and must match this WASM.
-#
-# These are content-hashed URLs on phase-rs.dev's CDN. phase-rs ships daily, so
-# they may eventually 404 as old assets are pruned. If that happens, build the
-# matching WASM + card-data from source at the pinned git tag — see
-# domainbook/decisions/0006 and domainbook/debt/0001.
+# The phase-rs CDN URLs are content-hashed and pruned over time, so a pinned
+# URL can eventually 404. When that happens either (a) set a "mirror.base" in
+# the manifest and mirror the pinned set there (scripts/mirror-engine.sh), or
+# (b) rebuild from source at the pinned tag (scripts/build-engine-from-source.sh).
 set -euo pipefail
 
-DEST="$(cd "$(dirname "$0")/.." && pwd)/public/engine"
-WASM_URL="https://data.phase-rs.dev/wasm/engine_wasm_bg-c214e9ae9bddbd05.wasm"
-CARD_DATA_URL="https://data.phase-rs.dev/card-data-bf86286a0934abc9.json"
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+DEST="$ROOT/public/engine"
+MANIFEST="$ROOT/src/engine/vendor/engine-manifest.json"
+
+if [ ! -f "$MANIFEST" ]; then
+  echo "ERROR: manifest not found at $MANIFEST" >&2
+  exit 1
+fi
+
+# Read a dotted field out of the manifest via node (guaranteed available in CI).
+m() { node -e "process.stdout.write(String(require('$MANIFEST').$1 ?? ''))"; }
+
+VERSION="$(m version)"
+WASM_URL="$(m assets.wasm.url)"
+WASM_SHA="$(m assets.wasm.sha256)"
+WASM_DEST="$(m assets.wasm.dest)"
+CARD_URL="$(m assets.cardData.url)"
+CARD_SHA="$(m assets.cardData.sha256)"
+CARD_DEST="$(m assets.cardData.dest)"
+CARD_GZIP="$(m assets.cardData.gzip)"
+MIRROR_BASE="$(m mirror.base)"
 
 mkdir -p "$DEST"
+echo "phase-rs engine snapshot: $VERSION"
 
-echo "Fetching engine WASM → $DEST/engine_wasm_bg.wasm"
-curl -fSL "$WASM_URL" -o "$DEST/engine_wasm_bg.wasm"
+# Download $1 (primary URL) to $2, falling back to the manifest mirror base on
+# failure, then verify the SHA-256 in $3. Aborts on mismatch.
+fetch_verified() {
+  local url="$1" out="$2" want_sha="$3" name
+  name="$(basename "$url")"
 
-echo "Fetching card database (~95 MiB) → $DEST/card-data.json"
-curl -fSL "$CARD_DATA_URL" -o "$DEST/card-data.json"
+  if ! curl -fSL "$url" -o "$out" 2>/dev/null; then
+    if [ -n "$MIRROR_BASE" ]; then
+      echo "  primary URL failed; trying mirror: $MIRROR_BASE/$name" >&2
+      curl -fSL "$MIRROR_BASE/$name" -o "$out"
+    else
+      echo "ERROR: download failed for $url" >&2
+      echo "       The content-hashed URL may have been pruned. Set mirror.base in" >&2
+      echo "       the manifest, or rebuild from source (scripts/build-engine-from-source.sh)." >&2
+      return 1
+    fi
+  fi
 
-# Sanity check: WASM magic bytes and non-trivial card-data size.
-if ! head -c 4 "$DEST/engine_wasm_bg.wasm" | grep -q $'\x00asm'; then
-  echo "ERROR: downloaded WASM is not a valid module (URL may have expired)." >&2
+  local got_sha
+  got_sha="$(sha256sum "$out" | cut -d' ' -f1)"
+  if [ "$got_sha" != "$want_sha" ]; then
+    echo "ERROR: SHA-256 mismatch for $name" >&2
+    echo "       expected $want_sha" >&2
+    echo "       got      $got_sha" >&2
+    echo "       The manifest and the served asset disagree — do NOT use this file." >&2
+    rm -f "$out"
+    return 1
+  fi
+  echo "  verified $name (sha256 ok)"
+}
+
+echo "Fetching engine WASM → $DEST/$WASM_DEST"
+fetch_verified "$WASM_URL" "$DEST/$WASM_DEST" "$WASM_SHA"
+# Belt-and-suspenders: WASM magic bytes.
+if ! head -c 4 "$DEST/$WASM_DEST" | grep -q $'\x00asm'; then
+  echo "ERROR: $WASM_DEST is not a valid WASM module." >&2
   exit 1
 fi
-size=$(wc -c < "$DEST/card-data.json")
-if [ "$size" -lt 10000000 ]; then
-  echo "ERROR: card-data.json looks too small ($size bytes); download failed." >&2
-  exit 1
+
+echo "Fetching card database (~95 MiB) → verifying → $DEST/$CARD_DEST"
+RAW="$DEST/card-data.raw.json"
+fetch_verified "$CARD_URL" "$RAW" "$CARD_SHA"
+if [ "$CARD_GZIP" = "true" ]; then
+  echo "  compressing → $DEST/$CARD_DEST"
+  gzip -9 -c "$RAW" > "$DEST/$CARD_DEST"
+  rm -f "$RAW"
+else
+  mv "$RAW" "$DEST/$CARD_DEST"
 fi
 
-# Compress for the web and drop the raw copy (see header): produces
-# card-data.json.gz and removes card-data.json.
-echo "Compressing → $DEST/card-data.json.gz"
-gzip -9 -f "$DEST/card-data.json"
-
-echo "Done. Engine assets ready in public/engine/."
+echo "Done. Engine assets ($VERSION) ready in public/engine/."

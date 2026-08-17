@@ -1,0 +1,30 @@
+{
+  "$comment": "Single source of truth for the pinned phase-rs engine snapshot. The three vendored pieces below (glue + wasm + card-data) MUST stay a matched set — they are one coherent release. scripts/fetch-engine.sh reads this file, downloads the assets, and verifies each SHA-256 before use. To bump the engine, follow docs/engine-upgrade.md (or run the phase-rs-upgrade agent). The content hash in each CDN filename is the first 16 hex chars of that asset's sha256.",
+  "version": "v0.55.0",
+  "source": {
+    "repo": "https://github.com/phase-rs/phase",
+    "tag": "v0.55.0",
+    "releaseNotes": "https://github.com/phase-rs/phase/releases/tag/v0.55.0"
+  },
+  "assets": {
+    "wasm": {
+      "url": "https://data.phase-rs.dev/wasm/engine_wasm_bg-c214e9ae9bddbd05.wasm",
+      "sha256": "c214e9ae9bddbd051153effbdb726a8f15b412439c20000b55954a7536fc3896",
+      "dest": "engine_wasm_bg.wasm"
+    },
+    "cardData": {
+      "url": "https://data.phase-rs.dev/card-data-bf86286a0934abc9.json",
+      "sha256": "bf86286a0934abc9b7c372ff1dab329ef015b93d821342689970a51fc8af5a79",
+      "dest": "card-data.json.gz",
+      "gzip": true
+    },
+    "glue": {
+      "path": "src/engine/vendor/engine_wasm.js",
+      "sha256": "b489bc7436cdd0482247b68e3cf83d71459e81494afa52dc8ac62d56a0609ed1"
+    }
+  },
+  "mirror": {
+    "base": "",
+    "$comment": "Optional durable fallback. The phase-rs CDN prunes old content-hashed URLs (see domainbook/debt/0001), so a pinned URL can eventually 404. Set this to a base URL that hosts copies of the asset filenames (e.g. a GitHub Release download base like https://github.com/<owner>/<repo>/releases/download/engine-v0.55.0). scripts/mirror-engine.sh publishes the current pinned set there; fetch-engine.sh falls back to <base>/<filename> when the primary URL fails. The SHA-256 checks above still apply to the mirrored copy."
+  }
+}
