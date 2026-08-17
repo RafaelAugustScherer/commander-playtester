@@ -58,7 +58,7 @@ actually play, so `match setup` always has legal, playable decks to choose from.
   and turned into the same pasted-decklist text the author would otherwise type.
   This does not walk back `ADR-0004`: the user still supplies one deck they chose,
   and no field of decks is curated or browsed. The deck sites block cross-origin
-  browser calls, so the fetch goes through a proxy (`deck-proxy/`).
+  browser calls, so the fetch goes through a proxy (`ADR-0001`, `deck-proxy/`).
 
 ## Assumptions
 

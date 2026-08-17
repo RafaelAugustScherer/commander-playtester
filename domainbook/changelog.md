@@ -10,13 +10,9 @@ Security as H3s, each of them a bullet list.
 
 ### Added
 
-- Import a deck from its Moxfield or Archidekt URL: paste a public or unlisted
-  deck link and its commander and cards fill the editor, ready to review and save.
-  Because the app is a static site and those sites block cross-origin browser
-  requests, the fetch goes through a proxy — a bundled Cloudflare Worker
-  (`deck-proxy/`) for reliability, with a public proxy as the zero-config default.
-  Ligamagic URLs are recognized but can't be auto-imported (their deck data sits
-  behind a page session), so the author is pointed to paste the exported list.
+- Import a deck from its Moxfield or Archidekt URL: paste the link and its
+  commander and cards fill the editor, ready to review and save
+  (`import-from-a-url`, `deck-library/ADR-0001`).
 
 ## [0.1.2] - 2026-08-16
 
