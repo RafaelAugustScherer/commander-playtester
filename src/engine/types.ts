@@ -114,6 +114,36 @@ export interface AiProposal {
   semanticOwner?: number;
 }
 
+/** One typed piece of a log entry's message; card/player carry an id. */
+export type LogSegment =
+  | { type: "Text"; value: string }
+  | { type: "CardName"; value: { name: string; object_id: number } }
+  | { type: "PlayerName"; value: { name: string; player_id: number } }
+  | { type: "Zone"; value: string }
+  | { type: "Number"; value: number }
+  | { type: "Mana"; value: string }
+  | { type: "Keyword"; value: string };
+
+export type LogImportance = "Context" | "Detail" | "Essential";
+export type LogTone = "Neutral" | "Informational" | "Positive" | "Negative";
+export type LogBoundary = "None" | "Phase" | "Turn";
+export type LogVisibility = "Public" | "HiddenInformation";
+
+/** A single engine game-log line: typed message segments plus presentation hints. */
+export interface LogEntry {
+  seq: number;
+  turn: number;
+  phase: string;
+  category: string;
+  segments: LogSegment[];
+  presentation: {
+    importance: LogImportance;
+    tone: LogTone;
+    boundary: LogBoundary;
+    visibility: LogVisibility;
+  };
+}
+
 /** Error envelope some engine calls return instead of a value. */
 export interface EngineError {
   error: true;

@@ -3,6 +3,7 @@ import type {
   AiDifficulty,
   EngineDeckList,
   GameStateEnvelope,
+  LogEntry,
   WaitingFor,
 } from "../engine/types";
 import { actingPlayer, isEngineError } from "../engine/types";
@@ -156,6 +157,8 @@ export interface DriverCallbacks {
   onMatchStart?: (matchIndex: number) => void;
   onMatchEnd?: (result: MatchResult) => void;
   onLog?: (msg: string) => void;
+  /** New engine game-log lines produced by the action that was just applied. */
+  onLogEntries?: (entries: LogEntry[]) => void;
   /** Called on the human's priority in play mode; resolves with their choice. */
   requestHumanAction?: (
     env: GameStateEnvelope,
@@ -253,6 +256,12 @@ export class MatchRunner {
     await new Promise<void>((r) => this.resumeWaiters.push(r));
   }
 
+  private emitLog(res: { logEntries?: LogEntry[] }): void {
+    if (res.logEntries && res.logEntries.length) {
+      this.cb.onLogEntries?.(res.logEntries);
+    }
+  }
+
   async run(): Promise<MatchResult[]> {
     const results: MatchResult[] = [];
     for (let m = 0; m < this.opts.matchCount; m++) {
@@ -309,6 +318,7 @@ export class MatchRunner {
 
       const wantState = actions % renderEvery === 0;
       const res = await engine.aiStep(opts.difficulty, 0, wantState);
+      this.emitLog(res);
 
       if (!res.applied) {
         const final = res.state ?? (await engine.getState());
@@ -387,8 +397,11 @@ export class MatchRunner {
 
       // Run the human's choice: play their action, or hand this decision to the AI.
       const applyChoice = async (choice: HumanChoice): Promise<void> => {
-        if ("action" in choice) await engine.humanAction(humanSeat, choice.action);
-        else await engine.aiStep(opts.difficulty, humanSeat, false);
+        const res =
+          "action" in choice
+            ? await engine.humanAction(humanSeat, choice.action)
+            : await engine.aiStep(opts.difficulty, humanSeat, false);
+        this.emitLog(res);
       };
 
       if (humanPriority) {
@@ -442,6 +455,7 @@ export class MatchRunner {
       } else {
         // AI seats, and the human's non-priority sub-decisions, are AI-driven.
         const res = await engine.aiStep(opts.difficulty, acting, false);
+        this.emitLog(res);
         if (!res.applied) {
           const wf2 = res.state?.state.waiting_for;
           if (wf2?.type === "GameOver") winner = wf2.data?.winner ?? null;

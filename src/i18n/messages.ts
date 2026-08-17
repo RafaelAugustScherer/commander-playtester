@@ -241,6 +241,16 @@ export const messages = {
 
   "select.noResults": { pt: "Nenhum resultado", en: "No matches" },
 
+  "sidebar.title": { pt: "Pilha e registro", en: "Stack & log" },
+  "sidebar.stack": { pt: "Pilha", en: "Stack" },
+  "sidebar.stackEmpty": { pt: "A pilha está vazia.", en: "The stack is empty." },
+  "sidebar.stackTop": { pt: "topo", en: "top" },
+  "sidebar.log": { pt: "Registro", en: "Game log" },
+  "sidebar.logEmpty": { pt: "Nada ainda.", en: "Nothing yet." },
+  "sidebar.detailed": { pt: "Detalhado", en: "Detailed" },
+  "sidebar.show": { pt: "Mostrar registro", en: "Show log" },
+  "sidebar.hide": { pt: "Ocultar", en: "Hide" },
+
   "report.title": { pt: "Resultado da série", en: "Series result" },
   "report.newSetup": { pt: "Nova configuração", en: "New setup" },
   "report.winRateDeck": { pt: "Win rate (seu deck)", en: "Win rate (your deck)" },

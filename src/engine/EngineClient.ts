@@ -3,6 +3,7 @@ import type {
   AiDifficulty,
   EngineDeckList,
   GameStateEnvelope,
+  LogEntry,
 } from "./types";
 
 interface Pending {
@@ -22,6 +23,7 @@ export interface InitGameArgs {
 export interface AiStepResult {
   applied: boolean;
   actionType?: string;
+  logEntries?: LogEntry[];
   state: GameStateEnvelope | null;
 }
 
@@ -87,7 +89,10 @@ export class EngineClient {
     return this.req("legalActions");
   }
 
-  humanAction(actor: number, action: unknown): Promise<any> {
+  humanAction(
+    actor: number,
+    action: unknown,
+  ): Promise<{ result: any; logEntries?: LogEntry[]; state: GameStateEnvelope }> {
     return this.req("humanAction", { actor, action });
   }
 
