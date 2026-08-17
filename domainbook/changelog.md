@@ -8,6 +8,19 @@ Security as H3s, each of them a bullet list.
 
 ## [Unreleased]
 
+## [0.1.3] - 2026-08-16
+
+### Added
+
+- Stack & game-log sidebar: a right-hand panel showing the current stack (top
+  first) and a running log of the game's events, read from the engine's own log
+  stream. Each log line names its cards and player, colours by outcome, groups
+  under turn headings, and expands to show the referenced card. A "Detailed"
+  toggle reveals the low-level lines (priority passes, phase markers) hidden by
+  the default curated view. The panel is docked open on desktop and a collapsible
+  overlay on mobile, and remembers its state. Opponents' hidden-information lines
+  are withheld unless hands are revealed.
+
 ## [0.1.2] - 2026-08-16
 
 ### Added

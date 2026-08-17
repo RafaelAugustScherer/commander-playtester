@@ -29,6 +29,8 @@ export interface BoardView {
   gameOver: boolean;
   winner: number | null;
   seats: SeatView[];
+  /** Objects on the stack, bottom-to-top as the engine orders them. */
+  stack: GameObject[];
 }
 
 export interface SeatMeta {
@@ -95,6 +97,9 @@ export function toBoardView(
   const playerCount = st.players.length || 1;
   const round =
     turnNumber < 1 ? turnNumber : Math.floor((turnNumber - 1) / playerCount) + 1;
+  const stack = (st.stack ?? [])
+    .map((id) => objects[id])
+    .filter((o): o is GameObject => !!o);
   return {
     turn: round,
     phase: st.phase ?? "",
@@ -102,5 +107,6 @@ export function toBoardView(
     gameOver,
     winner: gameOver ? (st.waiting_for?.data?.winner ?? null) : null,
     seats,
+    stack,
   };
 }

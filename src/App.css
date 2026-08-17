@@ -842,3 +842,267 @@ th {
   color: var(--muted);
   font-size: 0.85rem;
 }
+
+/* ── Stack & game-log sidebar ──────────────────────────────────── */
+.run-layout {
+  display: flex;
+  gap: 1.25rem;
+  align-items: flex-start;
+}
+.run-main {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.game-sidebar {
+  flex: 0 0 330px;
+  position: sticky;
+  top: 1rem;
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 2rem);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.game-sidebar__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border);
+}
+.sidebar-backdrop {
+  display: none;
+}
+.sidebar-section {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border);
+}
+.sidebar-section--log {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  border-bottom: none;
+  padding-bottom: 0;
+}
+.sidebar-section__title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+.sidebar-count {
+  background: var(--panel-2);
+  border-radius: 999px;
+  padding: 0 0.45rem;
+  color: var(--text);
+}
+.log-toggle {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+}
+.sidebar-empty {
+  margin: 0.25rem 0 0.5rem;
+}
+
+/* Stack */
+.stack-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  max-height: 220px;
+  overflow-y: auto;
+}
+.stack-card {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+.stack-card__img {
+  width: 40px;
+  height: 56px;
+  object-fit: cover;
+  object-position: top;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+.stack-card__img--none {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+}
+.stack-card__meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+.stack-card__name {
+  font-size: 0.85rem;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.stack-card__tag {
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--accent);
+}
+
+/* Log */
+.log-scroll {
+  flex: 1 1 auto;
+  min-height: 160px;
+  overflow-y: auto;
+  padding-right: 0.25rem;
+  padding-bottom: 0.75rem;
+}
+.log-turn {
+  position: sticky;
+  top: 0;
+  background: var(--panel);
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text);
+  padding: 0.4rem 0 0.3rem;
+  margin-top: 0.25rem;
+  border-bottom: 1px solid var(--border);
+  z-index: 1;
+}
+.log-row {
+  border-left: 2px solid transparent;
+  padding-left: 0.4rem;
+  margin: 0.05rem 0;
+}
+.log-row--positive {
+  border-left-color: var(--good);
+}
+.log-row--negative {
+  border-left-color: var(--bad);
+}
+.log-row--informational {
+  border-left-color: var(--accent);
+}
+.log-row__head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  width: 100%;
+  background: transparent;
+  border: none;
+  padding: 0.2rem 0;
+  text-align: left;
+  color: var(--text);
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+.log-row__head:disabled {
+  cursor: default;
+  opacity: 1;
+}
+.log-row__chevron {
+  width: 0.8rem;
+  flex-shrink: 0;
+  color: var(--muted);
+  font-size: 0.7rem;
+}
+.log-row__icon {
+  flex-shrink: 0;
+  color: var(--muted);
+}
+.log-row__msg {
+  min-width: 0;
+}
+.log-row__cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  padding: 0.35rem 0 0.5rem 1.15rem;
+}
+.log-card__img {
+  width: 118px;
+  height: auto;
+  border-radius: 6px;
+}
+.log-card__none {
+  font-size: 0.8rem;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.3rem 0.5rem;
+}
+
+/* Log segment chips */
+.seg-card {
+  color: var(--text);
+  font-weight: 700;
+}
+.seg-player {
+  color: var(--muted);
+  font-weight: 600;
+}
+.seg-player--you {
+  color: var(--accent);
+}
+.seg-zone {
+  font-style: italic;
+  color: var(--muted);
+}
+.seg-num {
+  font-weight: 700;
+}
+.seg-mana {
+  display: inline-block;
+  min-width: 1.05em;
+  text-align: center;
+  border-radius: 999px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  font-size: 0.72em;
+  font-weight: 700;
+  padding: 0 0.25em;
+}
+.seg-kw {
+  font-weight: 700;
+  color: var(--warn);
+}
+
+@media (max-width: 899px) {
+  .sidebar-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 59;
+  }
+  .game-sidebar {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: min(90vw, 360px);
+    max-height: 100vh;
+    border-radius: 0;
+    z-index: 60;
+  }
+}

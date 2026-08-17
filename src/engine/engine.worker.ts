@@ -68,12 +68,17 @@ async function handle(cmd: string, args: any): Promise<any> {
       const { difficulty, player, wantState } = args;
       const proposal = get_ai_action_proposal(difficulty, player ?? 0);
       if (!proposal) {
-        return { applied: false, state: get_game_state() };
+        return { applied: false, state: get_game_state(), logEntries: [] };
       }
-      submit_ai_action_proposal(proposal.token, proposal.actor, proposal.action);
+      const res = submit_ai_action_proposal(
+        proposal.token,
+        proposal.actor,
+        proposal.action,
+      );
       return {
         applied: true,
         actionType: proposal.action?.type,
+        logEntries: res?.result?.log_entries ?? [],
         state: wantState ? get_game_state() : null,
       };
     }
@@ -88,7 +93,11 @@ async function handle(cmd: string, args: any): Promise<any> {
     case "humanAction": {
       const { actor, action } = args;
       const res = submit_action(actor, action);
-      return { result: res, state: get_game_state() };
+      return {
+        result: res,
+        logEntries: res?.log_entries ?? [],
+        state: get_game_state(),
+      };
     }
     default:
       throw new Error(`unknown engine command: ${cmd}`);
