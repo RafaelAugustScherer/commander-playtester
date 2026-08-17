@@ -27,6 +27,7 @@ Example: A play is logged with its card
   Given a player plays or casts a card
   When the log updates
   Then the entry names the card and the acting player
+  And the entry is coloured by its outcome
   And I can expand the entry to see the card
 
 Example: Turns and phases group the history

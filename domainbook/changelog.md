@@ -12,22 +12,13 @@ Security as H3s, each of them a bullet list.
 
 ### Added
 
-- Stack & game-log sidebar: a right-hand drawer showing the current stack (top
-  first) and a running log of the game's events, read from the engine's own log
-  stream. Each log line names its cards and player, colours by outcome, groups
-  under turn headings, and expands to show the referenced card. A "Detailed"
-  toggle reveals the low-level lines the curated default hides — priority passes,
-  phase markers, tapping and untapping, mana added and spent, and card draws. The
-  drawer is glued to the right edge and slides open and closed from an arrow tab;
-  it reserves board space on desktop and covers the full screen on mobile, and
-  remembers its state. Opponents' hidden-information lines are withheld unless
-  hands are revealed.
+- Stack & game-log sidebar: a collapsible drawer showing the current stack and a
+  running, engine-sourced log of the game's events (`follow-the-game`).
 
 ### Changed
 
-- Every UI icon is now drawn from the lucide-react set instead of emoji, so they
-  render consistently across platforms: the board's mana pips, zone counts, life
-  and drop-zone slots, the language switcher, and each log-category icon.
+- Every UI icon is now drawn from lucide-react instead of emoji, for consistent
+  rendering across platforms (`board/ADR-0001`).
 
 ## [0.1.2] - 2026-08-16
 
