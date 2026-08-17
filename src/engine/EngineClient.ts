@@ -61,7 +61,8 @@ export class EngineClient {
   /** Boot the WASM and load the card database (idempotent, ~95 MiB one-time). */
   ready(): Promise<{ commanderConfig: unknown }> {
     if (!this.readyPromise) {
-      this.readyPromise = this.req("ready").then((r: any) => {
+      const base = new URL(import.meta.env.BASE_URL, location.href).href;
+      this.readyPromise = this.req("ready", { base }).then((r: any) => {
         this.commanderConfig = r.commanderConfig;
         return r;
       });

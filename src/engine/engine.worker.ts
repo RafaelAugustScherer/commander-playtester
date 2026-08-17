@@ -17,7 +17,11 @@ import init, {
   submit_action,
 } from "./vendor/engine_wasm.js";
 
-const BASE = import.meta.env.BASE_URL;
+// Absolute base URL for engine assets, supplied by the main thread on "ready".
+// It must be resolved against the *page* location, not the worker's: a relative
+// base like "./" resolves against the worker's own URL (`/assets/`) rather than
+// the app root, which 404s the WASM and card database.
+let assetBase = import.meta.env.BASE_URL;
 
 let started = false;
 let dbLoaded = false;
@@ -25,7 +29,7 @@ let commanderConfig: any = null;
 
 async function ensureStarted(): Promise<void> {
   if (started) return;
-  await init({ module_or_path: `${BASE}engine/engine_wasm_bg.wasm` });
+  await init({ module_or_path: `${assetBase}engine/engine_wasm_bg.wasm` });
   init_panic_hook();
   started = true;
 }
@@ -35,7 +39,7 @@ async function ensureStarted(): Promise<void> {
 // If a host transparently decodes the gzip (Content-Encoding), the bytes are
 // already plain JSON — detected via the gzip magic — so we use them directly.
 async function fetchCardData(): Promise<string> {
-  const res = await fetch(`${BASE}engine/card-data.json.gz`);
+  const res = await fetch(`${assetBase}engine/card-data.json.gz`);
   if (!res.ok) {
     throw new Error(`card-data fetch failed: HTTP ${res.status}`);
   }
@@ -61,6 +65,7 @@ async function ensureDb(): Promise<void> {
 async function handle(cmd: string, args: any): Promise<any> {
   switch (cmd) {
     case "ready": {
+      if (args?.base) assetBase = args.base;
       await ensureStarted();
       await ensureDb();
       return { commanderConfig };
