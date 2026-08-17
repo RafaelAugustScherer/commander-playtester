@@ -12,13 +12,21 @@ depth live there. A purely-internal PR that touches no product or architecture m
 skip its version with a `Skip-Docs: <reason>` trailer instead. There are no
 per-domain changelogs; this file is the single timeline (`ADR-0007`).
 
-## [0.1.6] - 2026-08-17
+## [0.1.7] - 2026-08-17
 
 ### Changed
 
 - Documentation: consolidated to this single versioned changelog and retired the
   per-domain changelogs; every PR now cuts a version with terse entries that link
   to the feature/decision/debt carrying the detail (`ADR-0007`).
+
+## [0.1.6] - 2026-08-17
+
+### Fixed
+
+- Starting a match no longer 404s the engine WASM and card database under a
+  subpath deploy (e.g. GitHub Pages project sites): the worker resolves engine
+  asset URLs against the page, not its own `/assets/` location (`ADR-0006`).
 
 ## [0.1.5] - 2026-08-17
 
