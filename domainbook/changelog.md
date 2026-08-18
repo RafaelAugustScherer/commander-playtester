@@ -16,10 +16,11 @@ per-domain changelogs; this file is the single timeline (`ADR-0007`).
 
 ### Fixed
 
-- Two-sided cards (split, MDFC, transform, adventure) no longer show up as "not
-  found": their decklist name is collapsed to the front face, which is how both
-  Scryfall and the engine key them — Moxfield/Archidekt export the full
-  "Front // Back" name, which resolved to nothing
+- Pasting or importing a deck no longer needs two-sided cards edited by hand: a
+  shared card-name adapter collapses "Front // Back" (split, MDFC, transform,
+  adventure) to the front face — the only face Scryfall and the engine key on —
+  so an exported Moxfield/Archidekt list works as-is. The adapter runs on both
+  the pasted-text and URL-import paths
   (`domains/deck-library/features/import-from-a-url.md`).
 
 ## [0.1.8] - 2026-08-18

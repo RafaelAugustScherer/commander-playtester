@@ -64,6 +64,18 @@ describe("parseMoxfield", () => {
     expect(all).not.toContain("Grafdigger's Cage"); // sideboard
   });
 
+  it("collapses a two-sided card name to its front face", () => {
+    const deck = parseMoxfield({
+      name: "DFC deck",
+      boards: {
+        mainboard: {
+          cards: { a: { quantity: 1, card: { name: "Never // Return" } } },
+        },
+      },
+    });
+    expect(deck.mainboard.map((e) => e.name)).toEqual(["Never"]);
+  });
+
   it("routes the commanders board and ignores the maybeboard", () => {
     const deck = parseMoxfield(moxfieldCommanderFixture);
     expect(deck.commanders.map((e) => e.name)).toEqual(["Atraxa, Praetors' Voice"]);

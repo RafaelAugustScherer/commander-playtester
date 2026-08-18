@@ -1,4 +1,5 @@
 import type { DecklistEntry, ParsedDecklist } from "./types";
+import { normalizeCardName } from "./cardName";
 
 /**
  * Parse a raw decklist pasted from Moxfield, Archidekt, or plain text.
@@ -80,37 +81,9 @@ function parseLine(line: string): DecklistEntry | null {
     rest = qtyMatch[2];
   }
 
-  const name = cleanCardName(rest);
+  const name = normalizeCardName(rest);
   if (!name) return null;
   if (!Number.isFinite(quantity) || quantity < 1) return null;
 
   return { quantity, name };
-}
-
-/**
- * Strip trailing set/collector/foil metadata and normalize a card name.
- * Handles Moxfield's "(SET) 123 *F*" suffix and Archidekt's "(SET)" suffix.
- */
-export function cleanCardName(input: string): string {
-  let name = input.trim();
-
-  // Remove a trailing foil/etched marker like "*F*" or "*E*".
-  name = name.replace(/\s*\*[a-z]\*\s*$/i, "");
-
-  // Remove a trailing "(SET) collector" block. Set codes are 3-5 alnum chars.
-  name = name.replace(/\s*\([0-9a-z]{2,6}\)\s*[0-9a-z-]*\s*$/i, "");
-
-  // Archidekt sometimes appends category tags in square brackets.
-  name = name.replace(/\s*\[[^\]]*\]\s*$/g, "");
-
-  // Collapse a two-sided "Front // Back" name (split, MDFC, transform, adventure)
-  // to its front face. Scryfall's collection endpoint and the engine's card
-  // database both key these cards by a single face, so the full name resolves to
-  // nothing — this is what Moxfield exports for every double-faced card. The
-  // separator is always " // " with surrounding spaces, so this leaves real
-  // names that contain a slash intact (e.g. "SP//dr, Piloted by Peni",
-  // "Summon: Choco/Mog").
-  name = name.split(/\s+\/\/\s+/)[0];
-
-  return name.trim();
 }

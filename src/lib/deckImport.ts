@@ -1,4 +1,5 @@
 import type { DecklistEntry } from "./types";
+import { normalizeCardName } from "./cardName";
 
 export type DeckSource = "moxfield" | "archidekt" | "ligamagic";
 
@@ -83,7 +84,7 @@ function moxfieldEntries(board?: { cards?: Record<string, MoxfieldCard> }): Deck
   const entries: DecklistEntry[] = [];
   for (const c of Object.values(cards)) {
     const name = c.card?.name;
-    if (name) entries.push({ quantity: c.quantity ?? 1, name });
+    if (name) entries.push({ quantity: c.quantity ?? 1, name: normalizeCardName(name) });
   }
   return entries;
 }
@@ -122,11 +123,11 @@ export function parseArchidekt(json: unknown): Omit<ImportedDeck, "source"> {
   const commanders: DecklistEntry[] = [];
   const mainboard: DecklistEntry[] = [];
   for (const c of d.cards ?? []) {
-    const name = c.card?.oracleCard?.name;
-    if (!name) continue;
+    const rawName = c.card?.oracleCard?.name;
+    if (!rawName) continue;
     const cats = c.categories ?? [];
     if (cats.some((cat) => excluded.has(cat))) continue;
-    const entry = { quantity: c.quantity ?? 1, name };
+    const entry = { quantity: c.quantity ?? 1, name: normalizeCardName(rawName) };
     if (cats.includes(ARCHIDEKT_COMMANDER)) commanders.push(entry);
     else mainboard.push(entry);
   }
