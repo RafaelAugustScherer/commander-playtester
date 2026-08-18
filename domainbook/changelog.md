@@ -12,6 +12,16 @@ depth live there. A purely-internal PR that touches no product or architecture m
 skip its version with a `Skip-Docs: <reason>` trailer instead. There are no
 per-domain changelogs; this file is the single timeline (`ADR-0007`).
 
+## [0.1.9] - 2026-08-18
+
+### Fixed
+
+- Two-sided cards (split, MDFC, transform, adventure) no longer show up as "not
+  found": their decklist name is collapsed to the front face, which is how both
+  Scryfall and the engine key them — Moxfield/Archidekt export the full
+  "Front // Back" name, which resolved to nothing
+  (`domains/deck-library/features/import-from-a-url.md`).
+
 ## [0.1.8] - 2026-08-18
 
 ### Added

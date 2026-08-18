@@ -16,6 +16,27 @@ describe("cleanCardName", () => {
       "Atraxa, Praetors' Voice",
     );
   });
+
+  it("collapses two-sided 'Front // Back' names to the front face", () => {
+    // Split, MDFC, transform, and adventure cards all export this way.
+    expect(cleanCardName("Never // Return")).toBe("Never");
+    expect(cleanCardName("Malakir Rebirth // Malakir Mire")).toBe(
+      "Malakir Rebirth",
+    );
+    expect(cleanCardName("Valki, God of Lies // Tibalt, Cosmic Impostor")).toBe(
+      "Valki, God of Lies",
+    );
+    // Still collapses when Moxfield appends set + collector metadata.
+    expect(cleanCardName("Connive // Concoct (GRN) 222")).toBe("Connive");
+  });
+
+  it("keeps a slash that is part of the real name (not a face separator)", () => {
+    // The face separator is always " // " with surrounding spaces.
+    expect(cleanCardName("SP//dr, Piloted by Peni")).toBe(
+      "SP//dr, Piloted by Peni",
+    );
+    expect(cleanCardName("Summon: Choco/Mog")).toBe("Summon: Choco/Mog");
+  });
 });
 
 describe("parseDecklist", () => {

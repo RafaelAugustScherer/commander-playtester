@@ -103,8 +103,14 @@ export function cleanCardName(input: string): string {
   // Archidekt sometimes appends category tags in square brackets.
   name = name.replace(/\s*\[[^\]]*\]\s*$/g, "");
 
-  // Collapse a modal/split "Name // Other" to the front face for lookup
-  // safety is NOT applied here — Scryfall resolves full DFC names, so keep it.
+  // Collapse a two-sided "Front // Back" name (split, MDFC, transform, adventure)
+  // to its front face. Scryfall's collection endpoint and the engine's card
+  // database both key these cards by a single face, so the full name resolves to
+  // nothing — this is what Moxfield exports for every double-faced card. The
+  // separator is always " // " with surrounding spaces, so this leaves real
+  // names that contain a slash intact (e.g. "SP//dr, Piloted by Peni",
+  // "Summon: Choco/Mog").
+  name = name.split(/\s+\/\/\s+/)[0];
 
   return name.trim();
 }
