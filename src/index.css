@@ -1,17 +1,25 @@
 :root {
-  --bg: #0f1115;
-  --panel: #181b22;
-  --panel-2: #20242e;
-  --border: #2b303b;
-  --text: #e7e9ee;
-  --muted: #9aa2b1;
-  --accent: #7c9cff;
-  --good: #4ade80;
-  --warn: #fbbf24;
-  --bad: #f87171;
+  /* Copper Ember — warm medieval-tavern dark theme */
+  --bg: #1a120c; /* page background — deep walnut */
+  --panel: #291c12; /* cards / panels */
+  --panel-2: #372615; /* insets, rows, tiles */
+  --border: #5c4029; /* hairline borders */
+  --text: #f1e4d0; /* primary text — candlelight cream */
+  --muted: #c09c77; /* secondary text */
+  --accent: #c47f4d; /* copper — primary accent */
+  --accent-ink: #241207; /* text/icon on accent fills */
+  --good: #8aa35a; /* positive log events */
+  --warn: #dca24a; /* warnings */
+  --bad: #cf5a37; /* damage / concede / eliminate */
+
+  --radius: 6px; /* panels — sharp */
+  --radius-sm: 5px; /* buttons, tiles */
+
+  --font-display: "MedievalSharp", Georgia, serif; /* headings, turn/phase, panel titles */
+  --font-body: "Alegreya", Georgia, "Times New Roman", serif; /* body text */
 
   color-scheme: dark;
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-family: var(--font-body);
   color: var(--text);
   background: var(--bg);
 }
@@ -30,6 +38,7 @@ h2,
 h3 {
   margin: 0 0 0.5rem;
   line-height: 1.2;
+  font-family: var(--font-display);
 }
 
 a {
