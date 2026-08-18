@@ -1,7 +1,7 @@
 ---
 id: report-head-to-head-win-rate
 name: Report head-to-head win rate
-status: draft
+status: implemented
 ---
 
 ## Story

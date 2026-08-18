@@ -1,7 +1,7 @@
 ---
 id: follow-the-game
 name: Follow the game
-status: draft
+status: implemented
 ---
 
 ## Story

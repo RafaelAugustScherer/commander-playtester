@@ -20,6 +20,10 @@ import {
   parseCreatureTypePrompt,
   type CreatureTypePrompt,
 } from "./decisions/creatureType";
+import {
+  parseMulliganPrompt,
+  type MulliganPrompt,
+} from "./decisions/mulligan";
 
 export interface MatchResult {
   matchIndex: number;
@@ -188,6 +192,11 @@ export interface DriverCallbacks {
   requestHumanCreatureType?: (
     env: GameStateEnvelope,
     prompt: CreatureTypePrompt & { aiChoice: string | null },
+  ) => Promise<HumanChoice>;
+  /** Called at game start for the human's opening mulligan (keep / mulligan / bottom). */
+  requestHumanMulligan?: (
+    env: GameStateEnvelope,
+    prompt: MulliganPrompt,
   ) => Promise<HumanChoice>;
 }
 
@@ -394,6 +403,10 @@ export class MatchRunner {
         humanNonPriority && cb.requestHumanCreatureType
           ? parseCreatureTypePrompt(wf)
           : null;
+      const humanMulligan =
+        humanNonPriority && cb.requestHumanMulligan
+          ? parseMulliganPrompt(wf, env.state, humanSeat)
+          : null;
 
       // Run the human's choice: play their action, or hand this decision to the AI.
       const applyChoice = async (choice: HumanChoice): Promise<void> => {
@@ -447,6 +460,13 @@ export class MatchRunner {
           ...humanCreatureType,
           aiChoice: typeof suggested === "string" ? suggested : null,
         });
+        if (this.aborted) {
+          stopped = true;
+          break;
+        }
+        await applyChoice(choice);
+      } else if (humanMulligan) {
+        const choice = await cb.requestHumanMulligan!(env, humanMulligan);
         if (this.aborted) {
           stopped = true;
           break;

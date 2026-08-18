@@ -1,7 +1,7 @@
 ---
 id: configure-a-run
 name: Configure a run
-status: draft
+status: implemented
 ---
 
 ## Story

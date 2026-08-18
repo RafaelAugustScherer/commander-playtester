@@ -1,7 +1,7 @@
 ---
 id: author-a-named-deck
 name: Author a named deck
-status: draft
+status: implemented
 ---
 
 ## Story
