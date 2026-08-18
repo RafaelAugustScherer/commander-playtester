@@ -60,3 +60,8 @@ Example: Letting the AI decide
   When I choose let the AI decide
   Then the engine's own AI resolves my keep, mulligan, and bottoming
 ```
+
+## Open Questions
+
+- Whether to suggest which cards to bottom (e.g. the AI's pick) rather than
+  leaving the whole selection to the player.
