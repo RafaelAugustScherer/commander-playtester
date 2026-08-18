@@ -40,6 +40,12 @@ import {
   chooseOptionAction,
   type CreatureTypePrompt,
 } from "../sim/decisions/creatureType";
+import {
+  mulliganKeepAction,
+  mulliganTakeAction,
+  bottomCardsAction,
+  type MulliganPrompt,
+} from "../sim/decisions/mulligan";
 import { toBoardView, type BoardView, type SeatMeta } from "../board/boardView";
 import { GameSidebar, type LoggedEntry } from "../board/GameSidebar";
 import type { LogEntry } from "../engine/types";
@@ -134,6 +140,11 @@ interface CreatureTypeTurn {
   resolve: (choice: HumanChoice) => void;
 }
 
+interface MulliganTurn {
+  prompt: MulliganPrompt;
+  resolve: (choice: HumanChoice) => void;
+}
+
 /** Runs a configured series of matches and renders the live board + results. */
 export function RunView({
   config,
@@ -170,6 +181,8 @@ export function RunView({
   const [creatureTypeTurn, setCreatureTypeTurn] =
     useState<CreatureTypeTurn | null>(null);
   const [creatureTypePick, setCreatureTypePick] = useState("");
+  const [mulliganTurn, setMulliganTurn] = useState<MulliganTurn | null>(null);
+  const [bottomPick, setBottomPick] = useState<Set<number>>(new Set());
   const [passingTurn, setPassingTurn] = useState(false);
   const [logEntries, setLogEntries] = useState<LoggedEntry[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(() => {
@@ -344,6 +357,22 @@ export function RunView({
                   prompt,
                   resolve: (choice) => {
                     setCreatureTypeTurn(null);
+                    resolve(choice);
+                  },
+                });
+              }),
+            requestHumanMulligan: (_env, prompt) =>
+              new Promise<HumanChoice>((resolve) => {
+                if (cancelled) {
+                  resolve({ ai: true });
+                  return;
+                }
+                setBottomPick(new Set());
+                setMulliganTurn({
+                  prompt,
+                  resolve: (choice) => {
+                    setMulliganTurn(null);
+                    setBottomPick(new Set());
                     resolve(choice);
                   },
                 });
@@ -1103,6 +1132,32 @@ export function RunView({
         )}
       </div>
 
+      {mulliganTurn && (
+        <MulliganModal
+          prompt={mulliganTurn.prompt}
+          images={images}
+          bottomPick={bottomPick}
+          onToggleBottom={(id) =>
+            setBottomPick((prev) => {
+              const next = new Set(prev);
+              if (next.has(id)) next.delete(id);
+              else if (next.size < mulliganTurn.prompt.bottomCount) next.add(id);
+              return next;
+            })
+          }
+          onKeep={() =>
+            mulliganTurn.resolve({ action: mulliganKeepAction() })
+          }
+          onMulligan={() =>
+            mulliganTurn.resolve({ action: mulliganTakeAction() })
+          }
+          onConfirmBottom={() =>
+            mulliganTurn.resolve({ action: bottomCardsAction([...bottomPick]) })
+          }
+          onLetAi={() => mulliganTurn.resolve({ ai: true })}
+        />
+      )}
+
       {phase === "done" && (
         <RunReport
           stats={stats}
@@ -1111,6 +1166,115 @@ export function RunView({
           onExit={onExit}
         />
       )}
+    </div>
+  );
+}
+
+/** Opening-hand popup: keep or mulligan, then pick London bottoms if any. */
+function MulliganModal({
+  prompt,
+  images,
+  bottomPick,
+  onToggleBottom,
+  onKeep,
+  onMulligan,
+  onConfirmBottom,
+  onLetAi,
+}: {
+  prompt: MulliganPrompt;
+  images: Record<string, string>;
+  bottomPick: Set<number>;
+  onToggleBottom: (id: number) => void;
+  onKeep: () => void;
+  onMulligan: () => void;
+  onConfirmBottom: () => void;
+  onLetAi: () => void;
+}) {
+  const { t } = useI18n();
+  const bottoming = prompt.stage === "bottom";
+
+  return (
+    <div className="mull-overlay" role="dialog" aria-modal="true">
+      <div className="mull-modal">
+        <div className="mull-modal__head">
+          <h2>{bottoming ? t("mulligan.bottomTitle") : t("mulligan.title")}</h2>
+          <p className="hint">
+            {bottoming
+              ? t("mulligan.bottomInstruction", { n: prompt.bottomCount })
+              : prompt.mulliganCount === 0 && prompt.freeFirstMulligan
+                ? t("mulligan.freeHint", { n: prompt.nextKeepSize })
+                : t("mulligan.takenHint", {
+                    n: prompt.mulliganCount,
+                    keep: prompt.keepSize,
+                  })}
+          </p>
+        </div>
+
+        <div className="mull-hand">
+          {prompt.hand.map((c) => {
+            const url = c.name ? images[c.name.toLowerCase()] : undefined;
+            const picked = bottomPick.has(c.id);
+            return (
+              <button
+                key={c.id}
+                type="button"
+                className={`mull-card${bottoming ? " mull-card--selectable" : ""}${
+                  picked ? " mull-card--picked" : ""
+                }`}
+                disabled={!bottoming}
+                onClick={() => bottoming && onToggleBottom(c.id)}
+                title={c.name}
+              >
+                {url ? (
+                  <img src={url} alt={c.name} loading="lazy" />
+                ) : (
+                  <span className="mull-card__name">{c.name || "?"}</span>
+                )}
+                {picked && <span className="mull-card__badge">↓</span>}
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="mull-actions">
+          {bottoming ? (
+            <>
+              <span className="hint">
+                {t("mulligan.bottomProgress", {
+                  n: bottomPick.size,
+                  max: prompt.bottomCount,
+                })}
+              </span>
+              <button
+                className="btn"
+                disabled={bottomPick.size !== prompt.bottomCount}
+                onClick={onConfirmBottom}
+              >
+                {t("mulligan.bottomConfirm")}
+              </button>
+              <button className="btn btn--ghost" onClick={onLetAi}>
+                {t("mulligan.letAi")}
+              </button>
+            </>
+          ) : (
+            <>
+              <button className="btn" onClick={onKeep}>
+                {prompt.keepSize < prompt.hand.length
+                  ? t("mulligan.keepCount", { n: prompt.keepSize })
+                  : t("mulligan.keepAll")}
+              </button>
+              <button className="btn btn--ghost" onClick={onMulligan}>
+                {prompt.mulliganCount === 0 && prompt.freeFirstMulligan
+                  ? t("mulligan.free")
+                  : t("mulligan.take", { n: prompt.nextKeepSize })}
+              </button>
+              <button className="btn btn--ghost" onClick={onLetAi}>
+                {t("mulligan.letAi")}
+              </button>
+            </>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

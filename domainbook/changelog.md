@@ -12,6 +12,15 @@ depth live there. A purely-internal PR that touches no product or architecture m
 skip its version with a `Skip-Docs: <reason>` trailer instead. There are no
 per-domain changelogs; this file is the single timeline (`ADR-0007`).
 
+## [0.1.8] - 2026-08-18
+
+### Added
+
+- Play mode opens with an interactive mulligan popup on your seat: keep or take a
+  free first mulligan, watch the kept-hand size shrink by one from the second
+  mulligan on (London), and choose which cards to bottom — or hand the decision to
+  the AI (`domains/simulation/features/decide-the-opening-mulligan.md`).
+
 ## [0.1.7] - 2026-08-17
 
 ### Changed

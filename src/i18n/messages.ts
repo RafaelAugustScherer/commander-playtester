@@ -239,6 +239,28 @@ export const messages = {
   "creatureType.confirm": { pt: "Confirmar", en: "Confirm" },
   "creatureType.letAi": { pt: "IA decide", en: "Let the AI decide" },
 
+  "mulligan.title": { pt: "Mão inicial", en: "Opening hand" },
+  "mulligan.keepCount": { pt: "Ficar com {n}", en: "Keep {n}" },
+  "mulligan.keepAll": { pt: "Ficar com a mão", en: "Keep hand" },
+  "mulligan.free": { pt: "Mulligan grátis", en: "Free mulligan" },
+  "mulligan.take": { pt: "Mulligan (ficar com {n})", en: "Mulligan (keep {n})" },
+  "mulligan.freeHint": {
+    pt: "O primeiro mulligan é grátis — você continua com {n} cartas.",
+    en: "Your first mulligan is free — you still keep {n} cards.",
+  },
+  "mulligan.takenHint": {
+    pt: "Mulligans usados: {n}. Ao ficar, você mantém {keep} cartas.",
+    en: "Mulligans taken: {n}. Keeping now holds {keep} cards.",
+  },
+  "mulligan.bottomTitle": { pt: "Devolver ao fundo", en: "Put on the bottom" },
+  "mulligan.bottomInstruction": {
+    pt: "Escolha {n} carta(s) para colocar no fundo do grimório.",
+    en: "Choose {n} card(s) to put on the bottom of your library.",
+  },
+  "mulligan.bottomProgress": { pt: "Selecionadas: {n} / {max}", en: "Selected: {n} / {max}" },
+  "mulligan.bottomConfirm": { pt: "Devolver e ficar", en: "Bottom & keep" },
+  "mulligan.letAi": { pt: "IA decide o mulligan", en: "Let the AI decide" },
+
   "select.noResults": { pt: "Nenhum resultado", en: "No matches" },
 
   "sidebar.title": { pt: "Pilha e registro", en: "Stack & log" },
