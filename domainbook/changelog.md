@@ -12,6 +12,17 @@ depth live there. A purely-internal PR that touches no product or architecture m
 skip its version with a `Skip-Docs: <reason>` trailer instead. There are no
 per-domain changelogs; this file is the single timeline (`ADR-0007`).
 
+## [0.1.9] - 2026-08-18
+
+### Fixed
+
+- Pasting or importing a deck no longer needs two-sided cards edited by hand: a
+  shared card-name adapter collapses "Front // Back" (split, MDFC, transform,
+  adventure) to the front face — the only face Scryfall and the engine key on —
+  so an exported Moxfield/Archidekt list works as-is. The adapter runs on both
+  the pasted-text and URL-import paths
+  (`domains/deck-library/features/import-from-a-url.md`).
+
 ## [0.1.8] - 2026-08-18
 
 ### Added
