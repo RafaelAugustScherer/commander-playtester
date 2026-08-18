@@ -1,7 +1,7 @@
 ---
 id: import-from-a-url
 name: Import a deck from a URL
-status: draft
+status: implemented
 ---
 
 ## Story

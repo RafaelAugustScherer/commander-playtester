@@ -1,7 +1,7 @@
 ---
 id: flag-unsupported-cards
 name: Flag unsupported cards
-status: draft
+status: implemented
 ---
 
 ## Story

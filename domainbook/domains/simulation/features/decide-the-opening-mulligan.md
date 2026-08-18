@@ -1,7 +1,7 @@
 ---
 id: decide-the-opening-mulligan
 name: Decide the opening mulligan
-status: draft
+status: implemented
 ---
 
 ## Story

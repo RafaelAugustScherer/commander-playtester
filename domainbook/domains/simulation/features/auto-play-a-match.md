@@ -1,7 +1,7 @@
 ---
 id: auto-play-a-match
 name: Auto-play a match
-status: draft
+status: implemented
 ---
 
 ## Story

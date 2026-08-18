@@ -1,7 +1,7 @@
 ---
 id: step-through-a-turn
 name: Step through a turn
-status: draft
+status: implemented
 ---
 
 ## Story
