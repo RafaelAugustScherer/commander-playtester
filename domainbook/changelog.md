@@ -12,6 +12,16 @@ depth live there. A purely-internal PR that touches no product or architecture m
 skip its version with a `Skip-Docs: <reason>` trailer instead. There are no
 per-domain changelogs; this file is the single timeline (`ADR-0007`).
 
+## [0.2.2] - 2026-08-19
+
+### Added
+
+- Ninjutsu is now playable by hand: during your combat, a ninja that can be put
+  in — in your hand, or your commander in the command zone for commander
+  ninjutsu — is highlighted; you pick it, then the unblocked attacker it returns.
+  Previously the engine offered ninjutsu but no UI surfaced it, so it couldn't be
+  used at all (`domains/simulation/features/step-through-a-turn.md`).
+
 ## [0.2.1] - 2026-08-18
 
 ### Added

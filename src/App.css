@@ -689,6 +689,23 @@ th {
   box-shadow: 0 0 0 3px var(--accent);
 }
 
+/* ── Ninjutsu: pick a ninja, then the attacker it swaps in for ─── */
+.card--ninjutsu {
+  cursor: pointer;
+  box-shadow: 0 0 0 2px var(--accent);
+}
+.card--ninjutsu:hover,
+.card--ninjutsu-chosen {
+  box-shadow: 0 0 0 3px var(--accent);
+}
+.card--ninjutsu-return {
+  cursor: pointer;
+  box-shadow: 0 0 0 2px var(--warn);
+}
+.card--ninjutsu-return:hover {
+  box-shadow: 0 0 0 3px var(--warn);
+}
+
 /* ── Click-to-cast the commander from the command zone ─────────── */
 .card--castable {
   cursor: pointer;

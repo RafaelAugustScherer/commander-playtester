@@ -162,6 +162,14 @@ export const messages = {
     en: "Click a highlighted permanent to activate an ability.",
   },
   "turn.abilityN": { pt: "Habilidade {n}", en: "Ability {n}" },
+  "turn.ninjutsuHint": {
+    pt: "Clique em um ninja destacado (na mão ou na zona de comando) para usar ninjutsu.",
+    en: "Click a highlighted ninja (in hand or the command zone) to use ninjutsu.",
+  },
+  "turn.ninjutsuReturnHint": {
+    pt: "Agora clique no atacante não bloqueado que voltará para a mão.",
+    en: "Now click the unblocked attacker to return to hand.",
+  },
   "turn.cancel": { pt: "Cancelar", en: "Cancel" },
   "turn.keyHints": {
     pt: "Espaço = prioridade · Enter = passar turno",

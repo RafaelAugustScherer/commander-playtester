@@ -18,6 +18,7 @@ import {
   type PlayInteraction,
   type TargetInteraction,
   type AbilityInteraction,
+  type NinjutsuInteraction,
   type AttackInteraction,
   type BlockInteraction,
   type ManaInteraction,
@@ -50,6 +51,7 @@ import { toBoardView, type BoardView, type SeatMeta } from "../board/boardView";
 import { GameSidebar, type LoggedEntry } from "../board/GameSidebar";
 import type { LogEntry } from "../engine/types";
 import { abilitiesBySource } from "../sim/decisions/abilities";
+import { ninjutsuBySource } from "../sim/decisions/ninjutsu";
 import { aggregate } from "../analysis/matchStats";
 import { fetchCardsCached } from "../lib/scryfallCache";
 import { SearchableSelect } from "../components/SearchableSelect";
@@ -168,6 +170,7 @@ export function RunView({
   const [dragging, setDragging] = useState<number | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [abilityPick, setAbilityPick] = useState<{ objId: number; actions: any[] } | null>(null);
+  const [ninjutsuSource, setNinjutsuSource] = useState<number | null>(null);
   const [targeting, setTargeting] = useState<TargetTurn | null>(null);
   const [chosen, setChosen] = useState<TargetRef[]>([]);
   const [attacking, setAttacking] = useState<AttackTurn | null>(null);
@@ -429,6 +432,7 @@ export function RunView({
   useEffect(() => {
     setDragging(null);
     setAbilityPick(null);
+    setNinjutsuSource(null);
   }, [humanTurn]);
 
   // Space bar passes priority during the human's turn.
@@ -544,6 +548,37 @@ export function RunView({
       },
     };
   }, [humanTurn]);
+
+  // Ninjutsu: pick a ninja (hand or command zone), then which unblocked
+  // attacker it returns. The engine enumerates one action per (ninja, attacker).
+  const ninjutsu: NinjutsuInteraction | undefined = useMemo(() => {
+    if (!humanTurn) return undefined;
+    const bySource = ninjutsuBySource(humanTurn.legal.actions);
+    if (bySource.size === 0) return undefined;
+    const chosen =
+      ninjutsuSource != null && bySource.has(ninjutsuSource)
+        ? ninjutsuSource
+        : null;
+    const returnable = new Set(
+      chosen != null ? bySource.get(chosen)!.map((o) => o.creatureId) : [],
+    );
+    return {
+      sourceIds: new Set(bySource.keys()),
+      chosenSource: chosen,
+      returnableIds: returnable,
+      onChooseSource: (objId: number) => {
+        const opts = bySource.get(objId);
+        if (!opts || opts.length === 0) return;
+        if (opts.length === 1) humanTurn.resolve({ action: opts[0].action });
+        else setNinjutsuSource(objId);
+      },
+      onChooseReturn: (creatureId: number) => {
+        if (chosen == null) return;
+        const opt = bySource.get(chosen)?.find((o) => o.creatureId === creatureId);
+        if (opt) humanTurn.resolve({ action: opt.action });
+      },
+    };
+  }, [humanTurn, ninjutsuSource]);
 
   // Highlight legal targets for the current slot and collect the human's picks.
   const target: TargetInteraction | undefined = useMemo(() => {
@@ -829,7 +864,14 @@ export function RunView({
             <>
               {hasPlayable && <p className="hint">{t("turn.dragHint")}</p>}
               {ability && <p className="hint">{t("turn.abilityHint")}</p>}
-              {!hasPlayable && !ability && (
+              {ninjutsu && (
+                <p className="hint">
+                  {ninjutsu.chosenSource != null
+                    ? t("turn.ninjutsuReturnHint")
+                    : t("turn.ninjutsuHint")}
+                </p>
+              )}
+              {!hasPlayable && !ability && !ninjutsu && (
                 <p className="hint">{t("turn.nothingToPlay")}</p>
               )}
               {abilityPick && (
@@ -1112,6 +1154,7 @@ export function RunView({
             play={play}
             target={target}
             ability={ability}
+            ninjutsu={ninjutsu}
             attack={attack}
             block={block}
             mana={mana}
