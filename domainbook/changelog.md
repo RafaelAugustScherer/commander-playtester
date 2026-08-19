@@ -12,6 +12,18 @@ depth live there. A purely-internal PR that touches no product or architecture m
 skip its version with a `Skip-Docs: <reason>` trailer instead. There are no
 per-domain changelogs; this file is the single timeline (`ADR-0007`).
 
+## [0.3.1] - 2026-08-19
+
+### Changed
+
+- The Play tab opens match setup directly on your last-played deck (a dropdown over
+  every saved deck), instead of requiring a deck to be picked from the library first
+  (`domains/match-setup/features/configure-a-run.md`).
+- Setup now defaults to one match against Very Hard AI
+  (`domains/match-setup/features/configure-a-run.md`).
+- Opponent decks are listed one per line, numbered in seat order
+  (`domains/match-setup/features/configure-a-run.md`).
+
 ## [0.3.0] - 2026-08-19
 
 ### Added
