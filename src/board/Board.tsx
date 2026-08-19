@@ -78,6 +78,48 @@ function abilityProps(
   return { activatable: true, onActivate: () => ability.onActivate(o.id) };
 }
 
+/** Ninjutsu: click a ninja (hand or command zone), then an unblocked attacker
+ * you control to return in its place. */
+export interface NinjutsuInteraction {
+  /** Ninja object ids playable via ninjutsu now (in hand or the command zone). */
+  sourceIds: Set<number>;
+  /** The ninja chosen, awaiting a creature to return (null before a pick). */
+  chosenSource: number | null;
+  /** Unblocked-attacker ids returnable for the chosen ninja. */
+  returnableIds: Set<number>;
+  onChooseSource: (objId: number) => void;
+  onChooseReturn: (creatureId: number) => void;
+}
+
+function ninjutsuSourceProps(
+  o: GameObject,
+  ninjutsu?: NinjutsuInteraction,
+): { ninjutsuSource?: boolean; ninjutsuChosen?: boolean; onNinjutsu?: () => void } {
+  if (!ninjutsu || !ninjutsu.sourceIds.has(o.id)) return {};
+  return {
+    ninjutsuSource: true,
+    ninjutsuChosen: ninjutsu.chosenSource === o.id,
+    onNinjutsu: () => ninjutsu.onChooseSource(o.id),
+  };
+}
+
+function ninjutsuReturnProps(
+  o: GameObject,
+  ninjutsu?: NinjutsuInteraction,
+): { ninjutsuReturn?: boolean; onNinjutsuReturn?: () => void } {
+  if (
+    !ninjutsu ||
+    ninjutsu.chosenSource === null ||
+    !ninjutsu.returnableIds.has(o.id)
+  ) {
+    return {};
+  }
+  return {
+    ninjutsuReturn: true,
+    onNinjutsuReturn: () => ninjutsu.onChooseReturn(o.id),
+  };
+}
+
 /** Declare-attackers interaction: toggle your creatures, aim at a defender. */
 export interface AttackInteraction {
   /** Your creatures that may attack (click to toggle). */
@@ -239,6 +281,7 @@ export function Board({
   play,
   target,
   ability,
+  ninjutsu,
   attack,
   block,
   mana,
@@ -248,6 +291,7 @@ export function Board({
   play?: PlayInteraction;
   target?: TargetInteraction;
   ability?: AbilityInteraction;
+  ninjutsu?: NinjutsuInteraction;
   attack?: AttackInteraction;
   block?: BlockInteraction;
   mana?: ManaInteraction;
@@ -294,6 +338,7 @@ export function Board({
             play={play}
             target={target}
             ability={ability}
+            ninjutsu={ninjutsu}
             attack={attack}
             block={block}
             mana={mana}
@@ -317,6 +362,7 @@ function Seat({
   play,
   target,
   ability,
+  ninjutsu,
   attack,
   block,
   mana,
@@ -331,6 +377,7 @@ function Seat({
   play?: PlayInteraction;
   target?: TargetInteraction;
   ability?: AbilityInteraction;
+  ninjutsu?: NinjutsuInteraction;
   attack?: AttackInteraction;
   block?: BlockInteraction;
   mana?: ManaInteraction;
@@ -427,12 +474,13 @@ function Seat({
                 {...(you ? blockerProps(c, block) : blockTargetProps(c, block))}
                 {...manaProps(c, you ? mana : undefined)}
                 {...commanderCastProps(c, you ? play : undefined)}
+                {...ninjutsuSourceProps(c, you ? ninjutsu : undefined)}
               />
             ))}
           </div>
         )}
 
-        <Row label={t("board.rowCreatures")} cards={seat.creatures} images={images} onHover={onHover} target={target} ability={ability} attack={you ? attack : undefined} block={block} you={you} mana={you ? mana : undefined} />
+        <Row label={t("board.rowCreatures")} cards={seat.creatures} images={images} onHover={onHover} target={target} ability={ability} ninjutsu={you ? ninjutsu : undefined} attack={you ? attack : undefined} block={block} you={you} mana={you ? mana : undefined} />
         <Row label={t("board.rowOthers")} cards={seat.others} images={images} onHover={onHover} target={target} ability={ability} mana={you ? mana : undefined} />
         <Row label={t("board.rowLands")} cards={seat.lands} images={images} onHover={onHover} target={target} ability={ability} mana={you ? mana : undefined} />
 
@@ -440,7 +488,7 @@ function Seat({
       </div>
 
       {seat.hand.length > 0 && (
-        <HandRow seat={seat} images={images} onHover={onHover} play={play} target={target} />
+        <HandRow seat={seat} images={images} onHover={onHover} play={play} target={target} ninjutsu={you ? ninjutsu : undefined} />
       )}
     </div>
   );
@@ -489,12 +537,14 @@ function HandRow({
   onHover,
   play,
   target,
+  ninjutsu,
 }: {
   seat: SeatView;
   images?: Record<string, string>;
   onHover?: (p: Preview | null) => void;
   play?: PlayInteraction;
   target?: TargetInteraction;
+  ninjutsu?: NinjutsuInteraction;
 }) {
   const { t } = useI18n();
   return (
@@ -527,6 +577,7 @@ function HandRow({
               }
               onDragEnd={play ? () => play.setDragging(null) : undefined}
               {...targetProps(o, target)}
+              {...ninjutsuSourceProps(o, ninjutsu)}
             />
           );
         })}
@@ -542,6 +593,7 @@ function Row({
   onHover,
   target,
   ability,
+  ninjutsu,
   attack,
   block,
   you,
@@ -553,6 +605,7 @@ function Row({
   onHover?: (p: Preview | null) => void;
   target?: TargetInteraction;
   ability?: AbilityInteraction;
+  ninjutsu?: NinjutsuInteraction;
   attack?: AttackInteraction;
   block?: BlockInteraction;
   you?: boolean;
@@ -571,6 +624,7 @@ function Row({
             onHover={onHover}
             {...targetProps(o, target)}
             {...abilityProps(o, ability)}
+            {...ninjutsuReturnProps(o, ninjutsu)}
             {...attackProps(o, attack)}
             {...(you ? blockerProps(o, block) : blockTargetProps(o, block))}
             {...manaProps(o, mana)}
@@ -596,6 +650,11 @@ function Card({
   onChoose,
   activatable,
   onActivate,
+  ninjutsuSource,
+  ninjutsuChosen,
+  onNinjutsu,
+  ninjutsuReturn,
+  onNinjutsuReturn,
   attacker,
   attacking,
   onToggleAttack,
@@ -624,6 +683,11 @@ function Card({
   onChoose?: () => void;
   activatable?: boolean;
   onActivate?: () => void;
+  ninjutsuSource?: boolean;
+  ninjutsuChosen?: boolean;
+  onNinjutsu?: () => void;
+  ninjutsuReturn?: boolean;
+  onNinjutsuReturn?: () => void;
   attacker?: boolean;
   attacking?: boolean;
   onToggleAttack?: () => void;
@@ -649,6 +713,9 @@ function Card({
     targetable ? "card--targetable" : "",
     targeted ? "card--targeted" : "",
     activatable ? "card--activatable" : "",
+    ninjutsuSource ? "card--ninjutsu" : "",
+    ninjutsuChosen ? "card--ninjutsu-chosen" : "",
+    ninjutsuReturn ? "card--ninjutsu-return" : "",
     attacker ? "card--attacker" : "",
     attacking ? "card--attacking" : "",
     blocker ? "card--blocker" : "",
@@ -680,6 +747,8 @@ function Card({
 
   const click =
     onChoose ??
+    onNinjutsuReturn ??
+    onNinjutsu ??
     onCast ??
     onActivate ??
     onToggleAttack ??

@@ -80,6 +80,31 @@ Example: Casting your commander from the command zone
   And clicking it casts the commander from the command zone onto the stack
 ```
 
+## Rule: You put a ninja in with ninjutsu by choosing the ninja, then the attacker it swaps in for
+
+Ninjutsu (and commander ninjutsu) can be used during your combat once an
+unblocked attacker exists. Each playable ninja is highlighted where it waits — a
+ninja card in hand, or your commander in the command zone for commander
+ninjutsu. You choose the ninja, then which unblocked attacker returns to hand in
+its place; the ninja enters tapped and attacking. When only one attacker could
+be returned, choosing the ninja resolves it in one step.
+
+```gherkin
+Example: Commander ninjutsu from the command zone
+  Given it is your combat and an attacker you control is unblocked
+  And you can pay the commander ninjutsu cost
+  Then your commander is highlighted in the command zone as playable via ninjutsu
+  When you choose it and then an unblocked attacker
+  Then that attacker returns to your hand
+  And the commander enters the battlefield tapped and attacking
+
+Example: Ninjutsu from your hand
+  Given it is your combat, a ninja is in your hand, and an attacker is unblocked
+  When you choose the ninja and then the attacker to return
+  Then the attacker returns to your hand
+  And the ninja enters the battlefield tapped and attacking
+```
+
 ## Rule: Pass turn advances your own turn and stops when an opponent acts
 
 ```gherkin
