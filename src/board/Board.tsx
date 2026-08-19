@@ -457,6 +457,11 @@ function DropLane({ card, play }: { card: GameObject; play: PlayInteraction }) {
           <div
             key={cat}
             className={`slot ${ok ? "slot--ok" : "slot--no"}`}
+            onClick={() => {
+              if (!ok || play.dragging == null) return;
+              play.onPlay(play.dragging);
+              play.setDragging(null);
+            }}
             onDragOver={(e) => {
               if (ok) e.preventDefault();
             }}
@@ -506,6 +511,12 @@ function HandRow({
               onHover={onHover}
               draggable={playable}
               playable={play ? playable : undefined}
+              selected={play?.dragging === o.id}
+              onTapPlay={
+                playable && play
+                  ? () => play.setDragging(play.dragging === o.id ? null : o.id)
+                  : undefined
+              }
               onDragStart={
                 playable && play
                   ? () => {
@@ -576,6 +587,8 @@ function Card({
   onHover,
   draggable,
   playable,
+  selected,
+  onTapPlay,
   onDragStart,
   onDragEnd,
   targetable,
@@ -602,6 +615,8 @@ function Card({
   onHover?: (p: Preview | null) => void;
   draggable?: boolean;
   playable?: boolean;
+  selected?: boolean;
+  onTapPlay?: () => void;
   onDragStart?: () => void;
   onDragEnd?: () => void;
   targetable?: boolean;
@@ -629,6 +644,7 @@ function Card({
     "card",
     obj.tapped ? "card--tapped" : "",
     draggable ? "card--draggable" : "",
+    selected ? "card--selected" : "",
     playable === false ? "card--unplayable" : "",
     targetable ? "card--targetable" : "",
     targeted ? "card--targeted" : "",
@@ -669,7 +685,8 @@ function Card({
     onToggleAttack ??
     onSelectBlock ??
     onAssignBlock ??
-    onTapSource;
+    onTapSource ??
+    onTapPlay;
   const common = {
     className: url ? cls : `${cls} card--text`,
     title: obj.name,

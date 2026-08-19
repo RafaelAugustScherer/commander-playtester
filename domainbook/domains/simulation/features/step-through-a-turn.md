@@ -60,13 +60,19 @@ Example: Naming a creature type
   And you may instead let the AI choose for you
 ```
 
-## Rule: You put cards into play by dragging from hand, or clicking the commander in its zone
+## Rule: You put cards into play by dragging or tapping from hand, or clicking the commander in its zone
 
 ```gherkin
 Example: Playing a card from your hand
   Given it is your main phase and a hand card has a legal play
   When you drag it onto a matching battlefield slot
   Then the card is played and its cost is paid
+
+Example: Playing a card by tapping (touch)
+  Given it is your main phase and a hand card has a legal play
+  When you tap the card and then tap a matching battlefield slot
+  Then the card is played and its cost is paid
+  And tapping the card again instead clears the selection
 
 Example: Casting your commander from the command zone
   Given it is your main phase and you can pay for your commander

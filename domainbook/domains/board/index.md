@@ -42,7 +42,9 @@ way whether they are playing or watching.
 
 ## Business Decisions
 
-- Fixed, Arena-style slots — no dragging cards, no fancy animation (project scope).
+- Fixed, Arena-style slots, no fancy animation (project scope); a hand card is
+  played onto a slot either by dragging it there or, for touch where HTML5 drag
+  doesn't fire, by tapping the card and then the slot.
 - A phase rail the human advances with space in `play mode`; the same rail is
   display-only in `watch mode`.
 - Reveal-hands renders opponents' hands face-up only when `match setup` turned it

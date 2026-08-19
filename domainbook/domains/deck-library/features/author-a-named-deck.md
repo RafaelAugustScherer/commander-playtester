@@ -38,6 +38,25 @@ Example: A deck that isn't exactly 100 cards can't be saved
   Then saving is refused and the count is flagged with the 100-card rule
 ```
 
+## Rule: A deck left unnamed takes its commander's name
+
+The name field is optional. While it is empty it shows the commander's name as its
+placeholder, and saving with it still empty adopts that commander name as the deck
+name — so an imported or typed deck never has to be named by hand.
+
+```gherkin
+Example: Saving without typing a name
+  Given a decklist whose Commander section names "Krenko, Mob Boss"
+  And the author leaves the name field empty
+  When the author saves the deck
+  Then the deck is saved as "Krenko, Mob Boss"
+
+Example: The name field previews the commander
+  Given a decklist with a commander and an empty name field
+  When the author looks at the name field
+  Then its placeholder shows the commander's name
+```
+
 ## Rule: A saved deck round-trips
 
 ```gherkin

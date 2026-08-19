@@ -650,6 +650,10 @@ th {
 .card--draggable:active {
   cursor: grabbing;
 }
+.card--selected {
+  cursor: pointer;
+  box-shadow: 0 0 0 3px var(--accent);
+}
 .card--unplayable {
   opacity: 0.5;
 }
