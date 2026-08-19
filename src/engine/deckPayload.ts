@@ -1,11 +1,13 @@
 import type { SavedDeck } from "../deck/model";
 import type { DecklistEntry } from "../lib/types";
+import { frontFace } from "../lib/cardName";
 import type { EngineDeckList, PlayerDeckPayload } from "./types";
 
 function expand(entries: DecklistEntry[]): string[] {
   const names: string[] = [];
   for (const entry of entries) {
-    for (let i = 0; i < entry.quantity; i++) names.push(entry.name);
+    const name = frontFace(entry.name);
+    for (let i = 0; i < entry.quantity; i++) names.push(name);
   }
   return names;
 }

@@ -33,6 +33,14 @@ Example: Importing a Moxfield deck
   And the sideboard and maybeboard are left out
 ```
 
+```gherkin
+Example: A two-sided card, however the platform wrote it
+  Given an exported list naming a split card as "Commit/Memory" or "Commit // Memory"
+  When the author imports or pastes it
+  Then the deck stores the full name "Commit // Memory"
+  And the deck is accepted — the card resolves by its front face "Commit"
+```
+
 ## Rule: The author is told when a URL can't be imported
 
 ```gherkin

@@ -62,6 +62,7 @@ export function DeckEditor({
   const commanderCount = parsed.commanders.reduce((n, e) => n + e.quantity, 0);
   const mainboardCount = parsed.mainboard.reduce((n, e) => n + e.quantity, 0);
   const total = commanderCount + mainboardCount;
+  const isHundred = total === 100;
 
   function handleSave() {
     const now = Date.now();
@@ -144,7 +145,12 @@ export function DeckEditor({
           {parsed.commanders.map((e) => e.name).join(", ") ||
             t("deck.noCommander")}
         </span>
-        <span className="chip">{t("deck.cards", { n: total })}</span>
+        <span
+          className="chip"
+          style={total > 0 && !isHundred ? { color: "var(--bad)" } : undefined}
+        >
+          {t("deck.cards", { n: total })}
+        </span>
         {parsed.warnings.length > 0 && (
           <span className="chip" style={{ color: "var(--bad)" }}>
             {t("editor.linesUnread", { n: parsed.warnings.length })}
@@ -160,9 +166,12 @@ export function DeckEditor({
           })}
         </p>
       )}
+      {total > 0 && !isHundred && (
+        <p className="error">{t("editor.needHundred", { n: total })}</p>
+      )}
 
       <div className="import__row">
-        <button className="btn" onClick={handleSave} disabled={total === 0}>
+        <button className="btn" onClick={handleSave} disabled={!isHundred}>
           {t("editor.save")}
         </button>
         <button className="btn btn--ghost" onClick={onCancel}>

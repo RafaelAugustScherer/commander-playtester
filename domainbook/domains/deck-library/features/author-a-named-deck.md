@@ -31,6 +31,13 @@ Example: A duplicate nonland is rejected
   And the offending card is named
 ```
 
+```gherkin
+Example: A deck that isn't exactly 100 cards can't be saved
+  Given a decklist with 99 cards (or any count other than 100)
+  When the author looks at the editor
+  Then saving is refused and the count is flagged with the 100-card rule
+```
+
 ## Rule: A saved deck round-trips
 
 ```gherkin
@@ -42,4 +49,5 @@ Example: Reload yields the same list
 
 ## Open Questions
 
-- Whether an incomplete deck (fewer than 99) can be saved as a draft.
+- Whether to also block on singleton and color-identity at save, or keep the
+  engine as the arbiter for those (only the exact-100 count is enforced here).

@@ -47,6 +47,10 @@ export const messages = {
   },
   "editor.linesUnread": { pt: "{n} linhas não lidas", en: "{n} lines not read" },
   "editor.unread": { pt: "Não lidas: {list}", en: "Not read: {list}" },
+  "editor.needHundred": {
+    pt: "Um deck de Commander precisa de exatamente 100 cartas (comandante + 99). Este tem {n}.",
+    en: "A Commander deck needs exactly 100 cards (commander + 99). This one has {n}.",
+  },
   "editor.untitled": { pt: "Deck sem nome", en: "Untitled deck" },
   "editor.save": { pt: "Salvar deck", en: "Save deck" },
   "editor.cancel": { pt: "Cancelar", en: "Cancel" },

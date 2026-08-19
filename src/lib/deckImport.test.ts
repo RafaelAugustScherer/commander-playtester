@@ -64,7 +64,7 @@ describe("parseMoxfield", () => {
     expect(all).not.toContain("Grafdigger's Cage"); // sideboard
   });
 
-  it("collapses a two-sided card name to its front face", () => {
+  it("keeps a two-sided card name whole, canonicalized", () => {
     const deck = parseMoxfield({
       name: "DFC deck",
       boards: {
@@ -73,7 +73,7 @@ describe("parseMoxfield", () => {
         },
       },
     });
-    expect(deck.mainboard.map((e) => e.name)).toEqual(["Never"]);
+    expect(deck.mainboard.map((e) => e.name)).toEqual(["Never // Return"]);
   });
 
   it("routes the commanders board and ignores the maybeboard", () => {

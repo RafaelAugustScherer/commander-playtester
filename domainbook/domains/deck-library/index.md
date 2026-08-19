@@ -52,6 +52,12 @@ actually play, so `match setup` always has legal, playable decks to choose from.
 - Two legality gates are kept apart: format legality (`color identity`,
   `singleton`, banlist) is read from Scryfall data; engine `coverage` — is the card
   implemented — is asked of phase-rs. A card can be Commander-legal yet unplayable.
+- A two-sided card (split, MDFC, transform, adventure) is stored in its full
+  `Front // Back` form with the spaced separator, whatever the platform wrote —
+  including Moxfield's bare-slash `Front/Back` shorthand. The `src/lib/cardName.ts`
+  adapter canonicalizes on the way in; the Scryfall and engine boundaries collapse
+  the stored name to its `frontFace` at the point they query, since both key on
+  the front face alone.
 - The existing `src/lib/decklist.ts` parser and `src/lib/scryfall.ts` resolver are
   reused rather than rewritten.
 - A deck may also be brought in by its Moxfield or Archidekt URL, which is fetched
@@ -63,8 +69,9 @@ actually play, so `match setup` always has legal, playable decks to choose from.
 ## Assumptions
 
 - Canonical Scryfall names line up with the engine's card names in the common case;
-  split / modal-double-faced / adventure `//` names and diacritics are the known
-  exceptions.
+  the two both key two-sided cards on the front face, so the stored `Front // Back`
+  name is collapsed to that face before either is queried. Diacritics remain a
+  known exception.
 - The engine exposes a queryable list of implemented cards (phase-rs
   `classify_deck`), so coverage is checked before a game, not discovered during one.
 - The user maintains their own decks; the library does not curate or suggest.
@@ -78,8 +85,8 @@ actually play, so `match setup` always has legal, playable decks to choose from.
 
 ## Open Questions
 
-- How to match split / MDFC / adventure `//` names and diacritics against the
-  engine's card set without false misses.
+- How to match diacritics against the engine's card set without false misses
+  (split / MDFC / adventure `//` names now resolve via the front face).
 - Block a deck that contains unsupported cards, or only warn and let it run with
   those cards absent?
 - Where named decks persist — `localStorage` or IndexedDB — given decks are small

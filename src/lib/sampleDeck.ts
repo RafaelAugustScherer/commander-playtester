@@ -102,6 +102,7 @@ Deck
 1 Swamp
 1 Island
 1 Island
+1 Island
 1 Evolving Wilds
 1 Terramorphic Expanse
 1 Fabled Passage

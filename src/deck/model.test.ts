@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { totalCards, deckToText } from "./model";
 import type { SavedDeck } from "./model";
 import { parseDecklist } from "../lib/decklist";
+import { SAMPLE_DECK } from "../lib/sampleDeck";
 
 const deck: SavedDeck = {
   id: "x",
@@ -24,5 +25,15 @@ describe("deck model", () => {
     const parsed = parseDecklist(deckToText(deck));
     expect(parsed.commanders).toEqual(deck.commanders);
     expect(parsed.mainboard).toEqual(deck.mainboard);
+  });
+
+  it("the sample deck is a legal 100-card Commander deck", () => {
+    const parsed = parseDecklist(SAMPLE_DECK);
+    const total = [...parsed.commanders, ...parsed.mainboard].reduce(
+      (n, e) => n + e.quantity,
+      0,
+    );
+    expect(total).toBe(100);
+    expect(parsed.warnings).toEqual([]);
   });
 });

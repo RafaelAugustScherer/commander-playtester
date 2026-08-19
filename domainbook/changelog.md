@@ -12,6 +12,26 @@ depth live there. A purely-internal PR that touches no product or architecture m
 skip its version with a `Skip-Docs: <reason>` trailer instead. There are no
 per-domain changelogs; this file is the single timeline (`ADR-0007`).
 
+## [0.1.10] - 2026-08-18
+
+### Changed
+
+- Two-sided cards (split, MDFC, transform, adventure) are now stored in full as
+  the canonical `Front // Back`, whatever a platform wrote — including Moxfield's
+  bare-slash `Front/Back` shorthand, which previously imported as an unknown card
+  and made the deck invalid. The Scryfall and engine boundaries collapse the
+  stored name to its front face when they query, since both key on that face
+  (`domains/deck-library/features/import-from-a-url.md`).
+- The deck editor now requires exactly 100 cards to save (commander + 99),
+  matching what the engine enforces at game start, so a short deck can no longer
+  be saved and then rejected mid-match
+  (`domains/deck-library/features/author-a-named-deck.md`).
+
+### Fixed
+
+- The built-in example deck is now a legal 100-card list (was 99), so loading it
+  and running a match works without a card-count rejection.
+
 ## [0.1.9] - 2026-08-18
 
 ### Fixed

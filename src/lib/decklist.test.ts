@@ -54,8 +54,8 @@ describe("parseDecklist", () => {
     ]);
     expect(parsed.mainboard.map((e) => e.name)).toEqual([
       "Sol Ring",
-      "Never",
-      "Discovery",
+      "Never // Return",
+      "Discovery // Dispersal",
     ]);
     expect(parsed.warnings).toEqual([]);
   });
