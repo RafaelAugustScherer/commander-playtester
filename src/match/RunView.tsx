@@ -23,6 +23,7 @@ import {
   type BlockInteraction,
   type ManaInteraction,
 } from "../board/Board";
+import { CardPreview, type Preview } from "../board/CardPreview";
 import {
   declareAttackersAction,
   type AttackersPrompt,
@@ -46,6 +47,7 @@ import {
   mulliganTakeAction,
   bottomCardsAction,
   type MulliganPrompt,
+  type MulliganCard,
 } from "../sim/decisions/mulligan";
 import { toBoardView, type BoardView, type SeatMeta } from "../board/boardView";
 import { GameSidebar, type LoggedEntry } from "../board/GameSidebar";
@@ -1322,6 +1324,48 @@ function MulliganModal({
     };
   }, []);
 
+  const canHover =
+    typeof window !== "undefined" &&
+    !!window.matchMedia?.("(hover: hover) and (pointer: fine)").matches;
+
+  const [preview, setPreview] = useState<Preview | null>(null);
+  const [zoomed, setZoomed] = useState<MulliganCard | null>(null);
+  const longPressTimer = useRef<number | null>(null);
+  const longPressFired = useRef(false);
+
+  const previewFor = (c: MulliganCard, rect: DOMRect): Preview => ({
+    url: c.name ? images[c.name.toLowerCase()] : undefined,
+    name: c.name || "?",
+    isCreature: false,
+    rect,
+  });
+
+  const cancelLongPress = () => {
+    if (longPressTimer.current != null) {
+      window.clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  };
+  useEffect(() => cancelLongPress, []);
+
+  const startLongPress = (c: MulliganCard) => {
+    longPressFired.current = false;
+    cancelLongPress();
+    longPressTimer.current = window.setTimeout(() => {
+      longPressFired.current = true;
+      setZoomed(c);
+    }, 500);
+  };
+
+  const onCardClick = (c: MulliganCard) => {
+    if (longPressFired.current) {
+      longPressFired.current = false;
+      return;
+    }
+    if (bottoming) onToggleBottom(c.id);
+    else if (!canHover) setZoomed(c);
+  };
+
   return (
     <div className="mull-overlay" role="dialog" aria-modal="true" aria-labelledby="mull-title">
       <div className="mull-modal" ref={modalRef}>
@@ -1350,8 +1394,23 @@ function MulliganModal({
                 className={`mull-card${bottoming ? " mull-card--selectable" : ""}${
                   picked ? " mull-card--picked" : ""
                 }`}
-                disabled={!bottoming}
-                onClick={() => bottoming && onToggleBottom(c.id)}
+                onClick={() => onCardClick(c)}
+                onMouseEnter={
+                  canHover
+                    ? (e) => setPreview(previewFor(c, e.currentTarget.getBoundingClientRect()))
+                    : undefined
+                }
+                onMouseLeave={canHover ? () => setPreview(null) : undefined}
+                onFocus={
+                  canHover
+                    ? (e) => setPreview(previewFor(c, e.currentTarget.getBoundingClientRect()))
+                    : undefined
+                }
+                onBlur={canHover ? () => setPreview(null) : undefined}
+                onTouchStart={canHover ? undefined : () => startLongPress(c)}
+                onTouchEnd={canHover ? undefined : cancelLongPress}
+                onTouchMove={canHover ? undefined : cancelLongPress}
+                onContextMenu={canHover ? undefined : (e) => e.preventDefault()}
                 title={c.name}
               >
                 {url ? (
@@ -1404,6 +1463,28 @@ function MulliganModal({
           )}
         </div>
       </div>
+
+      {preview && <CardPreview preview={preview} />}
+
+      {zoomed && (
+        <div
+          className="mull-zoom"
+          onClick={() => setZoomed(null)}
+          role="dialog"
+          aria-modal="true"
+        >
+          {(() => {
+            const url = zoomed.name
+              ? images[zoomed.name.toLowerCase()]
+              : undefined;
+            return url ? (
+              <img src={url} alt={zoomed.name} className="mull-zoom__img" />
+            ) : (
+              <div className="mull-zoom__text">{zoomed.name || "?"}</div>
+            );
+          })()}
+        </div>
+      )}
     </div>
   );
 }

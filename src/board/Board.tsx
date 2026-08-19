@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import type { GameObject } from "../engine/types";
 import type { BoardView, SeatView } from "./boardView";
+import { CardPreview, type Preview } from "./CardPreview";
 import { useI18n } from "../i18n/I18nContext";
 import { categoryLabel } from "../i18n/messages";
 
@@ -263,15 +264,6 @@ function slotsFor(o: GameObject): string[] {
 function slotAccepts(cat: string, o: GameObject): boolean {
   if (cat === "Spell") return !isPermanent(o);
   return coreTypes(o).includes(cat);
-}
-
-interface Preview {
-  url?: string;
-  name: string;
-  power?: number | null;
-  toughness?: number | null;
-  isCreature: boolean;
-  rect: DOMRect;
 }
 
 /** Render opponents (top) with the human seat centered and larger at the bottom. */
@@ -816,37 +808,3 @@ function Card({
   );
 }
 
-/** Fixed-position enlarged card shown beside the hovered card. */
-function CardPreview({ preview }: { preview: Preview }) {
-  const width = 312;
-  const height = Math.round(width / 0.716);
-  const { rect } = preview;
-  const vw = typeof window !== "undefined" ? window.innerWidth : 1280;
-  const vh = typeof window !== "undefined" ? window.innerHeight : 800;
-  const gap = 12;
-  const fitsRight = rect.right + gap + width <= vw;
-  const left = fitsRight
-    ? rect.right + gap
-    : Math.max(8, rect.left - gap - width);
-  const top = Math.min(Math.max(8, rect.top - 20), Math.max(8, vh - height - 8));
-
-  return (
-    <div
-      className="card-preview"
-      style={{ left, top, width }}
-    >
-      {preview.url ? (
-        <img src={preview.url} alt={preview.name} className="card-preview__img" />
-      ) : (
-        <div className="card-preview__text">
-          <div className="card-preview__name">{preview.name}</div>
-          {preview.isCreature && (
-            <div className="card-preview__pt">
-              {preview.power ?? 0}/{preview.toughness ?? 0}
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}

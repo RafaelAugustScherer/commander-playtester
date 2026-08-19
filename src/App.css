@@ -1454,3 +1454,30 @@ th {
 .mull-actions .hint {
   margin-right: auto;
 }
+.mull-zoom {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+}
+.mull-zoom__img {
+  width: auto;
+  max-width: min(88vw, 360px);
+  max-height: 88vh;
+  border-radius: var(--radius);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+}
+.mull-zoom__text {
+  max-width: min(88vw, 360px);
+  padding: 1.25rem 1.4rem;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-weight: 700;
+  text-align: center;
+}
