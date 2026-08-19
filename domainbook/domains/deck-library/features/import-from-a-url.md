@@ -60,11 +60,22 @@ Example: The deck can't be reached
   Then the author sees why — not found, or the import proxy is unreachable
 ```
 
-## Open Questions
+## Rule: The import survives a flaky proxy
 
-- Whether to rely on the default public proxy or require the owned `deck-proxy`
-  worker; Moxfield needs the owned proxy with an approved User-Agent, Archidekt
-  works through either.
+With no owned proxy configured, the import tries a chain of public proxies in
+turn and takes the first that answers, so one being rate-limited or down doesn't
+fail the import on its own. Full reliability still needs the owned `deck-proxy`
+worker — and Moxfield only answers it with an approved User-Agent.
+
+```gherkin
+Example: The first proxy is down
+  Given no owned proxy is configured
+  And the first public proxy is unreachable
+  When the author imports a supported deck
+  Then a later proxy in the chain fetches it and the import succeeds
+```
+
+## Open Questions
 - Whether Ligamagic could be supported later (its deck data is behind a page
   session token, so it would need a different approach than a plain fetch).
 - Whether to import more than the mainboard and commanders (companions,

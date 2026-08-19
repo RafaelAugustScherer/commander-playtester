@@ -150,8 +150,8 @@ export const messages = {
 
   "turn.title": { pt: "Sua vez", en: "Your turn" },
   "turn.dragHint": {
-    pt: "Arraste uma carta da sua mão até um espaço para jogá-la.",
-    en: "Drag a card from your hand onto a slot to play it.",
+    pt: "Arraste uma carta da mão até um espaço — ou toque na carta e depois no espaço — para jogá-la.",
+    en: "Drag a hand card onto a slot — or tap the card, then a slot — to play it.",
   },
   "turn.spaceHint": { pt: "Espaço = passar prioridade", en: "Space = pass priority" },
   "turn.pass": { pt: "Passar (espaço)", en: "Pass (space)" },

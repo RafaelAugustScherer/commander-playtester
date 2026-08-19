@@ -32,19 +32,62 @@ export class DeckImportError extends Error {
 /** Minimal fetch shape, so tests can inject a stub (mirrors scryfall.ts). */
 export type FetchLike = (
   input: string,
+  init?: { signal?: AbortSignal },
 ) => Promise<{ ok: boolean; status: number; json: () => Promise<unknown> }>;
 
-const DEFAULT_PROXY = "https://api.allorigins.win/raw?url=";
+/** One proxy hop: the request URL, plus how to unwrap the deck JSON from it. */
+interface ProxyAttempt {
+  url: string;
+  unwrap: (body: unknown) => unknown;
+}
+
+const identity = (body: unknown): unknown => body;
+
+/** allorigins `/get` returns `{ contents: "<json string>" }`; unpack it. */
+function unwrapAllOriginsGet(body: unknown): unknown {
+  const contents = (body as { contents?: unknown }).contents;
+  if (typeof contents !== "string") throw new Error("unexpected proxy wrapper");
+  return JSON.parse(contents);
+}
 
 /**
  * Deck sites block cross-origin browser requests, so a static build routes the
- * fetch through a proxy. `VITE_DECK_PROXY` overrides the default (set it to your
- * own deck-proxy worker for reliability, or to "" to fetch directly).
+ * fetch through a proxy. `VITE_DECK_PROXY` pins a single proxy (set it to your
+ * own deck-proxy worker for reliability, or to "" to fetch directly). Left
+ * unset, the app tries a chain of public proxies in turn — each is
+ * rate-limited and intermittently down, so trying several raises the odds one
+ * answers. Deploy the worker (see deck-proxy/README) for dependable imports.
  */
-function proxied(url: string): string {
+function proxyAttempts(apiUrl: string): ProxyAttempt[] {
   const configured = import.meta.env.VITE_DECK_PROXY as string | undefined;
-  const base = configured === undefined ? DEFAULT_PROXY : configured.trim();
-  return base ? base + encodeURIComponent(url) : url;
+  if (configured !== undefined) {
+    const base = configured.trim();
+    return [
+      { url: base ? base + encodeURIComponent(apiUrl) : apiUrl, unwrap: identity },
+    ];
+  }
+  const enc = encodeURIComponent(apiUrl);
+  return [
+    { url: `https://api.allorigins.win/raw?url=${enc}`, unwrap: identity },
+    { url: `https://api.codetabs.com/v1/proxy?quest=${apiUrl}`, unwrap: identity },
+    { url: `https://api.allorigins.win/get?url=${enc}`, unwrap: unwrapAllOriginsGet },
+  ];
+}
+
+const ATTEMPT_TIMEOUT_MS = 15000;
+
+/** Run a fetch with a hard timeout so one hung proxy can't stall the chain. */
+async function fetchWithTimeout(
+  fetchImpl: FetchLike,
+  url: string,
+): Promise<Awaited<ReturnType<FetchLike>>> {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), ATTEMPT_TIMEOUT_MS);
+  try {
+    return await fetchImpl(url, { signal: ctrl.signal });
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 function normalizeUrl(raw: string): URL | null {
@@ -165,22 +208,25 @@ export async function importDeck(
   const apiUrl = apiUrlFor(source, url);
   if (!apiUrl) throw new DeckImportError("no-id", source);
 
-  let res: Awaited<ReturnType<FetchLike>>;
-  try {
-    res = await fetchImpl(proxied(apiUrl));
-  } catch {
-    throw new DeckImportError("network", source);
+  let json: unknown | undefined;
+  for (const attempt of proxyAttempts(apiUrl)) {
+    let res: Awaited<ReturnType<FetchLike>>;
+    try {
+      res = await fetchWithTimeout(fetchImpl, attempt.url);
+    } catch {
+      continue; // proxy hung or refused — try the next one
+    }
+    // A missing deck answers 404 through every proxy, so stop asking.
+    if (res.status === 404) throw new DeckImportError("not-found", source);
+    if (!res.ok) continue;
+    try {
+      json = attempt.unwrap(await res.json());
+      break;
+    } catch {
+      continue; // proxy returned a non-JSON error/landing page
+    }
   }
-  if (!res.ok) {
-    throw new DeckImportError(res.status === 404 ? "not-found" : "network", source);
-  }
-
-  let json: unknown;
-  try {
-    json = await res.json();
-  } catch {
-    throw new DeckImportError("network", source);
-  }
+  if (json === undefined) throw new DeckImportError("network", source);
 
   const parsed =
     source === "moxfield" ? parseMoxfield(json) : parseArchidekt(json);

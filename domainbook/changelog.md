@@ -12,6 +12,27 @@ depth live there. A purely-internal PR that touches no product or architecture m
 skip its version with a `Skip-Docs: <reason>` trailer instead. There are no
 per-domain changelogs; this file is the single timeline (`ADR-0007`).
 
+## [0.2.1] - 2026-08-18
+
+### Added
+
+- A deck left unnamed adopts its commander's name, and the name field previews
+  the commander as its placeholder, so imported or typed decks need no manual
+  naming (`domains/deck-library/features/author-a-named-deck.md`).
+
+### Changed
+
+- URL import tries a chain of public proxies and takes the first that answers,
+  instead of relying on one that may be rate-limited or down
+  (`domains/deck-library/features/import-from-a-url.md`).
+
+### Fixed
+
+- Play mode on touch devices: a hand card can be played by tapping it and then a
+  slot, not only by dragging — HTML5 drag doesn't fire on touch, so cards
+  previously couldn't be played on mobile
+  (`domains/simulation/features/step-through-a-turn.md`).
+
 ## [0.2.0] - 2026-08-18
 
 ### Added

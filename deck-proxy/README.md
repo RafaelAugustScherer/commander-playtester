@@ -6,9 +6,12 @@ Archidekt only send permissive CORS headers to their own front-ends, so a
 cross-origin `fetch` from the app is blocked. This tiny [Cloudflare Worker][cf]
 forwards one allowlisted request and adds the CORS headers the browser needs.
 
-By default the app falls back to a public proxy (`api.allorigins.win`), which is
-fine for trying it out but is rate-limited, occasionally down, and can't reach
-Moxfield (see below). Deploy this worker for a reliable import.
+By default the app tries a chain of public proxies (`api.allorigins.win`,
+`api.codetabs.com`) in turn, taking the first that answers. Each is
+rate-limited and intermittently down, so trying several is more reliable than
+one — but none is dependable, and reaching Moxfield needs an approved
+User-Agent (see below) that public proxies don't send. Deploy this worker for
+reliable imports.
 
 ## Deploy
 

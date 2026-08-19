@@ -59,6 +59,7 @@ export function DeckEditor({
   }
 
   const parsed = useMemo(() => parseDecklist(text), [text]);
+  const commanderName = parsed.commanders.map((e) => e.name).join(" & ");
   const commanderCount = parsed.commanders.reduce((n, e) => n + e.quantity, 0);
   const mainboardCount = parsed.mainboard.reduce((n, e) => n + e.quantity, 0);
   const total = commanderCount + mainboardCount;
@@ -68,7 +69,7 @@ export function DeckEditor({
     const now = Date.now();
     const deck: SavedDeck = {
       id: initial?.id ?? newId(),
-      name: name.trim() || t("editor.untitled"),
+      name: name.trim() || commanderName || t("editor.untitled"),
       commanders: parsed.commanders,
       mainboard: parsed.mainboard,
       createdAt: initial?.createdAt ?? now,
@@ -122,7 +123,7 @@ export function DeckEditor({
           className="input"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder={t("editor.namePlaceholder")}
+          placeholder={commanderName || t("editor.namePlaceholder")}
         />
       </label>
 

@@ -111,6 +111,18 @@ describe("importDeck", () => {
     );
   });
 
+  it("falls through to the next proxy when the first one fails", async () => {
+    let n = 0;
+    const flaky: FetchLike = async () => {
+      n += 1;
+      if (n === 1) throw new Error("proxy hung");
+      return { ok: true, status: 200, json: async () => archidektFixture };
+    };
+    const deck = await importDeck("https://archidekt.com/decks/1/fun", flaky);
+    expect(n).toBe(2);
+    expect(deck.name).toBe("Fun With Fungus");
+  });
+
   it("maps a 404 to not-found", async () => {
     await expect(
       importDeck("https://moxfield.com/decks/nope", stubFetch(null, false, 404)),
