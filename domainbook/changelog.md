@@ -12,6 +12,38 @@ depth live there. A purely-internal PR that touches no product or architecture m
 skip its version with a `Skip-Docs: <reason>` trailer instead. There are no
 per-domain changelogs; this file is the single timeline (`ADR-0007`).
 
+## [0.3.0] - 2026-08-19
+
+### Added
+
+- Mobile board: the hand is now a horizontal strip of larger, readable cards, and
+  a multi-opponent pod shows opponents as a swipeable gallery that follows whose
+  turn it is (holding put on your own turn)
+  (`domains/board/features/read-the-board-on-a-phone.md`).
+
+### Changed
+
+- Mobile play no longer scrolls the page sideways: the play-controls toolbar wraps
+  and the log drawer is contained, so only the hand and opponents gallery scroll
+  horizontally (`domains/board/features/read-the-board-on-a-phone.md`).
+- On mobile, keyboard hints (space/enter) are dropped and the pass buttons lose
+  their key labels, and the stack & log drawer always starts closed so it never
+  covers the board on entry (`domains/board/features/follow-the-game.md`).
+- The playback controls are now icons — a pause icon that stays lit while paused,
+  then Slow / Normal / Fast as one, two, and three play triangles; pressing a
+  speed resumes. Each carries an accessible name
+  (`domains/match-setup/features/configure-a-run.md`).
+- The game log reads newest-first — the latest entry is on top, with each turn
+  heading above its own group (`domains/board/features/follow-the-game.md`).
+
+### Fixed
+
+- Accessibility: a visible keyboard focus ring across the app, touch targets raised
+  to at least 44px on mobile, selected state exposed on the nav tabs and the
+  pod/mode/difficulty/speed toggles, and the opening-hand popup now traps and
+  restores focus as a dialog. The mulligan popup also fits within a phone screen
+  (`domains/match-setup/features/configure-a-run.md`).
+
 ## [0.2.2] - 2026-08-19
 
 ### Added

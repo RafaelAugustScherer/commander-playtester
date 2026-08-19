@@ -67,6 +67,33 @@ const SPEED_LABEL: Record<Speed, Record<Lang, string>> = {
   normal: { pt: "Normal", en: "Normal" },
   fast: { pt: "Rápido", en: "Fast" },
 };
+const SPEED_TICKS: Record<Speed, number> = { slow: 1, normal: 2, fast: 3 };
+
+function PlayGlyph({ size = 15 }: { size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      stroke="currentColor"
+      strokeWidth="1"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M6 4 L20 12 L6 20 Z" />
+    </svg>
+  );
+}
+
+function PauseGlyph({ size = 16 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <rect x="6" y="4.5" width="4.5" height="15" rx="1.5" />
+      <rect x="13.5" y="4.5" width="4.5" height="15" rx="1.5" />
+    </svg>
+  );
+}
 
 /** Cast/play action types that put a hand card onto the board (drag targets). */
 const PLAYABLE_TYPES = new Set([
@@ -188,15 +215,30 @@ export function RunView({
   const [bottomPick, setBottomPick] = useState<Set<number>>(new Set());
   const [passingTurn, setPassingTurn] = useState(false);
   const [logEntries, setLogEntries] = useState<LoggedEntry[]>([]);
+  // On mobile the log is a full-screen drawer, so it always starts closed and
+  // its state isn't persisted (a remembered "open" would cover the board). On
+  // desktop it starts open and remembers the last choice.
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(() => {
+    if (!window.matchMedia("(min-width: 900px)").matches) return false;
     const saved = localStorage.getItem("sidebarOpen");
-    if (saved != null) return saved === "1";
-    return window.matchMedia("(min-width: 900px)").matches;
+    return saved != null ? saved === "1" : true;
   });
+  // Touch/narrow screens: drop keyboard hints (space/enter don't apply).
+  const [compact, setCompact] = useState<boolean>(() =>
+    window.matchMedia("(max-width: 899px)").matches,
+  );
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 899px)");
+    const onChange = () => setCompact(mq.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
+
   const logIdRef = useRef(0);
   const runnerRef = useRef<MatchRunner | null>(null);
 
   useEffect(() => {
+    if (!window.matchMedia("(min-width: 900px)").matches) return;
     localStorage.setItem("sidebarOpen", sidebarOpen ? "1" : "0");
   }, [sidebarOpen]);
 
@@ -411,21 +453,20 @@ export function RunView({
     [results, config.seatDeckIds.length],
   );
 
-  function togglePause() {
-    const runner = runnerRef.current;
-    if (!runner) return;
-    if (paused) {
-      runner.resume();
-      setPaused(false);
-    } else {
-      runner.pause();
-      setPaused(true);
-    }
+  function pauseGame() {
+    if (paused) return;
+    runnerRef.current?.pause();
+    setPaused(true);
   }
 
   function changeSpeed(s: Speed) {
+    const runner = runnerRef.current;
     setSpeed(s);
-    runnerRef.current?.setPace(PACE_MS[s]);
+    runner?.setPace(PACE_MS[s]);
+    if (paused) {
+      runner?.resume();
+      setPaused(false);
+    }
   }
 
   // Reset any in-flight drag / ability pick when the priority window changes.
@@ -745,20 +786,31 @@ export function RunView({
           <div className="deck-list__actions">
             {phase === "running" && (
               <>
+                <button
+                  className={`btn btn--ghost btn--sm btn--icon has-tooltip ${paused ? "btn--active" : ""}`}
+                  onClick={pauseGame}
+                  aria-pressed={paused}
+                  aria-label={t("run.pause")}
+                  data-tooltip={t("run.pause")}
+                >
+                  <PauseGlyph size={16} />
+                </button>
                 <div className="seg">
                   {(["slow", "normal", "fast"] as Speed[]).map((s) => (
                     <button
                       key={s}
-                      className={`seg__btn ${speed === s ? "seg__btn--active" : ""}`}
+                      className={`seg__btn seg__btn--speed has-tooltip ${speed === s && !paused ? "seg__btn--active" : ""}`}
                       onClick={() => changeSpeed(s)}
+                      aria-pressed={speed === s && !paused}
+                      aria-label={SPEED_LABEL[s][lang]}
+                      data-tooltip={SPEED_LABEL[s][lang]}
                     >
-                      {SPEED_LABEL[s][lang]}
+                      {Array.from({ length: SPEED_TICKS[s] }).map((_, i) => (
+                        <PlayGlyph key={i} />
+                      ))}
                     </button>
                   ))}
                 </div>
-                <button className="btn btn--ghost btn--sm" onClick={togglePause}>
-                  {paused ? t("run.resume") : t("run.pause")}
-                </button>
                 <button
                   className="btn btn--ghost btn--sm"
                   onClick={() => setSidebarOpen((v) => !v)}
@@ -839,7 +891,7 @@ export function RunView({
                 </>
               )}
             </h2>
-            {humanTurn && (
+            {humanTurn && !compact && (
               <span className="hint">
                 {humanTurn.myTurn ? t("turn.keyHints") : t("turn.spaceHint")}
               </span>
@@ -903,14 +955,14 @@ export function RunView({
                     humanTurn.resolve(pass ? { action: pass } : { ai: true });
                   }}
                 >
-                  {t("turn.pass")}
+                  {compact ? t("turn.passShort") : t("turn.pass")}
                 </button>
                 {humanTurn.myTurn && (
                   <button
                     className="btn"
                     onClick={() => beginPassTurn(humanTurn)}
                   >
-                    {t("turn.passTurn")}
+                    {compact ? t("turn.passTurnShort") : t("turn.passTurn")}
                   </button>
                 )}
                 <button
@@ -1235,12 +1287,46 @@ function MulliganModal({
 }) {
   const { t } = useI18n();
   const bottoming = prompt.stage === "bottom";
+  const modalRef = useRef<HTMLDivElement>(null);
+
+  // Move focus into the dialog, trap Tab within it, and restore focus on close.
+  useEffect(() => {
+    const node = modalRef.current;
+    if (!node) return;
+    const prev = document.activeElement as HTMLElement | null;
+    const focusable = () =>
+      [
+        ...node.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+        ),
+      ];
+    focusable()[0]?.focus();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Tab") return;
+      const els = focusable();
+      if (els.length === 0) return;
+      const first = els[0];
+      const last = els[els.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+    node.addEventListener("keydown", onKey);
+    return () => {
+      node.removeEventListener("keydown", onKey);
+      prev?.focus?.();
+    };
+  }, []);
 
   return (
-    <div className="mull-overlay" role="dialog" aria-modal="true">
-      <div className="mull-modal">
+    <div className="mull-overlay" role="dialog" aria-modal="true" aria-labelledby="mull-title">
+      <div className="mull-modal" ref={modalRef}>
         <div className="mull-modal__head">
-          <h2>{bottoming ? t("mulligan.bottomTitle") : t("mulligan.title")}</h2>
+          <h2 id="mull-title">{bottoming ? t("mulligan.bottomTitle") : t("mulligan.title")}</h2>
           <p className="hint">
             {bottoming
               ? t("mulligan.bottomInstruction", { n: prompt.bottomCount })

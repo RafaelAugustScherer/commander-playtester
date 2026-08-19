@@ -40,6 +40,31 @@ Example: A seed makes a run repeatable
   Then the same matches play out
 ```
 
+## Rule: The controls are reachable and legible to assistive tech
+
+The toggle groups (pod size, mode, difficulty, and playback speed) expose which
+option is selected, not only by colour, and the opening-hand popup behaves as a
+modal dialog — focus moves into it, stays trapped while it is open, and returns
+to where it was on close. Where a control shows only an icon — the icon-based
+playback speed and pause/resume — it still carries a text accessible name.
+
+```gherkin
+Example: A chosen option is announced
+  Given a segmented control such as pod size or mode
+  When one option is selected
+  Then it is exposed to assistive tech as the pressed option
+
+Example: An icon-only control still has a name
+  Given a control shown only as an icon, such as playback speed or pause
+  When assistive tech reads it
+  Then it announces a text label, not just the icon
+
+Example: The opening-hand dialog keeps focus
+  Given the opening-hand popup is open
+  When I move focus with the keyboard
+  Then focus stays within the dialog until I resolve it
+```
+
 ## Open Questions
 
 - The default match count, given each match is slow.

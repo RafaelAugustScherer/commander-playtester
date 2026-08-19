@@ -78,7 +78,7 @@ export function GameSidebar({
   const [detailed, setDetailed] = useState(false);
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
   const scrollRef = useRef<HTMLDivElement>(null);
-  const atBottom = useRef(true);
+  const atTop = useRef(true);
 
   const visible = useMemo(
     () =>
@@ -90,10 +90,26 @@ export function GameSidebar({
     [log, humanSeat, revealAll, detailed],
   );
 
+  const ordered = useMemo(() => {
+    const groups: LoggedEntry[][] = [];
+    for (const item of visible) {
+      if (isTurnMarker(item.entry) || groups.length === 0) groups.push([]);
+      groups[groups.length - 1].push(item);
+    }
+    const out: LoggedEntry[] = [];
+    for (let g = groups.length - 1; g >= 0; g--) {
+      const group = groups[g];
+      const start = isTurnMarker(group[0].entry) ? 1 : 0;
+      if (start === 1) out.push(group[0]);
+      for (let r = group.length - 1; r >= start; r--) out.push(group[r]);
+    }
+    return out;
+  }, [visible]);
+
   useEffect(() => {
     const el = scrollRef.current;
-    if (el && atBottom.current) el.scrollTop = el.scrollHeight;
-  }, [visible.length, open]);
+    if (el && atTop.current) el.scrollTop = 0;
+  }, [ordered.length, open]);
 
   const stackTopFirst = [...stack].reverse();
 
@@ -185,15 +201,13 @@ export function GameSidebar({
             className="log-scroll"
             ref={scrollRef}
             onScroll={(e) => {
-              const el = e.currentTarget;
-              atBottom.current =
-                el.scrollHeight - el.scrollTop - el.clientHeight < 48;
+              atTop.current = e.currentTarget.scrollTop < 48;
             }}
           >
-            {visible.length === 0 ? (
+            {ordered.length === 0 ? (
               <p className="hint sidebar-empty">{t("sidebar.logEmpty")}</p>
             ) : (
-              visible.map(({ id, entry }) =>
+              ordered.map(({ id, entry }) =>
                 isTurnMarker(entry) ? (
                   <div key={id} className="log-turn">
                     {entryText(entry)}

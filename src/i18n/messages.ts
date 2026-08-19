@@ -142,7 +142,6 @@ export const messages = {
   "run.matchOf": { pt: "Partida {i} de {n}", en: "Match {i} of {n}" },
   "run.match": { pt: "Partida", en: "Match" },
   "run.pause": { pt: "Pausar", en: "Pause" },
-  "run.resume": { pt: "Retomar", en: "Resume" },
   "run.exit": { pt: "Sair", en: "Exit" },
   "run.yourWins": { pt: "Vitórias suas: {w}/{n}", en: "Your wins: {w}/{n}" },
   "run.winRate": { pt: "Win rate: {p}%", en: "Win rate: {p}%" },
@@ -155,6 +154,8 @@ export const messages = {
   },
   "turn.spaceHint": { pt: "Espaço = passar prioridade", en: "Space = pass priority" },
   "turn.pass": { pt: "Passar (espaço)", en: "Pass (space)" },
+  "turn.passShort": { pt: "Passar", en: "Pass" },
+  "turn.passTurnShort": { pt: "Passar turno", en: "Pass turn" },
   "turn.letAi": { pt: "IA joga por mim", en: "Let the AI play" },
   "turn.nothingToPlay": { pt: "Nada para jogar agora — passe a vez.", en: "Nothing to play right now — pass." },
   "turn.abilityHint": {

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { MouseEvent as ReactMouseEvent } from "react";
 import {
   Biohazard,
@@ -298,16 +298,38 @@ export function Board({
 }) {
   const { t } = useI18n();
   const [preview, setPreview] = useState<Preview | null>(null);
+  const oppScrollRef = useRef<HTMLDivElement>(null);
 
   const you = view.seats.find((s) => s.seat === 0);
   const opponents = view.seats.filter((s) => s.seat !== 0);
+
+  // In the mobile opponents gallery, follow the active opponent into view. When
+  // the human (seat 0) is active, leave the gallery on the last-shown opponent.
+  const activePlayer = view.activePlayer;
+  useEffect(() => {
+    const container = oppScrollRef.current;
+    if (!container || activePlayer === 0) return;
+    if (container.scrollWidth <= container.clientWidth) return;
+    const el = container.querySelector<HTMLElement>(
+      `[data-seat="${activePlayer}"]`,
+    );
+    if (!el) return;
+    const cRect = container.getBoundingClientRect();
+    const eRect = el.getBoundingClientRect();
+    const delta =
+      eRect.left - cRect.left - (container.clientWidth - el.clientWidth) / 2;
+    container.scrollBy({ left: delta, behavior: "auto" });
+  }, [activePlayer]);
 
   const onHover = play?.dragging != null ? undefined : setPreview;
   const seatName = (s: SeatView) => s.name || t("board.player", { n: s.seat + 1 });
 
   return (
     <div className="board">
-      <div className={`board__opponents board__opponents--n${opponents.length}`}>
+      <div
+        className={`board__opponents board__opponents--n${opponents.length}`}
+        ref={oppScrollRef}
+      >
         {opponents.map((seat) => (
           <Seat
             key={seat.seat}
@@ -411,7 +433,7 @@ function Seat({
       : undefined;
 
   return (
-    <div className={cls} onClick={seatClick}>
+    <div className={cls} onClick={seatClick} data-seat={seat.seat}>
       <div className="seat__head">
         <div className="seat__id">
           <span className="seat__name">
