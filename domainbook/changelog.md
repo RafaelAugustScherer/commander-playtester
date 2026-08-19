@@ -12,6 +12,15 @@ depth live there. A purely-internal PR that touches no product or architecture m
 skip its version with a `Skip-Docs: <reason>` trailer instead. There are no
 per-domain changelogs; this file is the single timeline (`ADR-0007`).
 
+## [0.2.0] - 2026-08-18
+
+### Added
+
+- Play mode lets you cast your commander from the command zone: when you can pay
+  for it, the commander is highlighted and a click casts it — previously only
+  hand cards could be played, leaving no way to cast the commander by hand
+  (`domains/simulation/features/step-through-a-turn.md`).
+
 ## [0.1.10] - 2026-08-18
 
 ### Changed
