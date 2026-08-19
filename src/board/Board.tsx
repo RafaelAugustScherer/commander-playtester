@@ -21,14 +21,15 @@ import type { BoardView, SeatView } from "./boardView";
 import { useI18n } from "../i18n/I18nContext";
 import { categoryLabel } from "../i18n/messages";
 
-/** Play-mode interaction for the human's seat: drag a hand card to a slot. */
+/** Play-mode interaction for the human's seat: drag a hand card to a slot, or
+ * click the commander in the command zone to cast it. */
 export interface PlayInteraction {
-  /** Hand object ids that have a legal play action right now. */
+  /** Object ids that have a legal play action right now (hand or command zone). */
   playableIds: Set<number>;
   /** Object id currently being dragged, or null. */
   dragging: number | null;
   setDragging: (id: number | null) => void;
-  /** Play the hand card with this object id (drag dropped on a valid slot). */
+  /** Play the object with this id (dropped on a valid slot, or clicked to cast). */
   onPlay: (objId: number) => void;
 }
 
@@ -165,6 +166,15 @@ function manaProps(
 ): { manaSource?: boolean; onTapSource?: () => void } {
   if (!mana || !mana.sourceIds.has(o.id)) return {};
   return { manaSource: true, onTapSource: () => mana.onTapSource(o.id) };
+}
+
+/** Command-zone cast: click your commander when the engine offers its cast. */
+function commanderCastProps(
+  o: GameObject,
+  play?: PlayInteraction,
+): { castable?: boolean; onCast?: () => void } {
+  if (!play || !play.playableIds.has(o.id)) return {};
+  return { castable: true, onCast: () => play.onPlay(o.id) };
 }
 
 const MANA_COLOR: Record<string, string> = {
@@ -416,6 +426,7 @@ function Seat({
                 {...attackProps(c, you ? attack : undefined)}
                 {...(you ? blockerProps(c, block) : blockTargetProps(c, block))}
                 {...manaProps(c, you ? mana : undefined)}
+                {...commanderCastProps(c, you ? play : undefined)}
               />
             ))}
           </div>
@@ -583,6 +594,8 @@ function Card({
   onAssignBlock,
   manaSource,
   onTapSource,
+  castable,
+  onCast,
 }: {
   obj: GameObject;
   images?: Record<string, string>;
@@ -607,6 +620,8 @@ function Card({
   onAssignBlock?: () => void;
   manaSource?: boolean;
   onTapSource?: () => void;
+  castable?: boolean;
+  onCast?: () => void;
 }) {
   const url = obj.name ? images?.[obj.name.toLowerCase()] : undefined;
   const isCreature = obj.card_types?.core_types?.includes("Creature") ?? false;
@@ -625,6 +640,7 @@ function Card({
     blockSelected ? "card--block-selected" : "",
     blockTarget ? "card--block-target" : "",
     manaSource ? "card--mana-source" : "",
+    castable ? "card--castable" : "",
   ]
     .filter(Boolean)
     .join(" ");
@@ -648,6 +664,7 @@ function Card({
 
   const click =
     onChoose ??
+    onCast ??
     onActivate ??
     onToggleAttack ??
     onSelectBlock ??

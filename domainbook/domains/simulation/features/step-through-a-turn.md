@@ -60,6 +60,20 @@ Example: Naming a creature type
   And you may instead let the AI choose for you
 ```
 
+## Rule: You put cards into play by dragging from hand, or clicking the commander in its zone
+
+```gherkin
+Example: Playing a card from your hand
+  Given it is your main phase and a hand card has a legal play
+  When you drag it onto a matching battlefield slot
+  Then the card is played and its cost is paid
+
+Example: Casting your commander from the command zone
+  Given it is your main phase and you can pay for your commander
+  Then the commander is highlighted as castable in the command zone
+  And clicking it casts the commander from the command zone onto the stack
+```
+
 ## Rule: Pass turn advances your own turn and stops when an opponent acts
 
 ```gherkin
