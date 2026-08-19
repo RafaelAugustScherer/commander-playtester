@@ -84,6 +84,7 @@ export function MatchSetup({
               key={count}
               className={`seg__btn ${seatCount === count ? "seg__btn--active" : ""}`}
               onClick={() => setSeatCount(count)}
+              aria-pressed={seatCount === count}
             >
               {t("setup.players", { n: count })}
             </button>
@@ -123,12 +124,14 @@ export function MatchSetup({
           <button
             className={`seg__btn ${mode === "play" ? "seg__btn--active" : ""}`}
             onClick={() => setMode("play")}
+            aria-pressed={mode === "play"}
           >
             {t("setup.modePlay")}
           </button>
           <button
             className={`seg__btn ${mode === "watch" ? "seg__btn--active" : ""}`}
             onClick={() => setMode("watch")}
+            aria-pressed={mode === "watch"}
           >
             {t("setup.modeWatch")}
           </button>
@@ -146,6 +149,7 @@ export function MatchSetup({
               key={d}
               className={`seg__btn ${difficulty === d ? "seg__btn--active" : ""}`}
               onClick={() => setDifficulty(d)}
+              aria-pressed={difficulty === d}
             >
               {DIFFICULTY_LABEL[d][lang]}
             </button>

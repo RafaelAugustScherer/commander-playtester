@@ -34,6 +34,12 @@ Example: Turns and phases group the history
   Given several turns have passed
   When I scan the log
   Then each turn is separated by a heading
+
+Example: The newest entry is on top
+  Given the log has several entries
+  When I look at it
+  Then the most recent entry is at the top, with older ones below
+  And each turn heading still sits above its own group of entries
 ```
 
 ## Rule: The log is readable by default, complete on demand
@@ -56,11 +62,16 @@ Example: Sliding the drawer open and closed
   And on desktop it reserves board space while open
   And on a narrow, mobile-width screen it covers the full screen while open
 
-Example: Its state is remembered
+Example: Its state is remembered on desktop
   Given a desktop screen
   Then the drawer starts open
-  And on a mobile-width screen it starts collapsed
-  And the choice is remembered
+  And the choice is remembered across games
+
+Example: It always starts closed on mobile
+  Given a mobile-width screen
+  When a game starts
+  Then the drawer is closed so it never covers the board on entry
+  And an open/closed choice made on mobile is not carried over
 ```
 
 ## Rule: Hidden information stays hidden

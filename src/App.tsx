@@ -35,12 +35,14 @@ export function App() {
             <button
               className={`tab ${view === "decks" ? "tab--active" : ""}`}
               onClick={() => setView("decks")}
+              aria-current={view === "decks" ? "page" : undefined}
             >
               {t("nav.decks")}
             </button>
             <button
               className={`tab ${view === "play" ? "tab--active" : ""}`}
               onClick={() => setView("play")}
+              aria-current={view === "play" ? "page" : undefined}
             >
               {t("nav.play")}
             </button>
