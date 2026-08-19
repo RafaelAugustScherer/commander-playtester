@@ -28,6 +28,11 @@ describe("toPlayerDeck", () => {
     expect(p.commander).toEqual(["Cmd A"]);
     expect(p.main_deck).toEqual(["Island", "Island", "Sol Ring"]);
   });
+
+  it("collapses a stored two-sided name to its front face for the engine", () => {
+    const p = toPlayerDeck(deck("A", "Cmd A", [[1, "Commit // Memory"]]));
+    expect(p.main_deck).toEqual(["Commit"]);
+  });
 });
 
 describe("buildDeckList", () => {

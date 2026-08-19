@@ -5,6 +5,7 @@ import type {
   ResolvedDeck,
 } from "./types";
 import { classifyRoles } from "./roles";
+import { frontFace } from "./cardName";
 
 const SCRYFALL_COLLECTION_URL = "https://api.scryfall.com/cards/collection";
 const BATCH_SIZE = 75; // Scryfall's documented max identifiers per request.
@@ -88,8 +89,11 @@ export async function fetchCards(
   const notFound: string[] = [];
 
   for (const batch of chunk(uniqueNames, BATCH_SIZE)) {
+    // Scryfall keys two-sided cards on the front face; send that, not the
+    // stored "Front // Back" name. The returned card carries its full name, and
+    // lookup() reconciles it back to the requested name.
     const body = JSON.stringify({
-      identifiers: batch.map((name) => ({ name })),
+      identifiers: batch.map((name) => ({ name: frontFace(name) })),
     });
     const res = await fetchImpl(SCRYFALL_COLLECTION_URL, {
       method: "POST",

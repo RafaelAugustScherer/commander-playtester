@@ -16,6 +16,9 @@ logs
 *.log
 npm-debug.log*
 
+# prepare-match screenshots
+scripts/.artifacts
+
 # phase-rs engine runtime assets (large; fetched via scripts/fetch-engine, not committed)
 public/engine/card-data.json
 public/engine/card-data.json.gz

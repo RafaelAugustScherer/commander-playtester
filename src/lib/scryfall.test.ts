@@ -77,4 +77,21 @@ describe("resolveDeck", () => {
     expect(deck.library.every((c) => c.name === "Forest")).toBe(true);
     expect(deck.unresolved).toEqual(["Nonexistent Card"]);
   });
+
+  it("resolves a stored two-sided name by querying its front face", async () => {
+    const parsed = parseDecklist("Deck\n1 Commit // Memory");
+    // Scryfall knows the card only under the front face "Commit"; it echoes the
+    // full name back on the returned card.
+    const fetchImpl = fakeFetch({
+      Commit: {
+        name: "Commit // Memory",
+        cmc: 4,
+        type_line: "Instant // Sorcery",
+      },
+    });
+
+    const deck = await resolveDeck(parsed, fetchImpl);
+    expect(deck.library.map((c) => c.name)).toEqual(["Commit // Memory"]);
+    expect(deck.unresolved).toEqual([]);
+  });
 });

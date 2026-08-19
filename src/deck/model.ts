@@ -29,9 +29,9 @@ export function uniqueCardNames(deck: SavedDeck): string[] {
 }
 
 /**
- * Commander legality is exactly 100 cards (1-2 commanders + the rest).
- * We report the count rather than block on it — partners, companions, and
- * the odd 101-card list exist, and the engine is the real arbiter.
+ * Commander legality is exactly 100 cards (1-2 commanders + the rest). The
+ * editor blocks saving anything else, matching what the engine enforces at
+ * game start.
  */
 export function isHundredCards(deck: SavedDeck): boolean {
   return totalCards(deck) === 100;

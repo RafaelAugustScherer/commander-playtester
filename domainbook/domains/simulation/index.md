@@ -55,6 +55,9 @@ and the finished-game result.
   that seat's move (`get_ai_action_proposal`) and submitting it (`simulation/ADR-0001`).
 - `play mode` keeps the human on their seat and advances phases on space; the AI
   fills the other seats and acts when priority passes to it.
+- The `engine adapter` builds phase-rs's name-only per-seat deck payload from the
+  stored deck, collapsing each two-sided `Front // Back` name to its front face —
+  the only face the engine's card database keys on (`src/engine/deckPayload.ts`).
 - One game runs per WASM instance, in a Web Worker; a `run` plays its matches
   sequentially (`ADR-0005`).
 - A match takes a seed from the session, so games are reproducible.
