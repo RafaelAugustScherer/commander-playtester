@@ -3,6 +3,7 @@ import "./App.css";
 import { DeckLibrary } from "./deck/DeckLibrary";
 import { DeckDetail } from "./deck/DeckDetail";
 import { useDecks } from "./deck/useDecks";
+import { getLastPlayedDeckId, setLastPlayedDeckId } from "./deck/storage";
 import type { SavedDeck } from "./deck/model";
 import { MatchSetup } from "./match/MatchSetup";
 import { RunView } from "./match/RunView";
@@ -20,7 +21,12 @@ export function App() {
   const [playDeck, setPlayDeck] = useState<SavedDeck | null>(null);
   const [runConfig, setRunConfig] = useState<RunConfig | null>(null);
 
-  const wide = view === "play" && !!playDeck && !!runConfig;
+  const wide = view === "play" && !!runConfig;
+
+  const preferredDeckId =
+    (playDeck && decks.some((d) => d.id === playDeck.id) && playDeck.id) ||
+    getLastPlayedDeckId() ||
+    undefined;
 
   return (
     <div className={`app${wide ? " app--wide" : ""}`}>
@@ -70,7 +76,7 @@ export function App() {
         ))}
 
       {view === "play" &&
-        (!playDeck ? (
+        (decks.length === 0 ? (
           <section className="panel">
             <h2>{t("play.empty.title")}</h2>
             <p className="hint">{t("play.empty.body")}</p>
@@ -85,9 +91,12 @@ export function App() {
           />
         ) : (
           <MatchSetup
-            yourDeck={playDeck}
-            decks={decks.filter((d) => d.id !== playDeck.id)}
-            onStart={setRunConfig}
+            decks={decks}
+            initialDeckId={preferredDeckId}
+            onStart={(config) => {
+              setLastPlayedDeckId(config.seatDeckIds[0]);
+              setRunConfig(config);
+            }}
           />
         ))}
     </div>

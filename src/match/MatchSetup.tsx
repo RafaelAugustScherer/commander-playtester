@@ -16,27 +16,35 @@ const DIFFICULTY_LABEL: Record<AiDifficulty, Record<Lang, string>> = {
   CEDH: { pt: "cEDH", en: "cEDH" },
 };
 
-/** Pre-game configuration: opponents, pod size, play/watch, match count. */
+/** Pre-game configuration: your deck, opponents, pod size, play/watch, match count. */
 export function MatchSetup({
-  yourDeck,
   decks,
+  initialDeckId,
   onStart,
 }: {
-  yourDeck: SavedDeck;
   decks: SavedDeck[];
+  initialDeckId?: string;
   onStart: (config: RunConfig) => void;
 }) {
   const { t, lang } = useI18n();
   const [seatCount, setSeatCount] = useState<SeatCount>(4);
   const [mode, setMode] = useState<PlayMode>("watch");
-  const [matchCount, setMatchCount] = useState(3);
+  const [matchCount, setMatchCount] = useState(1);
   const [seed, setSeed] = useState(1);
   const [revealHands, setRevealHands] = useState(false);
-  const [difficulty, setDifficulty] = useState<AiDifficulty>("Medium");
+  const [difficulty, setDifficulty] = useState<AiDifficulty>("VeryHard");
+  const [yourDeckId, setYourDeckId] = useState(
+    decks.find((d) => d.id === initialDeckId)?.id ?? decks[0].id,
+  );
   const [opponentIds, setOpponentIds] = useState<string[]>([]);
 
+  const yourDeck = decks.find((d) => d.id === yourDeckId) ?? decks[0];
+  const opponentDecks = decks.filter((d) => d.id !== yourDeck.id);
+
   function opponentAt(index: number): string {
-    return opponentIds[index] ?? decks[0]?.id ?? "";
+    const chosen = opponentIds[index];
+    if (chosen && opponentDecks.some((d) => d.id === chosen)) return chosen;
+    return opponentDecks[0]?.id ?? "";
   }
 
   function setOpponentAt(index: number, id: string) {
@@ -47,7 +55,7 @@ export function MatchSetup({
 
   const opponentSeats = seatCount - 1;
   const allChosen =
-    decks.length > 0 &&
+    opponentDecks.length > 0 &&
     Array.from({ length: opponentSeats }, (_, i) => opponentAt(i)).every(
       Boolean,
     );
@@ -73,7 +81,17 @@ export function MatchSetup({
 
       <div className="field">
         <span className="field__label">{t("setup.yourDeck")}</span>
-        <div className="chip">{yourDeck.name}</div>
+        <select
+          className="input"
+          value={yourDeck.id}
+          onChange={(e) => setYourDeckId(e.target.value)}
+        >
+          {decks.map((deck) => (
+            <option key={deck.id} value={deck.id}>
+              {deck.name}
+            </option>
+          ))}
+        </select>
       </div>
 
       <div className="field">
@@ -95,25 +113,30 @@ export function MatchSetup({
       {opponentSeats > 0 && (
         <div className="field">
           <span className="field__label">{t("setup.opponents")}</span>
-          {decks.length === 0 ? (
+          {opponentDecks.length === 0 ? (
             <p className="hint">{t("setup.needOpponent")}</p>
           ) : (
-            <div className="opponent-grid">
+            <ol className="opponent-list">
               {Array.from({ length: opponentSeats }, (_, i) => (
-                <select
-                  key={i}
-                  className="input"
-                  value={opponentAt(i)}
-                  onChange={(e) => setOpponentAt(i, e.target.value)}
-                >
-                  {decks.map((deck) => (
-                    <option key={deck.id} value={deck.id}>
-                      {deck.name}
-                    </option>
-                  ))}
-                </select>
+                <li key={i} className="opponent-list__item">
+                  <span className="opponent-list__num" aria-hidden="true">
+                    {i + 1}
+                  </span>
+                  <select
+                    className="input"
+                    value={opponentAt(i)}
+                    onChange={(e) => setOpponentAt(i, e.target.value)}
+                    aria-label={t("setup.opponentN", { n: i + 1 })}
+                  >
+                    {opponentDecks.map((deck) => (
+                      <option key={deck.id} value={deck.id}>
+                        {deck.name}
+                      </option>
+                    ))}
+                  </select>
+                </li>
               ))}
-            </div>
+            </ol>
           )}
         </div>
       )}

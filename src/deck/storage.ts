@@ -1,6 +1,7 @@
 import type { SavedDeck } from "./model";
 
 const STORAGE_KEY = "commander-playtester/decks/v1";
+const LAST_PLAYED_KEY = "commander-playtester/last-played-deck/v1";
 
 function readAll(): SavedDeck[] {
   try {
@@ -42,4 +43,21 @@ export function saveDeck(deck: SavedDeck): SavedDeck {
 
 export function deleteDeck(id: string): void {
   writeAll(readAll().filter((d) => d.id !== id));
+}
+
+/** The deck id the user last started a run with, if any. */
+export function getLastPlayedDeckId(): string | null {
+  try {
+    return localStorage.getItem(LAST_PLAYED_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export function setLastPlayedDeckId(id: string): void {
+  try {
+    localStorage.setItem(LAST_PLAYED_KEY, id);
+  } catch {
+    return;
+  }
 }

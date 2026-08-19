@@ -22,6 +22,37 @@ Example: A watch run is configured and started
   Then simulation begins a 20-match run with all seats piloted by the AI
 ```
 
+## Rule: Opening Play lands on setup with your last-played deck chosen
+
+The Play tab opens the setup form directly whenever the library holds at least
+one deck; only an empty library shows the "create a deck first" prompt. Your deck
+is a dropdown over every saved deck, defaulting to the one you last started a run
+with (or the first deck the first time). Opponents are chosen from the remaining
+decks and are listed one per line, numbered in seat order.
+
+```gherkin
+Example: Setup opens on the last-played deck
+  Given a run was last started with a given deck
+  When I open the Play tab again
+  Then setup opens with that deck chosen as my deck
+
+Example: My deck can be swapped at setup
+  Given the setup form is open
+  When I pick a different deck from the your-deck list
+  Then that deck becomes mine and the opponent choices exclude it
+```
+
+## Rule: Setup defaults to a single Very Hard match
+
+An unconfigured run defaults to one match against Very Hard AI, so pressing start
+without touching the form plays a single strong game.
+
+```gherkin
+Example: The defaults are one Very Hard match
+  Given the setup form opened without changes
+  Then the match count is 1 and the difficulty is Very Hard
+```
+
 ## Rule: The match count cannot exceed 50
 
 ```gherkin
@@ -67,4 +98,4 @@ Example: The opening-hand dialog keeps focus
 
 ## Open Questions
 
-- The default match count, given each match is slow.
+None.

@@ -18,8 +18,8 @@ export const messages = {
 
   "play.empty.title": { pt: "Testar deck em partida", en: "Test a deck in a match" },
   "play.empty.body": {
-    pt: "Escolha um deck na aba Decks e clique em Testar em partida.",
-    en: "Pick a deck in the Decks tab and click Test in a match.",
+    pt: "Crie um deck na aba Decks para começar uma partida.",
+    en: "Create a deck in the Decks tab to start a match.",
   },
 
   "library.title": { pt: "Meus decks", en: "My decks" },
@@ -109,6 +109,7 @@ export const messages = {
   "setup.podSize": { pt: "Jogadores no pod", en: "Players in the pod" },
   "setup.players": { pt: "{n} jogadores", en: "{n} players" },
   "setup.opponents": { pt: "Oponentes (IA)", en: "Opponents (AI)" },
+  "setup.opponentN": { pt: "Oponente {n}", en: "Opponent {n}" },
   "setup.needOpponent": { pt: "Crie outro deck para usar como oponente.", en: "Create another deck to use as an opponent." },
   "setup.mode": { pt: "Modo", en: "Mode" },
   "setup.modePlay": { pt: "Jogar (você pilota)", en: "Play (you pilot)" },
