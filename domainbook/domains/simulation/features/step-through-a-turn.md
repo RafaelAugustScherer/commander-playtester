@@ -58,6 +58,12 @@ Example: Naming a creature type
   When the engine asks for the type
   Then you pick one from the valid types, pre-selected with the AI's suggestion
   And you may instead let the AI choose for you
+
+Example: Choosing which cards to discard
+  Given an effect (or the end-of-turn hand-size rule) makes you discard
+  When the engine asks you to discard
+  Then a popup shows the eligible cards, previewable like your hand
+  And you pick exactly the required number to discard, or let the AI choose
 ```
 
 ## Rule: You put cards into play by dragging or tapping from hand, or clicking the commander in its zone
