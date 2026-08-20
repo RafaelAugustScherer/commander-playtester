@@ -23,7 +23,11 @@ import {
   type BlockInteraction,
   type ManaInteraction,
 } from "../board/Board";
-import { CardPreview, type Preview } from "../board/CardPreview";
+import { useCardPreview } from "./useCardPreview";
+import {
+  discardCardsAction,
+  type DiscardPrompt,
+} from "../sim/decisions/discard";
 import {
   declareAttackersAction,
   type AttackersPrompt,
@@ -47,7 +51,6 @@ import {
   mulliganTakeAction,
   bottomCardsAction,
   type MulliganPrompt,
-  type MulliganCard,
 } from "../sim/decisions/mulligan";
 import { toBoardView, type BoardView, type SeatMeta } from "../board/boardView";
 import { GameSidebar, type LoggedEntry } from "../board/GameSidebar";
@@ -176,6 +179,11 @@ interface MulliganTurn {
   resolve: (choice: HumanChoice) => void;
 }
 
+interface DiscardTurn {
+  prompt: DiscardPrompt;
+  resolve: (choice: HumanChoice) => void;
+}
+
 /** Runs a configured series of matches and renders the live board + results. */
 export function RunView({
   config,
@@ -215,6 +223,8 @@ export function RunView({
   const [creatureTypePick, setCreatureTypePick] = useState("");
   const [mulliganTurn, setMulliganTurn] = useState<MulliganTurn | null>(null);
   const [bottomPick, setBottomPick] = useState<Set<number>>(new Set());
+  const [discardTurn, setDiscardTurn] = useState<DiscardTurn | null>(null);
+  const [discardPick, setDiscardPick] = useState<Set<number>>(new Set());
   const [passingTurn, setPassingTurn] = useState(false);
   const [logEntries, setLogEntries] = useState<LoggedEntry[]>([]);
   // On mobile the log is a full-screen drawer, so it always starts closed and
@@ -420,6 +430,22 @@ export function RunView({
                   resolve: (choice) => {
                     setMulliganTurn(null);
                     setBottomPick(new Set());
+                    resolve(choice);
+                  },
+                });
+              }),
+            requestHumanDiscard: (_env, prompt) =>
+              new Promise<HumanChoice>((resolve) => {
+                if (cancelled) {
+                  resolve({ ai: true });
+                  return;
+                }
+                setDiscardPick(new Set());
+                setDiscardTurn({
+                  prompt,
+                  resolve: (choice) => {
+                    setDiscardTurn(null);
+                    setDiscardPick(new Set());
                     resolve(choice);
                   },
                 });
@@ -1255,6 +1281,26 @@ export function RunView({
         />
       )}
 
+      {discardTurn && (
+        <DiscardModal
+          prompt={discardTurn.prompt}
+          images={images}
+          pick={discardPick}
+          onTogglePick={(id) =>
+            setDiscardPick((prev) => {
+              const next = new Set(prev);
+              if (next.has(id)) next.delete(id);
+              else if (next.size < discardTurn.prompt.count) next.add(id);
+              return next;
+            })
+          }
+          onConfirm={() =>
+            discardTurn.resolve({ action: discardCardsAction([...discardPick]) })
+          }
+          onLetAi={() => discardTurn.resolve({ ai: true })}
+        />
+      )}
+
       {phase === "done" && (
         <RunReport
           stats={stats}
@@ -1324,47 +1370,11 @@ function MulliganModal({
     };
   }, []);
 
-  const canHover =
-    typeof window !== "undefined" &&
-    !!window.matchMedia?.("(hover: hover) and (pointer: fine)").matches;
-
-  const [preview, setPreview] = useState<Preview | null>(null);
-  const [zoomed, setZoomed] = useState<MulliganCard | null>(null);
-  const longPressTimer = useRef<number | null>(null);
-  const longPressFired = useRef(false);
-
-  const previewFor = (c: MulliganCard, rect: DOMRect): Preview => ({
-    url: c.name ? images[c.name.toLowerCase()] : undefined,
-    name: c.name || "?",
-    isCreature: false,
-    rect,
+  const { cardProps, overlay } = useCardPreview({
+    images,
+    selectable: bottoming,
+    onToggle: onToggleBottom,
   });
-
-  const cancelLongPress = () => {
-    if (longPressTimer.current != null) {
-      window.clearTimeout(longPressTimer.current);
-      longPressTimer.current = null;
-    }
-  };
-  useEffect(() => cancelLongPress, []);
-
-  const startLongPress = (c: MulliganCard) => {
-    longPressFired.current = false;
-    cancelLongPress();
-    longPressTimer.current = window.setTimeout(() => {
-      longPressFired.current = true;
-      setZoomed(c);
-    }, 500);
-  };
-
-  const onCardClick = (c: MulliganCard) => {
-    if (longPressFired.current) {
-      longPressFired.current = false;
-      return;
-    }
-    if (bottoming) onToggleBottom(c.id);
-    else if (!canHover) setZoomed(c);
-  };
 
   return (
     <div className="mull-overlay" role="dialog" aria-modal="true" aria-labelledby="mull-title">
@@ -1394,23 +1404,7 @@ function MulliganModal({
                 className={`mull-card${bottoming ? " mull-card--selectable" : ""}${
                   picked ? " mull-card--picked" : ""
                 }`}
-                onClick={() => onCardClick(c)}
-                onMouseEnter={
-                  canHover
-                    ? (e) => setPreview(previewFor(c, e.currentTarget.getBoundingClientRect()))
-                    : undefined
-                }
-                onMouseLeave={canHover ? () => setPreview(null) : undefined}
-                onFocus={
-                  canHover
-                    ? (e) => setPreview(previewFor(c, e.currentTarget.getBoundingClientRect()))
-                    : undefined
-                }
-                onBlur={canHover ? () => setPreview(null) : undefined}
-                onTouchStart={canHover ? undefined : () => startLongPress(c)}
-                onTouchEnd={canHover ? undefined : cancelLongPress}
-                onTouchMove={canHover ? undefined : cancelLongPress}
-                onContextMenu={canHover ? undefined : (e) => e.preventDefault()}
+                {...cardProps(c)}
                 title={c.name}
               >
                 {url ? (
@@ -1464,27 +1458,125 @@ function MulliganModal({
         </div>
       </div>
 
-      {preview && <CardPreview preview={preview} />}
+      {overlay}
+    </div>
+  );
+}
 
-      {zoomed && (
-        <div
-          className="mull-zoom"
-          onClick={() => setZoomed(null)}
-          role="dialog"
-          aria-modal="true"
-        >
-          {(() => {
-            const url = zoomed.name
-              ? images[zoomed.name.toLowerCase()]
-              : undefined;
-            return url ? (
-              <img src={url} alt={zoomed.name} className="mull-zoom__img" />
-            ) : (
-              <div className="mull-zoom__text">{zoomed.name || "?"}</div>
-            );
-          })()}
+/** Forced-discard popup: pick exactly `count` cards to discard. */
+function DiscardModal({
+  prompt,
+  images,
+  pick,
+  onTogglePick,
+  onConfirm,
+  onLetAi,
+}: {
+  prompt: DiscardPrompt;
+  images: Record<string, string>;
+  pick: Set<number>;
+  onTogglePick: (id: number) => void;
+  onConfirm: () => void;
+  onLetAi: () => void;
+}) {
+  const { t } = useI18n();
+  const modalRef = useRef<HTMLDivElement>(null);
+
+  // Move focus into the dialog, trap Tab within it, and restore focus on close.
+  useEffect(() => {
+    const node = modalRef.current;
+    if (!node) return;
+    const prev = document.activeElement as HTMLElement | null;
+    const focusable = () =>
+      [
+        ...node.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+        ),
+      ];
+    focusable()[0]?.focus();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Tab") return;
+      const els = focusable();
+      if (els.length === 0) return;
+      const first = els[0];
+      const last = els[els.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+    node.addEventListener("keydown", onKey);
+    return () => {
+      node.removeEventListener("keydown", onKey);
+      prev?.focus?.();
+    };
+  }, []);
+
+  const { cardProps, overlay } = useCardPreview({
+    images,
+    selectable: true,
+    onToggle: onTogglePick,
+  });
+
+  return (
+    <div
+      className="mull-overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="discard-title"
+    >
+      <div className="mull-modal" ref={modalRef}>
+        <div className="mull-modal__head">
+          <h2 id="discard-title">{t("discard.title")}</h2>
+          <p className="hint">{t("discard.instruction", { n: prompt.count })}</p>
         </div>
-      )}
+
+        <div className="mull-hand">
+          {prompt.cards.map((c) => {
+            const url = c.name ? images[c.name.toLowerCase()] : undefined;
+            const picked = pick.has(c.id);
+            return (
+              <button
+                key={c.id}
+                type="button"
+                className={`mull-card mull-card--selectable${
+                  picked ? " mull-card--picked" : ""
+                }`}
+                {...cardProps(c)}
+                title={c.name}
+              >
+                {url ? (
+                  <img src={url} alt={c.name} loading="lazy" />
+                ) : (
+                  <span className="mull-card__name">{c.name || "?"}</span>
+                )}
+                {picked && <span className="mull-card__badge">✕</span>}
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="mull-actions">
+          <span className="hint">
+            {t("discard.progress", { n: pick.size, max: prompt.count })}
+          </span>
+          <button
+            className="btn"
+            disabled={pick.size !== prompt.count}
+            onClick={onConfirm}
+          >
+            {t("discard.confirm")}
+          </button>
+          <button className="btn btn--ghost" onClick={onLetAi}>
+            {t("mulligan.letAi")}
+          </button>
+        </div>
+      </div>
+
+      {overlay}
     </div>
   );
 }

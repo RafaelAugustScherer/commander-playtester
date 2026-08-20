@@ -275,6 +275,14 @@ export const messages = {
   "mulligan.bottomConfirm": { pt: "Devolver e ficar", en: "Bottom & keep" },
   "mulligan.letAi": { pt: "IA decide o mulligan", en: "Let the AI decide" },
 
+  "discard.title": { pt: "Descartar cartas", en: "Discard cards" },
+  "discard.instruction": {
+    pt: "Escolha {n} carta(s) para descartar.",
+    en: "Choose {n} card(s) to discard.",
+  },
+  "discard.progress": { pt: "Selecionadas: {n} / {max}", en: "Selected: {n} / {max}" },
+  "discard.confirm": { pt: "Descartar", en: "Discard" },
+
   "select.noResults": { pt: "Nenhum resultado", en: "No matches" },
 
   "sidebar.title": { pt: "Pilha e registro", en: "Stack & log" },

@@ -12,6 +12,14 @@ depth live there. A purely-internal PR that touches no product or architecture m
 skip its version with a `Skip-Docs: <reason>` trailer instead. There are no
 per-domain changelogs; this file is the single timeline (`ADR-0007`).
 
+## [0.3.3] - 2026-08-20
+
+### Fixed
+
+- When playing by hand, a forced discard now prompts you to choose which cards to
+  discard (with the same card preview as the mulligan), instead of the AI picking
+  for you (`domains/simulation/features/step-through-a-turn.md`).
+
 ## [0.3.2] - 2026-08-19
 
 ### Added

@@ -24,6 +24,7 @@ import {
   parseMulliganPrompt,
   type MulliganPrompt,
 } from "./decisions/mulligan";
+import { parseDiscardPrompt, type DiscardPrompt } from "./decisions/discard";
 
 export interface MatchResult {
   matchIndex: number;
@@ -197,6 +198,11 @@ export interface DriverCallbacks {
   requestHumanMulligan?: (
     env: GameStateEnvelope,
     prompt: MulliganPrompt,
+  ) => Promise<HumanChoice>;
+  /** Called when an effect forces the human to choose cards to discard. */
+  requestHumanDiscard?: (
+    env: GameStateEnvelope,
+    prompt: DiscardPrompt,
   ) => Promise<HumanChoice>;
 }
 
@@ -407,6 +413,10 @@ export class MatchRunner {
         humanNonPriority && cb.requestHumanMulligan
           ? parseMulliganPrompt(wf, env.state, humanSeat)
           : null;
+      const humanDiscard =
+        humanNonPriority && cb.requestHumanDiscard
+          ? parseDiscardPrompt(wf, env.state, humanSeat)
+          : null;
 
       // Run the human's choice: play their action, or hand this decision to the AI.
       const applyChoice = async (choice: HumanChoice): Promise<void> => {
@@ -467,6 +477,13 @@ export class MatchRunner {
         await applyChoice(choice);
       } else if (humanMulligan) {
         const choice = await cb.requestHumanMulligan!(env, humanMulligan);
+        if (this.aborted) {
+          stopped = true;
+          break;
+        }
+        await applyChoice(choice);
+      } else if (humanDiscard) {
+        const choice = await cb.requestHumanDiscard!(env, humanDiscard);
         if (this.aborted) {
           stopped = true;
           break;
