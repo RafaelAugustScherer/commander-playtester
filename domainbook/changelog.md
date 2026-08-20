@@ -12,6 +12,14 @@ depth live there. A purely-internal PR that touches no product or architecture m
 skip its version with a `Skip-Docs: <reason>` trailer instead. There are no
 per-domain changelogs; this file is the single timeline (`ADR-0007`).
 
+## [0.3.2] - 2026-08-19
+
+### Added
+
+- Cards in the opening-hand mulligan popup can be enlarged to read: hover or focus
+  on a pointer device, tap on touch, and long-press while bottoming so a tap still
+  picks cards (`domains/simulation/features/decide-the-opening-mulligan.md`).
+
 ## [0.3.1] - 2026-08-19
 
 ### Changed

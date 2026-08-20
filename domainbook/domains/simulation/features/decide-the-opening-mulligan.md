@@ -52,6 +52,32 @@ Example: Bottoming the owed cards
   And confirming puts them on the bottom of my library and keeps the rest
 ```
 
+## Rule: Mulligan cards can be enlarged to read them
+
+Every card in the popup previews at full size, the same way the hand does during
+play. On a pointer device, hovering or focusing a card shows an enlarged copy
+beside it; on touch, tapping a card opens it as a centred overlay that dismisses
+on tap. During bottom-selection a tap already picks a card, so there a long press
+opens the enlarged overlay instead, without selecting the card.
+
+```gherkin
+Example: Hovering enlarges a card on a pointer device
+  Given the opening-hand popup on a pointer device
+  When I hover a card
+  Then an enlarged copy appears beside it so I can read it
+
+Example: Tapping enlarges a card while deciding on touch
+  Given the opening-hand popup on a touch device, deciding keep or mulligan
+  When I tap a card
+  Then it opens enlarged as an overlay I can dismiss by tapping
+
+Example: Long-press enlarges while bottoming on touch
+  Given the bottom-selection stage on a touch device
+  When I long-press a card
+  Then it opens enlarged without being picked for the bottom
+  And a plain tap still picks a card for the bottom
+```
+
 ## Rule: The mulligan can be handed to the AI
 
 ```gherkin
