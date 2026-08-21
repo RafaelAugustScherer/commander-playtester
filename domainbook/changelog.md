@@ -12,6 +12,14 @@ depth live there. A purely-internal PR that touches no product or architecture m
 skip its version with a `Skip-Docs: <reason>` trailer instead. There are no
 per-domain changelogs; this file is the single timeline (`ADR-0007`).
 
+## [0.4.3] - 2026-08-21
+
+### Fixed
+
+- Creatures with defender (walls, tokens, and printed cards alike) are no longer
+  offered as attackers when declaring attackers — the vendored engine lists them
+  regardless of the keyword (`domains/simulation/features/step-through-a-turn.md`).
+
 ## [0.4.2] - 2026-08-21
 
 ### Added

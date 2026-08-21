@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { parseAttackersPrompt, declareAttackersAction } from "./attackers";
-import type { WaitingFor } from "../../engine/types";
+import type { GameObject, WaitingFor } from "../../engine/types";
 
 // A real DeclareAttackers waiting_for captured from the phase-rs WASM build.
 const REAL: WaitingFor = {
@@ -22,6 +22,28 @@ describe("parseAttackersPrompt", () => {
     expect(p.player).toBe(0);
     expect(p.attackers.map((a) => a.attackerId)).toEqual([53, 81]);
     expect(p.attackers[0].targets).toEqual([{ type: "Player", data: 1 }]);
+  });
+
+  it("drops creatures with the Defender keyword the engine wrongly offers", () => {
+    const objects: Record<string, GameObject> = {
+      "53": { id: 53, zone: "Battlefield", keywords: ["Defender"] },
+      "81": { id: 81, zone: "Battlefield", keywords: ["Flying"] },
+    };
+    const p = parseAttackersPrompt(REAL, objects)!;
+    expect(p.attackers.map((a) => a.attackerId)).toEqual([81]);
+  });
+
+  it("returns null when every offered attacker has Defender", () => {
+    const objects: Record<string, GameObject> = {
+      "53": { id: 53, zone: "Battlefield", keywords: ["Defender"] },
+      "81": { id: 81, zone: "Battlefield", keywords: ["Defender", "Reach"] },
+    };
+    expect(parseAttackersPrompt(REAL, objects)).toBeNull();
+  });
+
+  it("keeps all attackers when object data is unavailable", () => {
+    const p = parseAttackersPrompt(REAL)!;
+    expect(p.attackers.map((a) => a.attackerId)).toEqual([53, 81]);
   });
 
   it("returns null for non-attack waiting_for and empty attacker lists", () => {

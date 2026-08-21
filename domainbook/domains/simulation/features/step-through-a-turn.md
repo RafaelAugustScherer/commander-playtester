@@ -66,6 +66,16 @@ Example: Choosing which cards to discard
   And you pick exactly the required number to discard, or let the AI choose
 ```
 
+## Rule: Creatures with defender are never offered as attackers
+
+```gherkin
+Example: A defender wall is not declarable as an attacker
+  Given it is your combat and you control a creature with defender
+  When the engine asks you to declare attackers
+  Then that creature is not offered as an attacker
+  And only creatures without defender can be declared
+```
+
 ## Rule: You put cards into play by dragging or tapping from hand, or clicking the commander in its zone
 
 ```gherkin
