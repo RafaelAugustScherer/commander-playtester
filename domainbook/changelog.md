@@ -18,7 +18,8 @@ per-domain changelogs; this file is the single timeline (`ADR-0007`).
 
 - Creatures with defender (walls, tokens, and printed cards alike) are no longer
   offered as attackers when declaring attackers — the vendored engine lists them
-  regardless of the keyword (`domains/simulation/features/step-through-a-turn.md`).
+  regardless of the keyword (`domains/simulation/features/step-through-a-turn.md`,
+  `TDR-0003`).
 
 ## [0.4.2] - 2026-08-21
 

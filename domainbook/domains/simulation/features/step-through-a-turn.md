@@ -68,6 +68,10 @@ Example: Choosing which cards to discard
 
 ## Rule: Creatures with defender are never offered as attackers
 
+The engine lists creatures with defender as legal attackers regardless of the
+keyword, so we drop them when building the prompt. This also hides the rare case
+of a defender granted the ability to attack (`TDR-0003`).
+
 ```gherkin
 Example: A defender wall is not declarable as an attacker
   Given it is your combat and you control a creature with defender
