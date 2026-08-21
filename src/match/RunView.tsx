@@ -58,6 +58,7 @@ import {
   type MulliganPrompt,
 } from "../sim/decisions/mulligan";
 import { toBoardView, type BoardView, type SeatMeta } from "../board/boardView";
+import { seatColor } from "../board/seatColor";
 import { GameSidebar, type LoggedEntry } from "../board/GameSidebar";
 import type { LogEntry } from "../engine/types";
 import { abilitiesBySource } from "../sim/decisions/abilities";
@@ -1129,7 +1130,14 @@ export function RunView({
                           {attackerName(id)}
                         </span>
                         <span className="attack-summary__arrow">→</span>
-                        <span className="attack-summary__to">
+                        <span
+                          className="attack-summary__to"
+                          style={
+                            seat !== undefined
+                              ? { color: seatColor(seat) }
+                              : undefined
+                          }
+                        >
                           {def ?? t("attack.noTarget")}
                         </span>
                       </li>

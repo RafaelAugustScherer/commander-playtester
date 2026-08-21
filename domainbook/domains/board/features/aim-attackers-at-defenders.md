@@ -20,6 +20,20 @@ Example: Focusing an attacker to aim it
   And clicking the focused attacker again removes it from combat
 ```
 
+## Rule: Each opponent has an identity color, so same-named seats stay distinct
+
+Opponents in a pod are often the same deck and commander, so their names read
+identically. Each seat carries a fixed identity color on its board name, and the
+attacker's target badge and the summary reuse that same color — so "who is this
+attacker aimed at" is answered by color, not by a name that repeats.
+
+```gherkin
+Example: Telling three identically-named opponents apart
+  Given a pod where every opponent shows the same deck name
+  Then each opponent's name is drawn in its own identity color
+  And an attacker aimed at one shows that opponent's color on its badge and summary row
+```
+
 ## Rule: Each declared attacker shows the opponent it is aimed at
 
 ```gherkin

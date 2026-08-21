@@ -18,8 +18,9 @@ per-domain changelogs; this file is the single timeline (`ADR-0007`).
 
 - Declaring attackers in a pod now aims each attacker at its own opponent: focus a
   creature and click a defender to aim it, see the target on each attacker and in a
-  summary, and confirm a split attack before passing priority
-  (`domains/board/features/aim-attackers-at-defenders.md`,
+  summary, and confirm a split attack before passing priority. Each opponent has an
+  identity color on its board name, badge, and summary row so same-named seats stay
+  distinct (`domains/board/features/aim-attackers-at-defenders.md`,
   `domains/simulation/features/step-through-a-turn.md`).
 
 ## [0.4.3] - 2026-08-21

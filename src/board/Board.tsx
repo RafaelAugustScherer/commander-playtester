@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import type { GameObject } from "../engine/types";
 import type { BoardView, SeatView } from "./boardView";
+import { seatColor } from "./seatColor";
 import { CardPreview, type Preview } from "./CardPreview";
 import { useI18n } from "../i18n/I18nContext";
 import { categoryLabel } from "../i18n/messages";
@@ -152,19 +153,19 @@ function attackProps(
   attacking?: boolean;
   attackerSelected?: boolean;
   attackTarget?: string;
+  attackTargetColor?: string;
   onToggleAttack?: () => void;
 } {
   if (!attack || !attack.attackerIds.has(o.id)) return {};
   const declared = attack.declaredIds.has(o.id);
   const seat = attack.assignments.get(o.id);
+  const aimed = attack.multiDefender && declared && seat !== undefined;
   return {
     attacker: true,
     attacking: declared,
     attackerSelected: attack.multiDefender && attack.selectedAttackerId === o.id,
-    attackTarget:
-      attack.multiDefender && declared && seat !== undefined
-        ? attack.defenderNames.get(seat)
-        : undefined,
+    attackTarget: aimed ? attack.defenderNames.get(seat!) : undefined,
+    attackTargetColor: aimed ? seatColor(seat!) : undefined,
     onToggleAttack: () => attack.onAttackerClick(o.id),
   };
 }
@@ -477,7 +478,10 @@ function Seat({
     <div className={cls} onClick={seatClick} data-seat={seat.seat}>
       <div className="seat__head">
         <div className="seat__id">
-          <span className="seat__name">
+          <span
+            className="seat__name"
+            style={you ? undefined : { color: seatColor(seat.seat) }}
+          >
             {name}
             {you && <span className="seat__tag">{t("board.you")}</span>}
           </span>
@@ -736,6 +740,7 @@ function Card({
   attacking,
   attackerSelected,
   attackTarget,
+  attackTargetColor,
   onToggleAttack,
   blocker,
   blocking,
@@ -771,6 +776,7 @@ function Card({
   attacking?: boolean;
   attackerSelected?: boolean;
   attackTarget?: string;
+  attackTargetColor?: string;
   onToggleAttack?: () => void;
   blocker?: boolean;
   blocking?: boolean;
@@ -828,7 +834,15 @@ function Card({
   ) : null;
 
   const targetBadge = attackTarget ? (
-    <span className="card__attack-target" title={attackTarget}>
+    <span
+      className="card__attack-target"
+      title={attackTarget}
+      style={
+        attackTargetColor
+          ? { background: attackTargetColor, color: "#1b1206" }
+          : undefined
+      }
+    >
       ⚔ {attackTarget}
     </span>
   ) : null;
