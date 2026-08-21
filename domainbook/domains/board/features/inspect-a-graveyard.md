@@ -42,6 +42,11 @@ Example: Dismiss it
   Given the graveyard window is open
   When I click its close button or press Escape
   Then the window disappears
+
+Example: Read a card up close
+  Given the graveyard window is open
+  When I hover a card in it
+  Then an enlarged preview of that card is shown, above the window
 ```
 
 ## Rule: Graveyard cards are shown untapped

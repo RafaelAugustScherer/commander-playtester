@@ -1137,7 +1137,7 @@ th {
 /* ── Hover card preview ────────────────────────────────────────── */
 .card-preview {
   position: fixed;
-  z-index: 50;
+  z-index: 78;
   pointer-events: none;
   border-radius: var(--radius);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.55);

@@ -17,8 +17,8 @@ per-domain changelogs; this file is the single timeline (`ADR-0007`).
 ### Added
 
 - Click a seat's graveyard count to open a floating, draggable, closable window
-  that lists that graveyard's cards in one row, shown untapped
-  (`domains/board/features/inspect-a-graveyard.md`).
+  that lists that graveyard's cards in one row, shown untapped, each enlarging on
+  hover (`domains/board/features/inspect-a-graveyard.md`).
 
 ## [0.4.0] - 2026-08-20
 

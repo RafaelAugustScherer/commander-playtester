@@ -379,7 +379,7 @@ export function Board({
             className="gy-window__row"
           >
             {graveView.graveyard.map((o) => (
-              <Card key={o.id} obj={o} images={images} />
+              <Card key={o.id} obj={o} images={images} onHover={onHover} />
             ))}
           </XpScroll>
         </XpWindow>
