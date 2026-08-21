@@ -51,6 +51,8 @@ export interface GameObject {
   power?: number | null;
   toughness?: number | null;
   card_types?: CardTypes;
+  /** Effective keywords after continuous effects (e.g. "Defender", "Flying"). */
+  keywords?: string[];
   is_commander?: boolean;
   is_token?: boolean;
   face_down?: boolean;

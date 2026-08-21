@@ -403,7 +403,7 @@ export class MatchRunner {
         humanNonPriority && cb.requestHumanTargets ? parseTargetPrompt(wf) : null;
       const humanAttackers =
         humanNonPriority && cb.requestHumanAttackers
-          ? parseAttackersPrompt(wf)
+          ? parseAttackersPrompt(wf, env.state.objects)
           : null;
       const humanBlockers =
         humanNonPriority && cb.requestHumanBlockers
