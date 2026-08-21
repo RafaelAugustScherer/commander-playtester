@@ -123,14 +123,23 @@ function ninjutsuReturnProps(
   };
 }
 
-/** Declare-attackers interaction: toggle your creatures, aim at a defender. */
+/** Declare-attackers interaction: toggle your creatures, aim each at a defender. */
 export interface AttackInteraction {
   /** Your creatures that may attack (click to toggle). */
   attackerIds: Set<number>;
   /** Attackers currently declared (highlighted). */
   declaredIds: Set<number>;
-  onToggleAttacker: (id: number) => void;
-  /** Opponent seats you may aim declared attackers at (multiplayer choice). */
+  /** Whether multiple defenders make per-attacker aiming meaningful. */
+  multiDefender: boolean;
+  /** The declared attacker focused for re-aiming (multiplayer), or null. */
+  selectedAttackerId: number | null;
+  /** attackerId -> the seat it is aimed at. */
+  assignments: Map<number, number>;
+  /** seat -> short display name, for the on-card target badge. */
+  defenderNames: Map<number, string>;
+  /** Click one of your creatures (toggles it, or focuses it for aiming). */
+  onAttackerClick: (id: number) => void;
+  /** Opponent seats you may aim the focused attacker at (multiplayer choice). */
   defenderSeats: Set<number>;
   onChooseDefender: (seat: number) => void;
 }
@@ -138,12 +147,25 @@ export interface AttackInteraction {
 function attackProps(
   o: GameObject,
   attack?: AttackInteraction,
-): { attacker?: boolean; attacking?: boolean; onToggleAttack?: () => void } {
+): {
+  attacker?: boolean;
+  attacking?: boolean;
+  attackerSelected?: boolean;
+  attackTarget?: string;
+  onToggleAttack?: () => void;
+} {
   if (!attack || !attack.attackerIds.has(o.id)) return {};
+  const declared = attack.declaredIds.has(o.id);
+  const seat = attack.assignments.get(o.id);
   return {
     attacker: true,
-    attacking: attack.declaredIds.has(o.id),
-    onToggleAttack: () => attack.onToggleAttacker(o.id),
+    attacking: declared,
+    attackerSelected: attack.multiDefender && attack.selectedAttackerId === o.id,
+    attackTarget:
+      attack.multiDefender && declared && seat !== undefined
+        ? attack.defenderNames.get(seat)
+        : undefined,
+    onToggleAttack: () => attack.onAttackerClick(o.id),
   };
 }
 
@@ -712,6 +734,8 @@ function Card({
   onNinjutsuReturn,
   attacker,
   attacking,
+  attackerSelected,
+  attackTarget,
   onToggleAttack,
   blocker,
   blocking,
@@ -745,6 +769,8 @@ function Card({
   onNinjutsuReturn?: () => void;
   attacker?: boolean;
   attacking?: boolean;
+  attackerSelected?: boolean;
+  attackTarget?: string;
   onToggleAttack?: () => void;
   blocker?: boolean;
   blocking?: boolean;
@@ -773,6 +799,7 @@ function Card({
     ninjutsuReturn ? "card--ninjutsu-return" : "",
     attacker ? "card--attacker" : "",
     attacking ? "card--attacking" : "",
+    attackerSelected ? "card--attacker-selected" : "",
     blocker ? "card--blocker" : "",
     blocking ? "card--blocking" : "",
     blockSelected ? "card--block-selected" : "",
@@ -797,6 +824,12 @@ function Card({
   const pt = isCreature ? (
     <span className="card__pt">
       {obj.power ?? 0}/{obj.toughness ?? 0}
+    </span>
+  ) : null;
+
+  const targetBadge = attackTarget ? (
+    <span className="card__attack-target" title={attackTarget}>
+      ⚔ {attackTarget}
     </span>
   ) : null;
 
@@ -838,6 +871,7 @@ function Card({
       <div {...common}>
         <img className="card__img" src={url} alt={obj.name ?? ""} loading="lazy" />
         {pt}
+        {targetBadge}
       </div>
     );
   }
@@ -845,6 +879,7 @@ function Card({
     <div {...common}>
       <span className="card__name">{obj.name ?? "?"}</span>
       {pt}
+      {targetBadge}
     </div>
   );
 }
