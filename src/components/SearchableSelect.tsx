@@ -1,4 +1,5 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { XpScroll } from "./XpScroll";
 
 interface SearchableSelectProps {
   options: string[];
@@ -102,27 +103,34 @@ export function SearchableSelect({
         onKeyDown={onKeyDown}
       />
       {open && (
-        <ul className="combobox__list" id={listId} role="listbox" ref={listRef}>
-          {filtered.length === 0 ? (
-            <li className="combobox__empty">{emptyLabel}</li>
-          ) : (
-            filtered.map((opt, i) => (
-              <li
-                key={opt}
-                role="option"
-                aria-selected={opt === value}
-                className={`combobox__option ${i === active ? "combobox__option--active" : ""}`}
-                onMouseEnter={() => setActive(i)}
-                onMouseDown={(e) => {
-                  e.preventDefault();
-                  select(opt);
-                }}
-              >
-                {opt}
-              </li>
-            ))
-          )}
-        </ul>
+        <XpScroll wrapperClassName="combobox__list">
+          <ul
+            className="combobox__options"
+            id={listId}
+            role="listbox"
+            ref={listRef}
+          >
+            {filtered.length === 0 ? (
+              <li className="combobox__empty">{emptyLabel}</li>
+            ) : (
+              filtered.map((opt, i) => (
+                <li
+                  key={opt}
+                  role="option"
+                  aria-selected={opt === value}
+                  className={`combobox__option ${i === active ? "combobox__option--active" : ""}`}
+                  onMouseEnter={() => setActive(i)}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    select(opt);
+                  }}
+                >
+                  {opt}
+                </li>
+              ))
+            )}
+          </ul>
+        </XpScroll>
       )}
     </div>
   );

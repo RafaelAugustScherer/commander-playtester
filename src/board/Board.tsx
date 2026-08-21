@@ -21,6 +21,7 @@ import type { BoardView, SeatView } from "./boardView";
 import { CardPreview, type Preview } from "./CardPreview";
 import { useI18n } from "../i18n/I18nContext";
 import { categoryLabel } from "../i18n/messages";
+import { XpScroll } from "../components/XpScroll";
 
 /** Play-mode interaction for the human's seat: drag a hand card to a slot, or
  * click the commander in the command zone to cast it. */
@@ -290,7 +291,7 @@ export function Board({
 }) {
   const { t } = useI18n();
   const [preview, setPreview] = useState<Preview | null>(null);
-  const oppScrollRef = useRef<HTMLDivElement>(null);
+  const oppScrollRef = useRef<HTMLDivElement | null>(null);
 
   const you = view.seats.find((s) => s.seat === 0);
   const opponents = view.seats.filter((s) => s.seat !== 0);
@@ -318,9 +319,11 @@ export function Board({
 
   return (
     <div className="board">
-      <div
+      <XpScroll
+        axis="x"
+        wrapperClassName="board__opponents-frame"
         className={`board__opponents board__opponents--n${opponents.length}`}
-        ref={oppScrollRef}
+        viewRef={oppScrollRef}
       >
         {opponents.map((seat) => (
           <Seat
@@ -337,7 +340,7 @@ export function Board({
             block={block}
           />
         ))}
-      </div>
+      </XpScroll>
 
       {you && (
         <div className="board__self">

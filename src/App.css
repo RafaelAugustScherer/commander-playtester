@@ -1,41 +1,286 @@
-.app {
-  max-width: 960px;
-  margin: 0 auto;
-  padding: 2rem 1.25rem 4rem;
+/* ── Windows XP shell: desktop → maximized window → pinned taskbar ── */
+.xp-desktop {
+  min-height: 100vh;
+  min-height: 100dvh;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: radial-gradient(1200px 700px at 50% -12%, #4a3117, #160f08 75%);
+  font-family: var(--font-body);
+  color: var(--text);
 }
 
-.app--wide {
-  max-width: 1400px;
+.xp-window-area {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  padding: 6px;
 }
 
-.app__header {
-  margin-bottom: 1.5rem;
+.xp-window {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--accent);
+  background: var(--winbg);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
 }
 
-.app__subtitle {
-  color: var(--muted);
-  margin: 0;
+.xp-titlebar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 30px;
+  padding: 0 6px 0 9px;
+  background: linear-gradient(var(--accent), var(--accent-2));
+}
+.xp-titlebar__icon {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  image-rendering: pixelated;
+  object-fit: contain;
+}
+.xp-titlebar__title {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--accent-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.xp-content {
+  flex: 1;
+  min-height: 0;
+}
+
+/* ── XpScroll: always-visible Windows XP scrollbar ─────────────── */
+.xpscroll {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+}
+.xpscroll--y {
+  flex-direction: row;
+}
+.xpscroll--x {
+  flex-direction: column;
+}
+.xpscroll__view {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  scrollbar-width: none;
+}
+.xpscroll__view::-webkit-scrollbar {
+  display: none;
+}
+.xpscroll--y > .xpscroll__view {
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+.xpscroll--x > .xpscroll__view {
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+.xpscroll__bar {
+  flex: 0 0 16px;
+  display: flex;
+  background: var(--inset);
+  box-shadow: var(--bevel-well);
+}
+.xpscroll--y > .xpscroll__bar {
+  flex-direction: column;
+}
+.xpscroll--x > .xpscroll__bar {
+  flex-direction: row;
+}
+.xpscroll__btn {
+  flex: 0 0 16px;
+  padding: 0;
+  background-color: var(--accent);
+  background-repeat: no-repeat;
+  background-position: center;
+  border: 1px solid var(--accent-2);
+  box-shadow: var(--bevel-raised);
+}
+.xpscroll__btn:hover {
+  background-color: var(--accent-bright);
+}
+.xpscroll__btn:active {
+  box-shadow: var(--bevel-pressed);
+}
+.xpscroll--y > .xpscroll__bar .xpscroll__btn--dec {
+  background-image: var(--arrow-up);
+}
+.xpscroll--y > .xpscroll__bar .xpscroll__btn--inc {
+  background-image: var(--arrow-down);
+}
+.xpscroll--x > .xpscroll__bar .xpscroll__btn--dec {
+  background-image: var(--arrow-left);
+}
+.xpscroll--x > .xpscroll__bar .xpscroll__btn--inc {
+  background-image: var(--arrow-right);
+}
+.xpscroll__track {
+  flex: 1 1 auto;
+  position: relative;
+}
+.xpscroll__thumb {
+  position: absolute;
+  border: 1px solid var(--accent-2);
+  box-shadow: var(--bevel-raised);
+}
+.xpscroll--y > .xpscroll__bar .xpscroll__thumb {
+  left: 0;
+  right: 0;
+  top: 0;
+  min-height: 24px;
+  background: linear-gradient(90deg, var(--accent-bright), var(--accent));
+}
+.xpscroll--x > .xpscroll__bar .xpscroll__thumb {
+  top: 0;
+  bottom: 0;
+  left: 0;
+  min-width: 24px;
+  background: linear-gradient(180deg, var(--accent-bright), var(--accent));
+}
+.xpscroll__thumb:hover {
+  background: var(--accent-bright);
+}
+.xpscroll__thumb:active {
+  box-shadow: var(--bevel-pressed);
+}
+body.xpscroll-dragging {
+  user-select: none;
+}
+
+/* ── Taskbar ──────────────────────────────────────────────────── */
+.xp-taskbar {
+  flex: 0 0 auto;
+  height: var(--taskbar-h);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 5px;
+  background: linear-gradient(180deg, var(--accent-bright), var(--accent-2));
+  border-top: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.25);
+}
+.xp-taskbtn {
+  height: 26px;
+  min-width: 158px;
+  padding: 0 11px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font: 700 12px var(--font-body);
+  color: var(--accent-ink);
+  background: linear-gradient(180deg, var(--accent-bright), var(--accent));
+  border: 1px solid var(--accent-2);
+  box-shadow: var(--bevel-raised);
+}
+.xp-taskbtn--active {
+  background: linear-gradient(180deg, var(--accent-2), #96562f);
+  border: 1px solid #7d4526;
+  box-shadow: var(--bevel-pressed);
+}
+.xp-taskbtn__icon {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  image-rendering: pixelated;
+  object-fit: contain;
+}
+
+/* Language switch — pushed to the right, opens upward. */
+.xp-lang {
+  margin-left: auto;
+  position: relative;
+  flex: 0 0 auto;
+}
+.xp-lang__btn {
+  height: 26px;
+  padding: 0 11px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font: 700 12px var(--font-body);
+  color: var(--accent-ink);
+  background: linear-gradient(180deg, var(--accent-bright), var(--accent));
+  border: 1px solid var(--accent-2);
+  box-shadow: var(--bevel-raised);
+}
+.xp-lang__caret {
+  opacity: 0.8;
+  font-size: 9px;
+}
+.xp-lang__menu {
+  position: absolute;
+  right: 0;
+  bottom: 100%;
+  margin: 0 0 3px;
+  padding: 0;
+  list-style: none;
+  min-width: 100%;
+  background: var(--winbg);
+  border: 1px solid var(--accent);
+  box-shadow: 0 -6px 14px rgba(0, 0, 0, 0.5);
+  z-index: 70;
+}
+.xp-lang__item {
+  padding: 7px 12px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  cursor: pointer;
+  border-bottom: 1px solid var(--line);
+}
+.xp-lang__item:last-child {
+  border-bottom: none;
+}
+.xp-lang__item:hover,
+.xp-lang__item--active {
+  background: var(--accent-2);
+  color: var(--accent-ink);
+}
+
+/* View width: narrow forms cap and left-align; report/board go full-bleed. */
+.xp-content--narrow .panel {
+  max-width: 780px;
 }
 
 .panel {
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 1.25rem;
-  margin-bottom: 1.25rem;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 16px 20px;
+  margin: 0;
+}
+/* Stacked sections within the one window read as divided regions. */
+.panel + .panel {
+  border-top: 1px solid var(--line);
 }
 
 .import__textarea {
   width: 100%;
   min-height: 220px;
   resize: vertical;
-  background: var(--panel-2);
-  color: var(--text);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
+  background: var(--inset);
+  color: #e2d4bd;
+  border: 1px solid var(--line);
+  border-radius: 0;
   padding: 0.75rem;
   font-size: 0.85rem;
-  line-height: 1.5;
+  line-height: 1.6;
 }
 
 .import__row {
@@ -60,18 +305,25 @@
 }
 
 .btn {
-  background: var(--accent);
+  background: linear-gradient(var(--accent), var(--accent-2));
   color: var(--accent-ink);
-  border: none;
-  border-radius: var(--radius-sm);
-  padding: 0.55rem 1.1rem;
-  font-weight: 600;
+  border: 1px solid var(--accent-edge);
+  border-radius: 0;
+  padding: 0.5rem 1rem;
+  font-weight: 700;
+}
+.btn:hover:not(:disabled) {
+  background: linear-gradient(var(--accent-bright), var(--accent));
 }
 
 .btn--ghost {
-  background: transparent;
+  background: var(--panel-2);
   color: var(--text);
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
+  font-weight: 400;
+}
+.btn--ghost:hover:not(:disabled) {
+  border-color: var(--accent);
 }
 
 .hint {
@@ -139,15 +391,20 @@ th {
 }
 
 .bar {
-  height: 8px;
-  background: var(--accent);
-  border-radius: 4px;
+  height: 12px;
+  background: repeating-linear-gradient(
+    90deg,
+    var(--accent-bright) 0 9px,
+    var(--accent) 9px 11px
+  );
+  border-radius: 0;
   min-width: 2px;
 }
 
 .bar-track {
-  background: var(--panel-2);
-  border-radius: 4px;
+  background: var(--inset);
+  border: 1px solid var(--line);
+  border-radius: 0;
   overflow: hidden;
 }
 
@@ -161,7 +418,7 @@ th {
 .chip {
   background: var(--panel-2);
   border: 1px solid var(--border);
-  border-radius: 999px;
+  border-radius: 0;
   padding: 0.2rem 0.7rem;
   font-size: 0.8rem;
   color: var(--muted);
@@ -169,35 +426,6 @@ th {
 
 .spinner {
   color: var(--muted);
-}
-
-.app__header--row {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 1rem;
-  flex-wrap: wrap;
-}
-
-.tabs {
-  display: flex;
-  gap: 0.4rem;
-}
-
-.tab {
-  background: transparent;
-  color: var(--muted);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 0.45rem 1rem;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.tab--active {
-  background: var(--panel-2);
-  color: var(--text);
-  border-color: var(--accent);
 }
 
 .panel__head {
@@ -226,12 +454,12 @@ th {
 
 .input {
   width: 100%;
-  background: var(--panel-2);
+  background: var(--inset);
   color: var(--text);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 0.55rem 0.7rem;
-  font-size: 0.95rem;
+  border: 1px solid var(--line);
+  border-radius: 0;
+  padding: 0.5rem 0.6rem;
+  font-size: 0.9rem;
 }
 
 .btn--sm {
@@ -259,9 +487,12 @@ th {
   align-items: center;
   gap: 1rem;
   background: var(--panel-2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 0.75rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: 0;
+  padding: 0.6rem 0.75rem;
+}
+.deck-list__item:hover {
+  border-color: var(--accent);
 }
 
 .deck-list__info {
@@ -304,17 +535,17 @@ th {
 .seg__btn {
   background: var(--panel-2);
   color: var(--muted);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 0.45rem 0.9rem;
-  font-weight: 600;
+  border: 1px solid var(--line);
+  border-radius: 0;
+  padding: 0.4rem 0.9rem;
+  font-weight: 700;
   cursor: pointer;
 }
 
 .seg__btn--active {
-  color: var(--text);
-  border-color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 18%, var(--panel-2));
+  color: var(--accent-ink);
+  border: 1px solid var(--accent-edge);
+  background: linear-gradient(var(--accent), var(--accent-2));
 }
 
 .seg__btn--speed {
@@ -395,7 +626,8 @@ th {
   font-variant-numeric: tabular-nums;
 }
 
-.opponent-list__item .input {
+.opponent-list__item .input,
+.opponent-list__item .xp-select {
   flex: 1;
   min-width: 0;
 }
@@ -461,11 +693,17 @@ th {
 
 /* ── Board ─────────────────────────────────────────────────────── */
 /* Opponents share a row on top; the player's seat sits centered below. */
+.board__opponents-frame {
+  margin-bottom: 0.6rem;
+}
+.board__opponents-frame:has(> .xpscroll__bar) {
+  border: 1px solid var(--line);
+  padding: 6px;
+}
 .board__opponents {
   display: grid;
   gap: 0.6rem;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  margin-bottom: 0.6rem;
 }
 .board__opponents--n1 {
   grid-template-columns: minmax(0, 1fr);
@@ -499,7 +737,11 @@ th {
 }
 /* The player's playmat: larger surface, larger cards. */
 .seat--you {
-  background: color-mix(in srgb, var(--accent) 7%, var(--panel-2));
+  background: linear-gradient(
+    180deg,
+    rgba(196, 127, 77, 0.14),
+    rgba(196, 127, 77, 0.04)
+  );
   padding: 0.8rem 1rem 1rem;
 }
 .seat--you .seat__name {
@@ -616,8 +858,9 @@ th {
   opacity: 0.85;
 }
 .card--text {
-  background: var(--panel);
-  border: 1px solid var(--border);
+  background: var(--inset);
+  border: 1px solid var(--line);
+  color: #e2d4bd;
   padding: 0.12rem 0.35rem;
   font-size: 0.66rem;
   max-width: 96px;
@@ -662,43 +905,6 @@ th {
 }
 .chip--btn:hover {
   border-color: var(--accent);
-}
-
-/* ── Header nav + language switcher ────────────────────────────── */
-.app__nav {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  flex-wrap: wrap;
-}
-.lang {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.2rem;
-  background: var(--panel-2);
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  padding: 0.2rem 0.35rem;
-}
-.lang__globe {
-  display: inline-flex;
-  align-items: center;
-  color: var(--muted);
-  margin: 0 0.15rem;
-}
-.lang__btn {
-  background: transparent;
-  color: var(--muted);
-  border: none;
-  border-radius: 999px;
-  padding: 0.2rem 0.55rem;
-  font-weight: 700;
-  font-size: 0.78rem;
-  letter-spacing: 0.03em;
-}
-.lang__btn--active {
-  background: var(--accent);
-  color: var(--accent-ink);
 }
 
 /* ── Player playmat: larger cards ──────────────────────────────── */
@@ -937,6 +1143,76 @@ th {
   margin-top: 0.35rem;
 }
 
+/* ── XP dropdown (select) ──────────────────────────────────────── */
+.xp-select {
+  position: relative;
+  width: 100%;
+}
+.xp-select__field {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  background: var(--inset);
+  border: 1px solid var(--line);
+  border-radius: 0;
+  padding: 0.5rem 0.6rem;
+  font: inherit;
+  font-size: 0.9rem;
+  color: var(--text);
+  text-align: left;
+}
+.xp-select__field:hover {
+  border-color: var(--accent);
+}
+.xp-select__value {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.xp-select__caret {
+  flex: 0 0 auto;
+  color: var(--muted);
+  font-size: 0.8em;
+}
+.xp-select__list {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  z-index: 20;
+  max-height: 260px;
+  background: var(--winbg);
+  border: 1px solid var(--accent);
+  border-top: none;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.5);
+}
+.xp-select__options {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.xp-select__option {
+  padding: 0.5rem 0.6rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.xp-select__option:last-child {
+  border-bottom: none;
+}
+.xp-select__option--selected,
+.xp-select__option--active,
+.xp-select__option:hover {
+  background: var(--accent-2);
+  color: var(--accent-ink);
+}
+
 /* ── Searchable select (combobox) ──────────────────────────────── */
 .combobox {
   position: relative;
@@ -949,19 +1225,20 @@ th {
   left: 0;
   right: 0;
   z-index: 20;
+  max-height: 240px;
+  background: var(--winbg);
+  border: 1px solid var(--accent);
+  border-radius: 0;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.5);
+}
+.combobox__options {
   margin: 0;
   padding: 4px;
   list-style: none;
-  max-height: 240px;
-  overflow-y: auto;
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
 }
 .combobox__option {
   padding: 0.4rem 0.6rem;
-  border-radius: var(--radius-sm);
+  border-radius: 0;
   font-size: 0.9rem;
   cursor: pointer;
   white-space: nowrap;
@@ -969,7 +1246,8 @@ th {
   text-overflow: ellipsis;
 }
 .combobox__option--active {
-  background: color-mix(in srgb, var(--accent) 18%, var(--panel-2));
+  background: var(--accent-2);
+  color: var(--accent-ink);
 }
 .combobox__empty {
   padding: 0.4rem 0.6rem;
@@ -992,13 +1270,13 @@ th {
   position: fixed;
   top: 0;
   right: 0;
-  bottom: 0;
+  bottom: var(--taskbar-h);
   width: var(--sidebar-w);
   z-index: 60;
   display: flex;
   flex-direction: column;
-  background: var(--panel);
-  border-left: 1px solid var(--border);
+  background: var(--strip);
+  border-left: 1px solid var(--accent);
   transform: translateX(100%);
   transition: transform 0.25s ease;
 }
@@ -1007,8 +1285,8 @@ th {
 }
 /* Reserve room on desktop so the board isn't hidden behind the open drawer. */
 @media (min-width: 900px) {
-  .app:has(.game-sidebar--open) {
-    padding-right: calc(1.25rem + var(--sidebar-w));
+  .xp-desktop:has(.game-sidebar--open) .xp-window-area {
+    padding-right: calc(6px + var(--sidebar-w));
   }
 }
 .game-sidebar__head {
@@ -1099,6 +1377,9 @@ th {
 }
 
 /* Stack */
+.stack-scroll {
+  max-height: 220px;
+}
 .stack-list {
   list-style: none;
   margin: 0;
@@ -1106,12 +1387,6 @@ th {
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
-  max-height: 220px;
-  overflow-y: auto;
-  scrollbar-width: none;
-}
-.stack-list::-webkit-scrollbar {
-  display: none;
 }
 .stack-card {
   display: flex;
@@ -1154,18 +1429,15 @@ th {
 .log-scroll {
   flex: 1 1 auto;
   min-height: 160px;
-  overflow-y: auto;
+}
+.log-scroll > .xpscroll__view {
   padding-right: 0.25rem;
   padding-bottom: 0.75rem;
-  scrollbar-width: none;
-}
-.log-scroll::-webkit-scrollbar {
-  display: none;
 }
 .log-turn {
   position: sticky;
   top: 0;
-  background: var(--panel);
+  background: var(--strip);
   font-size: 0.72rem;
   font-weight: 800;
   text-transform: uppercase;
@@ -1299,10 +1571,8 @@ th {
   /* Touch targets: WCAG 2.5.5 — bump the tappable controls to >=44px. */
   .btn,
   .seg__btn,
-  .tab {
-    min-height: 44px;
-  }
-  .lang__btn {
+  .xp-taskbtn,
+  .xp-lang__btn {
     min-height: 44px;
   }
 

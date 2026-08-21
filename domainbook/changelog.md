@@ -12,6 +12,18 @@ depth live there. A purely-internal PR that touches no product or architecture m
 skip its version with a `Skip-Docs: <reason>` trailer instead. There are no
 per-domain changelogs; this file is the single timeline (`ADR-0007`).
 
+## [0.4.0] - 2026-08-20
+
+### Changed
+
+- Re-skinned the whole app in a Windows XP "classic" visual language over the same
+  Copper Ember palette — a maximized window with a per-view title bar and a
+  persistent bottom taskbar (Decks/Play + language menu), square corners, XP
+  bevels, and Noto Sans; all views and interactions are preserved (`ADR-0008`).
+- Added an always-visible custom XP scrollbar (square track, arrow buttons,
+  draggable thumb) to the main view, the board opponents gallery, the game
+  log/stack, and the deck pickers (`ADR-0008`).
+
 ## [0.3.3] - 2026-08-20
 
 ### Fixed
