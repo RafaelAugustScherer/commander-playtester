@@ -12,6 +12,15 @@ depth live there. A purely-internal PR that touches no product or architecture m
 skip its version with a `Skip-Docs: <reason>` trailer instead. There are no
 per-domain changelogs; this file is the single timeline (`ADR-0007`).
 
+## [0.4.2] - 2026-08-21
+
+### Added
+
+- Scry and surveil open a floating window that shows the looked-at cards one at a
+  time, letting you place each — keep on top, or to the bottom (scry) / graveyard
+  (surveil) — instead of the AI resolving them unseen
+  (`domains/simulation/features/place-scry-and-surveil-cards.md`).
+
 ## [0.4.1] - 2026-08-21
 
 ### Added

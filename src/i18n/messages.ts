@@ -287,6 +287,14 @@ export const messages = {
   "discard.progress": { pt: "Selecionadas: {n} / {max}", en: "Selected: {n} / {max}" },
   "discard.confirm": { pt: "Descartar", en: "Discard" },
 
+  "scry.title": { pt: "Vidência", en: "Scry" },
+  "surveil.title": { pt: "Vigília", en: "Surveil" },
+  "scry.progress": { pt: "Carta {n} de {max}", en: "Card {n} of {max}" },
+  "scry.keepTop": { pt: "Manter no topo", en: "Keep on top" },
+  "scry.toBottom": { pt: "Enviar ao fundo", en: "Put on bottom" },
+  "surveil.toGrave": { pt: "Enviar ao cemitério", en: "Put into graveyard" },
+  "scry.letAi": { pt: "IA decide", en: "Let the AI decide" },
+
   "select.noResults": { pt: "Nenhum resultado", en: "No matches" },
 
   "sidebar.title": { pt: "Pilha e registro", en: "Stack & log" },

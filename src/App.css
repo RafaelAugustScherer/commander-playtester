@@ -1255,6 +1255,38 @@ th {
   font-size: 0.7rem;
 }
 
+/* ── Scry / Surveil window ─────────────────────────────────────── */
+.scry-window {
+  width: min(84vw, 260px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.7rem;
+}
+.scry-window__card {
+  width: 150px;
+  height: 209px;
+}
+.scry-window__card .card__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.scry-window__card.card--text {
+  max-width: none;
+  padding: 0.5rem;
+  white-space: normal;
+  text-align: center;
+  justify-content: center;
+  font-size: 0.78rem;
+}
+.scry-window__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.4rem;
+}
+
 /* ── XP dropdown (select) ──────────────────────────────────────── */
 .xp-select {
   position: relative;
