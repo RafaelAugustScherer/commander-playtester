@@ -324,6 +324,12 @@ export const messages = {
   "board.rowOthers": { pt: "Outros", en: "Other" },
   "board.rowLands": { pt: "Terrenos", en: "Lands" },
   "board.rowHand": { pt: "Mão", en: "Hand" },
+  "board.graveyardOpen": { pt: "Abrir cemitério", en: "Open graveyard" },
+  "board.graveyardOf": {
+    pt: "Cemitério de {name}",
+    en: "{name}'s graveyard",
+  },
+  "common.close": { pt: "Fechar", en: "Close" },
 
   "goldfish.title": { pt: "Consistência (goldfishing)", en: "Consistency (goldfishing)" },
   "goldfish.subtitle": {

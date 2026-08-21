@@ -22,6 +22,7 @@ import { CardPreview, type Preview } from "./CardPreview";
 import { useI18n } from "../i18n/I18nContext";
 import { categoryLabel } from "../i18n/messages";
 import { XpScroll } from "../components/XpScroll";
+import { XpWindow } from "../components/XpWindow";
 
 /** Play-mode interaction for the human's seat: drag a hand card to a slot, or
  * click the commander in the command zone to cast it. */
@@ -291,10 +292,12 @@ export function Board({
 }) {
   const { t } = useI18n();
   const [preview, setPreview] = useState<Preview | null>(null);
+  const [graveSeat, setGraveSeat] = useState<number | null>(null);
   const oppScrollRef = useRef<HTMLDivElement | null>(null);
 
   const you = view.seats.find((s) => s.seat === 0);
   const opponents = view.seats.filter((s) => s.seat !== 0);
+  const graveView = view.seats.find((s) => s.seat === graveSeat);
 
   // In the mobile opponents gallery, follow the active opponent into view. When
   // the human (seat 0) is active, leave the gallery on the last-shown opponent.
@@ -335,6 +338,7 @@ export function Board({
             winner={view.winner}
             images={images}
             onHover={onHover}
+            onOpenGraveyard={setGraveSeat}
             target={target}
             attack={attack}
             block={block}
@@ -352,6 +356,7 @@ export function Board({
             winner={view.winner}
             images={images}
             onHover={onHover}
+            onOpenGraveyard={setGraveSeat}
             play={play}
             target={target}
             ability={ability}
@@ -361,6 +366,23 @@ export function Board({
             mana={mana}
           />
         </div>
+      )}
+
+      {graveView && graveView.graveyard.length > 0 && (
+        <XpWindow
+          title={t("board.graveyardOf", { name: seatName(graveView) })}
+          onClose={() => setGraveSeat(null)}
+        >
+          <XpScroll
+            axis="x"
+            wrapperClassName="gy-window"
+            className="gy-window__row"
+          >
+            {graveView.graveyard.map((o) => (
+              <Card key={o.id} obj={o} images={images} onHover={onHover} />
+            ))}
+          </XpScroll>
+        </XpWindow>
       )}
 
       {preview && play?.dragging == null && <CardPreview preview={preview} />}
@@ -376,6 +398,7 @@ function Seat({
   winner,
   images,
   onHover,
+  onOpenGraveyard,
   play,
   target,
   ability,
@@ -391,6 +414,7 @@ function Seat({
   winner: number | null;
   images?: Record<string, string>;
   onHover?: (p: Preview | null) => void;
+  onOpenGraveyard?: (seat: number) => void;
   play?: PlayInteraction;
   target?: TargetInteraction;
   ability?: AbilityInteraction;
@@ -466,9 +490,23 @@ function Seat({
         <span>
           <Layers size={13} /> {seat.librarySize}
         </span>
-        <span>
-          <Skull size={13} /> {seat.graveyardSize}
-        </span>
+        {seat.graveyardSize > 0 && onOpenGraveyard ? (
+          <button
+            type="button"
+            className="seat__zone-btn"
+            onClick={(e) => {
+              e.stopPropagation();
+              onOpenGraveyard(seat.seat);
+            }}
+            title={t("board.graveyardOpen")}
+          >
+            <Skull size={13} /> {seat.graveyardSize}
+          </button>
+        ) : (
+          <span>
+            <Skull size={13} /> {seat.graveyardSize}
+          </span>
+        )}
         {seat.poison > 0 && (
           <span>
             <Biohazard size={13} /> {seat.poison}
