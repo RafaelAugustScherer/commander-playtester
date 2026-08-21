@@ -15,6 +15,10 @@ export const messages = {
   "nav.decks": { pt: "Decks", en: "Decks" },
   "nav.play": { pt: "Testar", en: "Play" },
   "lang.aria": { pt: "Idioma", en: "Language" },
+  "win.reportTitle": {
+    pt: "{name} — consistência",
+    en: "{name} — consistency",
+  },
 
   "play.empty.title": { pt: "Testar deck em partida", en: "Test a deck in a match" },
   "play.empty.body": {

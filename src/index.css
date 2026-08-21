@@ -1,27 +1,60 @@
 :root {
-  /* Copper Ember — warm medieval-tavern dark theme */
-  --bg: #1a120c; /* page background — deep walnut */
-  --panel: #291c12; /* cards / panels */
-  --panel-2: #372615; /* insets, rows, tiles */
-  --border: #5c4029; /* hairline borders */
+  /* Copper Ember — Windows XP "classic" skin over a walnut/copper dark palette */
+  --bg: #160f08; /* desktop backdrop — deepest walnut */
+  --winbg: #291c12; /* window background */
+  --panel: #291c12; /* window surface (alias of winbg) */
+  --panel-2: #372615; /* cards, rows, tiles, unselected chips */
+  --inset: #1e140c; /* inputs, sunken wells, striped-bar track */
+  --border: #5c4029; /* hairline borders / dividers */
+  --line: #5c4029; /* alias for --border (design token name) */
   --text: #f1e4d0; /* primary text — candlelight cream */
   --muted: #c09c77; /* secondary text */
-  --accent: #c47f4d; /* copper — primary accent */
-  --accent-ink: #241207; /* text/icon on accent fills */
-  --good: #8aa35a; /* positive log events */
-  --warn: #dca24a; /* warnings */
+  --accent: #c47f4d; /* copper — primary accent, borders, gradients */
+  --accent-2: #a86539; /* darker copper — gradient stops, selected list bg */
+  --accent-bright: #d99b6a; /* highlights, links, bar stripes */
+  --accent-edge: #d6a377; /* light border on primary (copper) buttons */
+  --accent-ink: #241207; /* text/icon on copper surfaces */
+  --good: #8aa35a; /* positive stat values / log events */
+  --warn: #dca24a; /* caution values / warnings */
   --bad: #cf5a37; /* damage / concede / eliminate */
+  --strip: #20140b; /* sub-header / rail backgrounds */
 
-  --radius: 6px; /* panels — sharp */
-  --radius-sm: 5px; /* buttons, tiles */
+  --taskbar-h: 34px; /* XP taskbar height */
 
-  --font-display: "MedievalSharp", Georgia, serif; /* headings, turn/phase, panel titles */
-  --font-body: "Alegreya", Georgia, "Times New Roman", serif; /* body text */
+  /* XP classic — square corners everywhere. */
+  --radius: 0;
+  --radius-sm: 0;
+
+  /* XP bevels. */
+  --bevel-raised: inset 1px 1px 0 rgba(255, 255, 255, 0.55),
+    inset -1px -1px 0 rgba(0, 0, 0, 0.3);
+  --bevel-pressed: inset 1px 1px 2px rgba(0, 0, 0, 0.55),
+    inset -1px -1px 0 rgba(255, 255, 255, 0.14);
+  --bevel-well: inset 1px 1px 2px rgba(0, 0, 0, 0.5),
+    inset -1px -1px 0 rgba(255, 255, 255, 0.15);
+
+  /* Scrollbar arrow glyphs (copper-ink triangles), shared by the native
+     fallback and the XpScroll component. */
+  --arrow-up: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M8 5 11.5 10.5 4.5 10.5Z' fill='%23241207'/%3E%3C/svg%3E");
+  --arrow-down: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4.5 5.5 11.5 5.5 8 11Z' fill='%23241207'/%3E%3C/svg%3E");
+  --arrow-left: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M5 8 10.5 5 10.5 11Z' fill='%23241207'/%3E%3C/svg%3E");
+  --arrow-right: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M11 8 5.5 5 5.5 11Z' fill='%23241207'/%3E%3C/svg%3E");
+
+  --font-display: "Noto Sans", "Trebuchet MS", Tahoma, sans-serif; /* titles, headings */
+  --font-body: "Noto Sans", Tahoma, Verdana, "Segoe UI", sans-serif; /* UI / body */
 
   color-scheme: dark;
+  scrollbar-color: var(--accent) var(--inset); /* Firefox: copper thumb on inset track */
   font-family: var(--font-body);
   color: var(--text);
   background: var(--bg);
+}
+
+/* Touch layouts bump taskbar buttons to 44px; grow the bar to contain them. */
+@media (max-width: 899px) {
+  :root {
+    --taskbar-h: 48px;
+  }
 }
 
 * {
@@ -49,6 +82,16 @@ h3 {
   margin: 0 0 0.5rem;
   line-height: 1.2;
   font-family: var(--font-display);
+  font-weight: 700;
+}
+h1 {
+  font-size: 1.15rem;
+}
+h2 {
+  font-size: 1rem;
+}
+h3 {
+  font-size: 0.95rem;
 }
 
 a {
@@ -60,6 +103,10 @@ button {
   cursor: pointer;
 }
 
+input[type="checkbox"] {
+  accent-color: var(--accent);
+}
+
 button:disabled {
   cursor: not-allowed;
   opacity: 0.5;
@@ -67,4 +114,67 @@ button:disabled {
 
 textarea {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+/* ── XP scrollbars: square inset track, raised copper thumb, arrow buttons ── */
+::-webkit-scrollbar {
+  width: 16px;
+  height: 16px;
+}
+::-webkit-scrollbar-track {
+  background: var(--inset);
+  box-shadow: var(--bevel-well);
+}
+::-webkit-scrollbar-corner {
+  background: var(--inset);
+}
+::-webkit-scrollbar-thumb {
+  min-height: 32px;
+  min-width: 32px;
+  background: linear-gradient(90deg, var(--accent-bright), var(--accent));
+  border: 1px solid var(--accent-2);
+  box-shadow: var(--bevel-raised);
+}
+::-webkit-scrollbar-thumb:vertical {
+  background: linear-gradient(180deg, var(--accent-bright), var(--accent));
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-bright);
+}
+::-webkit-scrollbar-thumb:active {
+  background: linear-gradient(var(--accent-2), var(--accent));
+  box-shadow: var(--bevel-pressed);
+}
+::-webkit-scrollbar-button:single-button {
+  background-color: var(--accent);
+  border: 1px solid var(--accent-2);
+  box-shadow: var(--bevel-raised);
+  background-repeat: no-repeat;
+  background-position: center;
+}
+::-webkit-scrollbar-button:single-button:hover {
+  background-color: var(--accent-bright);
+}
+::-webkit-scrollbar-button:single-button:active {
+  box-shadow: var(--bevel-pressed);
+}
+::-webkit-scrollbar-button:single-button:vertical:decrement {
+  height: 16px;
+  width: 16px;
+  background-image: var(--arrow-up);
+}
+::-webkit-scrollbar-button:single-button:vertical:increment {
+  height: 16px;
+  width: 16px;
+  background-image: var(--arrow-down);
+}
+::-webkit-scrollbar-button:single-button:horizontal:decrement {
+  width: 16px;
+  height: 16px;
+  background-image: var(--arrow-left);
+}
+::-webkit-scrollbar-button:single-button:horizontal:increment {
+  width: 16px;
+  height: 16px;
+  background-image: var(--arrow-right);
 }

@@ -6,6 +6,7 @@ import type { AiDifficulty } from "../engine/types";
 import { AI_DIFFICULTIES } from "../engine/types";
 import { useI18n } from "../i18n/I18nContext";
 import type { Lang } from "../i18n/messages";
+import { XpSelect } from "../components/XpSelect";
 
 const DIFFICULTY_LABEL: Record<AiDifficulty, Record<Lang, string>> = {
   VeryEasy: { pt: "Muito fácil", en: "Very easy" },
@@ -81,17 +82,12 @@ export function MatchSetup({
 
       <div className="field">
         <span className="field__label">{t("setup.yourDeck")}</span>
-        <select
-          className="input"
+        <XpSelect
+          options={decks.map((deck) => ({ value: deck.id, label: deck.name }))}
           value={yourDeck.id}
-          onChange={(e) => setYourDeckId(e.target.value)}
-        >
-          {decks.map((deck) => (
-            <option key={deck.id} value={deck.id}>
-              {deck.name}
-            </option>
-          ))}
-        </select>
+          onChange={setYourDeckId}
+          ariaLabel={t("setup.yourDeck")}
+        />
       </div>
 
       <div className="field">
@@ -122,18 +118,15 @@ export function MatchSetup({
                   <span className="opponent-list__num" aria-hidden="true">
                     {i + 1}
                   </span>
-                  <select
-                    className="input"
+                  <XpSelect
+                    options={opponentDecks.map((deck) => ({
+                      value: deck.id,
+                      label: deck.name,
+                    }))}
                     value={opponentAt(i)}
-                    onChange={(e) => setOpponentAt(i, e.target.value)}
-                    aria-label={t("setup.opponentN", { n: i + 1 })}
-                  >
-                    {opponentDecks.map((deck) => (
-                      <option key={deck.id} value={deck.id}>
-                        {deck.name}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(id) => setOpponentAt(i, id)}
+                    ariaLabel={t("setup.opponentN", { n: i + 1 })}
+                  />
                 </li>
               ))}
             </ol>

@@ -1,5 +1,3 @@
-import { useState } from "react";
-import { DeckEditor } from "./DeckEditor";
 import type { SavedDeck } from "./model";
 import { totalCards } from "./model";
 import { STARTER_DECKS } from "./starterDecks";
@@ -11,14 +9,17 @@ export function DeckLibrary({
   save,
   remove,
   onSelect,
+  onNew,
+  onEdit,
 }: {
   decks: SavedDeck[];
   save: (deck: SavedDeck) => void;
   remove: (id: string) => void;
   onSelect: (deck: SavedDeck) => void;
+  onNew: () => void;
+  onEdit: (deck: SavedDeck) => void;
 }) {
   const { t } = useI18n();
-  const [editing, setEditing] = useState<SavedDeck | "new" | null>(null);
 
   function addStarterDecks() {
     const now = Date.now();
@@ -34,24 +35,11 @@ export function DeckLibrary({
     });
   }
 
-  if (editing) {
-    return (
-      <DeckEditor
-        initial={editing === "new" ? undefined : editing}
-        onSave={(deck) => {
-          save(deck);
-          setEditing(null);
-        }}
-        onCancel={() => setEditing(null)}
-      />
-    );
-  }
-
   return (
     <section className="panel">
       <div className="panel__head">
         <h2>{t("library.title")}</h2>
-        <button className="btn" onClick={() => setEditing("new")}>
+        <button className="btn" onClick={onNew}>
           {t("library.new")}
         </button>
       </div>
@@ -81,7 +69,7 @@ export function DeckLibrary({
               <div className="deck-list__actions">
                 <button
                   className="btn btn--ghost btn--sm"
-                  onClick={() => setEditing(deck)}
+                  onClick={() => onEdit(deck)}
                 >
                   {t("library.edit")}
                 </button>

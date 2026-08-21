@@ -26,6 +26,7 @@ import {
   isVisibleTo,
   prettyKeyword,
 } from "./gameLog";
+import { XpScroll } from "../components/XpScroll";
 
 export interface LoggedEntry {
   id: number;
@@ -77,7 +78,7 @@ export function GameSidebar({
   const { t } = useI18n();
   const [detailed, setDetailed] = useState(false);
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement | null>(null);
   const atTop = useRef(true);
 
   const visible = useMemo(
@@ -159,29 +160,31 @@ export function GameSidebar({
           {stackTopFirst.length === 0 ? (
             <p className="hint sidebar-empty">{t("sidebar.stackEmpty")}</p>
           ) : (
-            <ul className="stack-list">
-              {stackTopFirst.map((o, i) => {
-                const name = o.name ?? "";
-                const img = name ? images?.[name.toLowerCase()] : undefined;
-                return (
-                  <li key={o.id} className="stack-card">
-                    {img ? (
-                      <img className="stack-card__img" src={img} alt={name} />
-                    ) : (
-                      <div className="stack-card__img stack-card__img--none" />
-                    )}
-                    <div className="stack-card__meta">
-                      <span className="stack-card__name">{name}</span>
-                      {i === 0 && stackTopFirst.length > 1 && (
-                        <span className="stack-card__tag">
-                          {t("sidebar.stackTop")}
-                        </span>
+            <XpScroll wrapperClassName="stack-scroll">
+              <ul className="stack-list">
+                {stackTopFirst.map((o, i) => {
+                  const name = o.name ?? "";
+                  const img = name ? images?.[name.toLowerCase()] : undefined;
+                  return (
+                    <li key={o.id} className="stack-card">
+                      {img ? (
+                        <img className="stack-card__img" src={img} alt={name} />
+                      ) : (
+                        <div className="stack-card__img stack-card__img--none" />
                       )}
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
+                      <div className="stack-card__meta">
+                        <span className="stack-card__name">{name}</span>
+                        {i === 0 && stackTopFirst.length > 1 && (
+                          <span className="stack-card__tag">
+                            {t("sidebar.stackTop")}
+                          </span>
+                        )}
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </XpScroll>
           )}
         </section>
 
@@ -197,9 +200,9 @@ export function GameSidebar({
               {t("sidebar.detailed")}
             </label>
           </div>
-          <div
-            className="log-scroll"
-            ref={scrollRef}
+          <XpScroll
+            wrapperClassName="log-scroll"
+            viewRef={scrollRef}
             onScroll={(e) => {
               atTop.current = e.currentTarget.scrollTop < 48;
             }}
@@ -224,7 +227,7 @@ export function GameSidebar({
                 ),
               )
             )}
-          </div>
+          </XpScroll>
         </section>
       </aside>
     </>
