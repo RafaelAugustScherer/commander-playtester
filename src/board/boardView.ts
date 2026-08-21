@@ -14,6 +14,8 @@ export interface SeatView {
   hand: GameObject[];
   librarySize: number;
   graveyardSize: number;
+  /** Cards in this player's graveyard, in the engine's order. */
+  graveyard: GameObject[];
   lands: GameObject[];
   creatures: GameObject[];
   others: GameObject[];
@@ -71,6 +73,10 @@ export function toBoardView(
     );
     const handZone = all.filter((o) => o.zone === "Hand" && o.owner === seat);
     const hand = handZone.filter((o) => !o.face_down);
+    const graveyard = (p.graveyard ?? [])
+      .map((id) => objects[id])
+      .filter((o): o is GameObject => !!o)
+      .map((o) => (o.tapped ? { ...o, tapped: false } : o));
 
     return {
       seat,
@@ -83,6 +89,7 @@ export function toBoardView(
       hand,
       librarySize: p.library?.length ?? 0,
       graveyardSize: p.graveyard?.length ?? 0,
+      graveyard,
       lands,
       creatures,
       others,

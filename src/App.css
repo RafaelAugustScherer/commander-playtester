@@ -819,6 +819,27 @@ th {
   align-items: center;
   gap: 0.25rem;
 }
+.seat__zone-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 1px 5px;
+  font: inherit;
+  color: var(--accent-bright);
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  box-shadow: var(--bevel-raised);
+}
+.seat__zone-btn:hover {
+  color: var(--accent-ink);
+  background: var(--accent);
+  border-color: var(--accent-2);
+}
+.seat__zone-btn:active {
+  box-shadow: var(--bevel-pressed);
+}
 .seat__cmd {
   display: flex;
   gap: 0.3rem;
@@ -1141,6 +1162,97 @@ th {
   color: var(--accent);
   font-weight: 700;
   margin-top: 0.35rem;
+}
+
+/* ── XpWindow: draggable floating window (graveyard, …) ─────────── */
+.xpwin {
+  position: fixed;
+  z-index: 75;
+  display: flex;
+  flex-direction: column;
+  max-width: min(92vw, 760px);
+  border: 1px solid var(--accent);
+  background: var(--winbg);
+  box-shadow: 0 14px 44px -8px rgba(0, 0, 0, 0.75);
+}
+.xpwin--center {
+  left: 50%;
+  top: 12vh;
+  transform: translateX(-50%);
+}
+.xpwin__bar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 28px;
+  padding: 0 4px 0 9px;
+  background: linear-gradient(var(--accent), var(--accent-2));
+  cursor: move;
+  user-select: none;
+}
+.xpwin__title {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--accent-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.xpwin__close {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 18px;
+  padding: 0;
+  color: var(--accent-ink);
+  background: var(--accent-bright);
+  border: 1px solid var(--accent-edge);
+  box-shadow: var(--bevel-raised);
+  cursor: pointer;
+}
+.xpwin__close:hover {
+  background: var(--warn);
+}
+.xpwin__close:active {
+  box-shadow: var(--bevel-pressed);
+}
+.xpwin__body {
+  min-width: 0;
+  padding: 8px;
+  background: var(--inset);
+  box-shadow: var(--bevel-well);
+}
+.gy-window {
+  width: min(88vw, 604px);
+}
+.gy-window__row {
+  display: flex;
+  gap: 0.4rem;
+  align-items: flex-start;
+}
+.gy-window__row .card {
+  flex: 0 0 auto;
+  width: 92px;
+  height: 128px;
+}
+.gy-window__row .card__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.gy-window__row .card--text {
+  max-width: none;
+  padding: 0.35rem;
+  white-space: normal;
+  text-align: center;
+  justify-content: center;
+  font-size: 0.7rem;
 }
 
 /* ── XP dropdown (select) ──────────────────────────────────────── */
