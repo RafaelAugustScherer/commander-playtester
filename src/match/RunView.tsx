@@ -28,6 +28,8 @@ import {
   discardCardsAction,
   type DiscardPrompt,
 } from "../sim/decisions/discard";
+import { scryAction, type ScryPrompt } from "../sim/decisions/scry";
+import { XpWindow } from "../components/XpWindow";
 import {
   declareAttackersAction,
   type AttackersPrompt,
@@ -184,6 +186,11 @@ interface DiscardTurn {
   resolve: (choice: HumanChoice) => void;
 }
 
+interface ScryTurn {
+  prompt: ScryPrompt;
+  resolve: (choice: HumanChoice) => void;
+}
+
 /** Runs a configured series of matches and renders the live board + results. */
 export function RunView({
   config,
@@ -225,6 +232,7 @@ export function RunView({
   const [bottomPick, setBottomPick] = useState<Set<number>>(new Set());
   const [discardTurn, setDiscardTurn] = useState<DiscardTurn | null>(null);
   const [discardPick, setDiscardPick] = useState<Set<number>>(new Set());
+  const [scryTurn, setScryTurn] = useState<ScryTurn | null>(null);
   const [passingTurn, setPassingTurn] = useState(false);
   const [logEntries, setLogEntries] = useState<LoggedEntry[]>([]);
   // On mobile the log is a full-screen drawer, so it always starts closed and
@@ -450,6 +458,20 @@ export function RunView({
                   },
                 });
               }),
+            requestHumanScry: (_env, prompt) =>
+              new Promise<HumanChoice>((resolve) => {
+                if (cancelled) {
+                  resolve({ ai: true });
+                  return;
+                }
+                setScryTurn({
+                  prompt,
+                  resolve: (choice) => {
+                    setScryTurn(null);
+                    resolve(choice);
+                  },
+                });
+              }),
           },
         );
         runnerRef.current = runner;
@@ -574,10 +596,13 @@ export function RunView({
 
   // Any other decision that needs the human pauses the pass-turn flow.
   useEffect(() => {
-    if (passingTurn && (targeting || manaTurn || blockingTurn || creatureTypeTurn)) {
+    if (
+      passingTurn &&
+      (targeting || manaTurn || blockingTurn || creatureTypeTurn || scryTurn)
+    ) {
       setPassingTurn(false);
     }
-  }, [passingTurn, targeting, manaTurn, blockingTurn, creatureTypeTurn]);
+  }, [passingTurn, targeting, manaTurn, blockingTurn, creatureTypeTurn, scryTurn]);
 
   // Map draggable hand cards to their play actions for the current window.
   const play: PlayInteraction | undefined = useMemo(() => {
@@ -1301,6 +1326,17 @@ export function RunView({
         />
       )}
 
+      {scryTurn && (
+        <ScryWindow
+          prompt={scryTurn.prompt}
+          images={images}
+          onSubmit={(keptOnTop) =>
+            scryTurn.resolve({ action: scryAction(keptOnTop) })
+          }
+          onLetAi={() => scryTurn.resolve({ ai: true })}
+        />
+      )}
+
       {phase === "done" && (
         <RunReport
           stats={stats}
@@ -1578,6 +1614,74 @@ function DiscardModal({
 
       {overlay}
     </div>
+  );
+}
+
+/** Scry/Surveil floating window: place each looked-at card, top of library first. */
+function ScryWindow({
+  prompt,
+  images,
+  onSubmit,
+  onLetAi,
+}: {
+  prompt: ScryPrompt;
+  images: Record<string, string>;
+  onSubmit: (keptOnTop: number[]) => void;
+  onLetAi: () => void;
+}) {
+  const { t } = useI18n();
+  const [index, setIndex] = useState(0);
+  const [kept, setKept] = useState<number[]>([]);
+
+  const card = prompt.cards[index];
+  const url = card?.name ? images[card.name.toLowerCase()] : undefined;
+
+  const advance = (keepOnTop: boolean) => {
+    const nextKept = keepOnTop ? [...kept, card.id] : kept;
+    const nextIndex = index + 1;
+    if (nextIndex >= prompt.cards.length) {
+      onSubmit(nextKept);
+    } else {
+      setKept(nextKept);
+      setIndex(nextIndex);
+    }
+  };
+
+  const awayLabel =
+    prompt.mode === "scry" ? t("scry.toBottom") : t("surveil.toGrave");
+
+  return (
+    <XpWindow
+      title={prompt.mode === "scry" ? t("scry.title") : t("surveil.title")}
+      onClose={onLetAi}
+    >
+      <div className="scry-window">
+        <p className="hint">
+          {t("scry.progress", { n: index + 1, max: prompt.cards.length })}
+        </p>
+        {card &&
+          (url ? (
+            <div className="card scry-window__card">
+              <img className="card__img" src={url} alt={card.name} />
+            </div>
+          ) : (
+            <div className="card card--text scry-window__card">
+              <span className="card__name">{card.name || "?"}</span>
+            </div>
+          ))}
+        <div className="scry-window__actions">
+          <button className="btn" onClick={() => advance(true)}>
+            {t("scry.keepTop")}
+          </button>
+          <button className="btn" onClick={() => advance(false)}>
+            {awayLabel}
+          </button>
+          <button className="btn btn--ghost" onClick={onLetAi}>
+            {t("scry.letAi")}
+          </button>
+        </div>
+      </div>
+    </XpWindow>
   );
 }
 

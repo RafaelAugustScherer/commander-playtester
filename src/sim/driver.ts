@@ -25,6 +25,7 @@ import {
   type MulliganPrompt,
 } from "./decisions/mulligan";
 import { parseDiscardPrompt, type DiscardPrompt } from "./decisions/discard";
+import { parseScryPrompt, type ScryPrompt } from "./decisions/scry";
 
 export interface MatchResult {
   matchIndex: number;
@@ -203,6 +204,11 @@ export interface DriverCallbacks {
   requestHumanDiscard?: (
     env: GameStateEnvelope,
     prompt: DiscardPrompt,
+  ) => Promise<HumanChoice>;
+  /** Called when the human scries or surveils and must place the looked-at cards. */
+  requestHumanScry?: (
+    env: GameStateEnvelope,
+    prompt: ScryPrompt,
   ) => Promise<HumanChoice>;
 }
 
@@ -417,6 +423,10 @@ export class MatchRunner {
         humanNonPriority && cb.requestHumanDiscard
           ? parseDiscardPrompt(wf, env.state, humanSeat)
           : null;
+      const humanScry =
+        humanNonPriority && cb.requestHumanScry
+          ? parseScryPrompt(wf, env.state, humanSeat)
+          : null;
 
       // Run the human's choice: play their action, or hand this decision to the AI.
       const applyChoice = async (choice: HumanChoice): Promise<void> => {
@@ -484,6 +494,13 @@ export class MatchRunner {
         await applyChoice(choice);
       } else if (humanDiscard) {
         const choice = await cb.requestHumanDiscard!(env, humanDiscard);
+        if (this.aborted) {
+          stopped = true;
+          break;
+        }
+        await applyChoice(choice);
+      } else if (humanScry) {
+        const choice = await cb.requestHumanScry!(env, humanScry);
         if (this.aborted) {
           stopped = true;
           break;
