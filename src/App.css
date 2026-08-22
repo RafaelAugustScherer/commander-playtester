@@ -253,6 +253,52 @@ body.xpscroll-dragging {
   color: var(--accent-ink);
 }
 
+/* Settings popup: sits just left of the language switch, opens upward. */
+.xp-settings {
+  margin-left: auto;
+}
+.xp-settings ~ .xp-lang {
+  margin-left: 4px;
+}
+.xp-settings__menu {
+  min-width: 244px;
+  padding: 0;
+}
+.xp-settings__item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  width: 100%;
+  padding: 9px 12px;
+  text-align: left;
+  background: var(--winbg);
+  border: none;
+  cursor: pointer;
+  color: var(--text);
+}
+.xp-settings__item:hover {
+  background: var(--accent-2);
+  color: var(--accent-ink);
+}
+.xp-settings__check {
+  font-size: 15px;
+  line-height: 1.2;
+  flex: 0 0 auto;
+}
+.xp-settings__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.xp-settings__label {
+  font-size: 13px;
+  font-weight: 700;
+}
+.xp-settings__desc {
+  font-size: 11px;
+  opacity: 0.75;
+}
+
 /* View width: narrow forms cap and left-align; report/board go full-bleed. */
 .xp-content--narrow .panel {
   max-width: 780px;

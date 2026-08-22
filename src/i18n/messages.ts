@@ -15,6 +15,15 @@ export const messages = {
   "nav.decks": { pt: "Decks", en: "Decks" },
   "nav.play": { pt: "Testar", en: "Play" },
   "lang.aria": { pt: "Idioma", en: "Language" },
+  "settings.title": { pt: "Configurações", en: "Settings" },
+  "settings.manualMana": {
+    pt: "Tocar mana manualmente",
+    en: "Tap mana manually",
+  },
+  "settings.manualManaDesc": {
+    pt: "Escolha quais permanentes tocar ao pagar mágicas.",
+    en: "Choose which permanents to tap when paying for spells.",
+  },
   "win.reportTitle": {
     pt: "{name} — consistência",
     en: "{name} — consistency",
@@ -168,6 +177,10 @@ export const messages = {
     en: "Click a highlighted permanent to activate an ability.",
   },
   "turn.abilityN": { pt: "Habilidade {n}", en: "Ability {n}" },
+  "turn.floatManaHint": {
+    pt: "Toque suas fontes para gerar mana; depois lance uma mágica que você já pode pagar.",
+    en: "Tap your sources to make mana, then cast a spell you can already pay for.",
+  },
   "turn.ninjutsuHint": {
     pt: "Clique em um ninja destacado (na mão ou na zona de comando) para usar ninjutsu.",
     en: "Click a highlighted ninja (in hand or the command zone) to use ninjutsu.",
