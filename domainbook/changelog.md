@@ -12,6 +12,22 @@ depth live there. A purely-internal PR that touches no product or architecture m
 skip its version with a `Skip-Docs: <reason>` trailer instead. There are no
 per-domain changelogs; this file is the single timeline (`ADR-0007`).
 
+## [0.4.6] - 2026-08-21
+
+### Added
+
+- A taskbar Settings menu with a persisted "tap mana manually" toggle; when on,
+  the player taps their own sources (any mana permanent, not just lands) to pool
+  mana, and a spell is castable only once the reserve covers it — casting then
+  spends the reserve and goes straight to targeting, with no auto-tapping
+  (`domains/simulation/features/pay-mana-by-hand.md`).
+
+### Fixed
+
+- The floating-mana reserve beside a player's life now reads the engine's
+  `mana_pool.mana` (it looked at a field that never populated), so pooled mana
+  shows.
+
 ## [0.4.5] - 2026-08-21
 
 ### Added

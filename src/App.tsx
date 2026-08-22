@@ -11,6 +11,7 @@ import { RunView } from "./match/RunView";
 import type { RunConfig } from "./match/config";
 import { useI18n } from "./i18n/I18nContext";
 import { LangToggle } from "./i18n/LangToggle";
+import { SettingsMenu } from "./settings/SettingsMenu";
 import { XpScroll } from "./components/XpScroll";
 import iconDecks from "./assets/icon-decks.png";
 import iconPlay from "./assets/icon-play.png";
@@ -138,6 +139,7 @@ export function App() {
           <img className="xp-taskbtn__icon" src={iconPlay} alt="" />
           {t("nav.play")}
         </button>
+        <SettingsMenu />
         <LangToggle />
       </div>
     </div>

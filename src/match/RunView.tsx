@@ -45,7 +45,12 @@ import {
 import {
   chooseManaColorAction,
   tapManaSourceAction,
+  priorityManaSources,
+  canPayFromPool,
+  readManaPool,
   type ManaPrompt,
+  type ManaPip,
+  type ManaSourceOption,
 } from "../sim/decisions/mana";
 import {
   chooseOptionAction,
@@ -60,13 +65,14 @@ import {
 import { toBoardView, type BoardView, type SeatMeta } from "../board/boardView";
 import { seatColor } from "../board/seatColor";
 import { GameSidebar, type LoggedEntry } from "../board/GameSidebar";
-import type { LogEntry } from "../engine/types";
+import type { GameObject, LogEntry } from "../engine/types";
 import { abilitiesBySource } from "../sim/decisions/abilities";
 import { ninjutsuBySource } from "../sim/decisions/ninjutsu";
 import { aggregate } from "../analysis/matchStats";
 import { fetchCardsCached } from "../lib/scryfallCache";
 import { SearchableSelect } from "../components/SearchableSelect";
 import { useI18n } from "../i18n/I18nContext";
+import { useSettings } from "../settings/SettingsContext";
 import { phaseLabel, type Lang } from "../i18n/messages";
 
 type Phase = "loading" | "running" | "done" | "error";
@@ -152,6 +158,10 @@ interface HumanTurn {
   myTurn: boolean;
   /** True when an opponent has something on the stack awaiting the human. */
   opponentActed: boolean;
+  /** Your floating mana this window (manual-mana gating + reserve display). */
+  manaPool: ManaPip[];
+  /** This frame's objects, for reading a castable spell's mana cost. */
+  objects: Record<string, GameObject>;
   resolve: (choice: HumanChoice) => void;
 }
 
@@ -206,6 +216,7 @@ export function RunView({
   onExit: () => void;
 }) {
   const { t, lang } = useI18n();
+  const { settings } = useSettings();
   const [phase, setPhase] = useState<Phase>("loading");
   const [message, setMessage] = useState(t("run.preparing"));
   const [board, setBoard] = useState<BoardView | null>(null);
@@ -218,6 +229,11 @@ export function RunView({
   const [dragging, setDragging] = useState<number | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [abilityPick, setAbilityPick] = useState<{ objId: number; actions: any[] } | null>(null);
+  // Which colour to make when a tapped mana source produces more than one.
+  const [manaSourcePick, setManaSourcePick] = useState<{
+    objId: number;
+    options: ManaSourceOption[];
+  } | null>(null);
   const [ninjutsuSource, setNinjutsuSource] = useState<number | null>(null);
   const [targeting, setTargeting] = useState<TargetTurn | null>(null);
   const [chosen, setChosen] = useState<TargetRef[]>([]);
@@ -346,6 +362,8 @@ export function RunView({
                   opponentActed: stack.some(
                     (id) => (st.objects?.[id]?.controller ?? -1) !== 0,
                   ),
+                  manaPool: readManaPool(st.players?.[0]),
+                  objects: st.objects ?? {},
                   resolve: (choice) => {
                     setHumanTurn(null);
                     resolve(choice);
@@ -530,6 +548,7 @@ export function RunView({
   useEffect(() => {
     setDragging(null);
     setAbilityPick(null);
+    setManaSourcePick(null);
     setNinjutsuSource(null);
   }, [humanTurn]);
 
@@ -612,6 +631,9 @@ export function RunView({
   }, [passingTurn, targeting, manaTurn, blockingTurn, creatureTypeTurn, scryTurn]);
 
   // Map draggable hand cards to their play actions for the current window.
+  // With manual mana on, a normal cast is offered only when the floating reserve
+  // already covers it, so casting never taps extra lands (the player floats mana
+  // by tapping sources first).
   const play: PlayInteraction | undefined = useMemo(() => {
     if (!humanTurn) return undefined;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -619,7 +641,15 @@ export function RunView({
     for (const a of humanTurn.legal.actions ?? []) {
       if (!PLAYABLE_TYPES.has(a?.type)) continue;
       const id = actionObjectId(a);
-      if (id != null && !map.has(id)) map.set(id, a);
+      if (id == null || map.has(id)) continue;
+      if (
+        settings.manualMana &&
+        a.type === "CastSpell" &&
+        !canPayFromPool(humanTurn.manaPool, humanTurn.objects[id]?.mana_cost)
+      ) {
+        continue;
+      }
+      map.set(id, a);
     }
     return {
       playableIds: new Set(map.keys()),
@@ -630,7 +660,7 @@ export function RunView({
         if (a) humanTurn.resolve({ action: a });
       },
     };
-  }, [humanTurn, dragging]);
+  }, [humanTurn, dragging, settings.manualMana]);
 
   const hasPlayable = (play?.playableIds.size ?? 0) > 0;
 
@@ -822,18 +852,39 @@ export function RunView({
     };
   }, [blockingTurn, blockAssign, selectedBlocker]);
 
-  // Tap one of your sources when the engine asks which to use for a payment.
+  // Two ways a source gets tapped: the engine asking which source to use for a
+  // payment (ManaSourceSelection), or — with manual mana on — the player pooling
+  // mana at their own priority before casting. A source that makes more than one
+  // color opens a small color picker first.
   const mana: ManaInteraction | undefined = useMemo(() => {
-    if (!manaTurn || manaTurn.prompt.kind !== "source") return undefined;
-    const { prompt } = manaTurn;
-    return {
-      sourceIds: new Set(prompt.sources.map((s) => s.objectId)),
-      onTapSource: (objId: number) => {
-        const src = prompt.sources.find((s) => s.objectId === objId);
-        if (src) manaTurn.resolve({ action: tapManaSourceAction(src) });
-      },
-    };
-  }, [manaTurn]);
+    if (manaTurn?.prompt.kind === "source") {
+      const { prompt } = manaTurn;
+      return {
+        sourceIds: new Set(prompt.sources.map((s) => s.objectId)),
+        onTapSource: (objId: number) => {
+          const src = prompt.sources.find((s) => s.objectId === objId);
+          if (src) manaTurn.resolve({ action: tapManaSourceAction(src) });
+        },
+      };
+    }
+    if (settings.manualMana && humanTurn) {
+      const sources = priorityManaSources(humanTurn.legal);
+      if (sources.size === 0) return undefined;
+      return {
+        sourceIds: new Set(sources.keys()),
+        onTapSource: (objId: number) => {
+          const options = sources.get(objId);
+          if (!options || options.length === 0) return;
+          if (options.length === 1) {
+            humanTurn.resolve({ action: options[0].action });
+          } else {
+            setManaSourcePick({ objId, options });
+          }
+        },
+      };
+    }
+    return undefined;
+  }, [manaTurn, humanTurn, settings.manualMana]);
 
   // Name a declared attacker (always one of the human seat's permanents).
   const attackerName = (id: number): string => {
@@ -996,9 +1047,15 @@ export function RunView({
                     : t("turn.ninjutsuHint")}
                 </p>
               )}
-              {!hasPlayable && !ability && !ninjutsu && (
-                <p className="hint">{t("turn.nothingToPlay")}</p>
+              {settings.manualMana && mana && (
+                <p className="hint">{t("turn.floatManaHint")}</p>
               )}
+              {!hasPlayable &&
+                !ability &&
+                !ninjutsu &&
+                !(settings.manualMana && mana) && (
+                  <p className="hint">{t("turn.nothingToPlay")}</p>
+                )}
               {abilityPick && (
                 <div className="import__row">
                   {abilityPick.actions.map((a, i) => (
@@ -1015,6 +1072,25 @@ export function RunView({
                   <button
                     className="btn btn--ghost"
                     onClick={() => setAbilityPick(null)}
+                  >
+                    {t("turn.cancel")}
+                  </button>
+                </div>
+              )}
+              {manaSourcePick && (
+                <div className="import__row">
+                  {manaSourcePick.options.map((opt, i) => (
+                    <button
+                      key={i}
+                      className="btn"
+                      onClick={() => humanTurn.resolve({ action: opt.action })}
+                    >
+                      {t(`mana.color.${opt.manaType}` as Parameters<typeof t>[0])}
+                    </button>
+                  ))}
+                  <button
+                    className="btn btn--ghost"
+                    onClick={() => setManaSourcePick(null)}
                   >
                     {t("turn.cancel")}
                   </button>

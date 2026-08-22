@@ -3,6 +3,8 @@ import {
   parseManaPrompt,
   chooseManaColorAction,
   tapManaSourceAction,
+  priorityManaSources,
+  canPayFromPool,
   readManaPool,
 } from "./mana";
 import type { WaitingFor } from "../../engine/types";
@@ -88,15 +90,116 @@ describe("mana action builders", () => {
   });
 });
 
+// A real legalActionsByObject slice for manual-mana priority: a basic taps for
+// one color, a dual offers two, a rock defers its color. Captured live (trimmed).
+const LEGAL_BY_OBJECT = {
+  legalActionsByObject: {
+    "48": [
+      {
+        type: "TapLandForMana",
+        data: {
+          selection: {
+            source: { object_id: 48, incarnation: 2 },
+            mana_type: "Green",
+            output: { type: "Concrete", data: "Green" },
+          },
+        },
+        interactionActionId: "abc123",
+      },
+    ],
+    "77": [
+      {
+        type: "TapLandForMana",
+        data: { selection: { source: { object_id: 77 }, mana_type: "White" } },
+      },
+      {
+        type: "TapLandForMana",
+        data: { selection: { source: { object_id: 77 }, mana_type: "Black" } },
+      },
+    ],
+    "90": [
+      {
+        type: "ActivateManaSource",
+        data: {
+          selection: {
+            source: { object_id: 90 },
+            output: { type: "DeferredColorChoice" },
+          },
+        },
+      },
+    ],
+    // A non-mana ability must not be offered as a mana source.
+    "5": [{ type: "ActivateAbility", data: { source_id: 5, ability_index: 0 } }],
+  },
+};
+
+describe("priorityManaSources", () => {
+  it("groups each permanent's tap-for-mana actions, skipping non-mana ones", () => {
+    const map = priorityManaSources(LEGAL_BY_OBJECT);
+    expect([...map.keys()].sort((a, b) => a - b)).toEqual([48, 77, 90]);
+    expect(map.get(77)!.map((o) => o.manaType)).toEqual(["White", "Black"]);
+    expect(map.get(90)![0].manaType).toBe(""); // deferred any-color
+  });
+
+  it("strips interactionActionId, echoing only type+data the engine accepts", () => {
+    const opt = priorityManaSources(LEGAL_BY_OBJECT).get(48)![0];
+    expect(Object.keys(opt.action)).toEqual(["type", "data"]);
+    expect(opt.action.type).toBe("TapLandForMana");
+  });
+
+  it("returns an empty map when there are no per-object actions", () => {
+    expect(priorityManaSources(undefined).size).toBe(0);
+    expect(priorityManaSources({}).size).toBe(0);
+  });
+});
+
+describe("canPayFromPool", () => {
+  const pool = (colors: string[]): { color: string; count: number }[] => {
+    const counts = new Map<string, number>();
+    for (const c of colors) counts.set(c, (counts.get(c) ?? 0) + 1);
+    return [...counts.entries()].map(([color, count]) => ({ color, count }));
+  };
+  const cost = (generic: number, shards: string[]) => ({
+    type: "Cost",
+    generic,
+    shards,
+  });
+
+  it("pays each colored pip from its own color and generic from the rest", () => {
+    expect(canPayFromPool(pool(["Green", "Black"]), cost(1, ["Green"]))).toBe(true);
+    expect(canPayFromPool(pool(["White", "White"]), cost(0, ["White", "White"]))).toBe(true);
+  });
+
+  it("rejects when a required color is not floating", () => {
+    expect(canPayFromPool(pool(["White", "Black"]), cost(1, ["Green"]))).toBe(false);
+  });
+
+  it("rejects when there is not enough total mana for the generic part", () => {
+    expect(canPayFromPool(pool(["Green"]), cost(1, ["Green"]))).toBe(false);
+  });
+
+  it("does not spend a colored pip's mana on the generic part", () => {
+    // {1}{G} with exactly G + G: one G pays the pip, the other covers generic.
+    expect(canPayFromPool(pool(["Green", "Green"]), cost(1, ["Green"]))).toBe(true);
+    // {1}{G} with only two generic-usable but no second mana fails.
+    expect(canPayFromPool(pool(["Green"]), cost(1, ["Green"]))).toBe(false);
+  });
+
+  it("treats a free cost (or none) as always payable", () => {
+    expect(canPayFromPool([], cost(0, []))).toBe(true);
+    expect(canPayFromPool([], null)).toBe(true);
+  });
+});
+
 describe("readManaPool", () => {
-  it("counts recognised colors in the pool, ignoring unknowns", () => {
+  it("reads the engine's mana_pool.mana entries by color", () => {
     const player = {
       mana_pool: {
-        units: [
-          { mana_type: "Blue" },
-          { mana_type: "Blue" },
-          { mana_type: "Red" },
-          { mana_type: "Mystery" },
+        mana: [
+          { color: "Blue" },
+          { color: "Blue" },
+          { color: "Red" },
+          { color: "Mystery" },
         ],
       },
     };
@@ -107,7 +210,7 @@ describe("readManaPool", () => {
   });
 
   it("returns an empty list when the pool is empty or absent", () => {
-    expect(readManaPool({ mana_pool: { units: [] } })).toEqual([]);
+    expect(readManaPool({ mana_pool: { mana: [] } })).toEqual([]);
     expect(readManaPool({})).toEqual([]);
     expect(readManaPool(null)).toEqual([]);
   });
