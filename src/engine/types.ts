@@ -55,6 +55,12 @@ export interface GameObject {
   keywords?: string[];
   is_commander?: boolean;
   is_token?: boolean;
+  /** For minted tokens: the Scryfall printing the engine picked for its art. */
+  token_image_ref?: {
+    scryfall_id?: string;
+    scryfall_oracle_id?: string;
+    preset_id?: string;
+  } | null;
   face_down?: boolean;
   summoning_sick?: boolean;
   damage_marked?: number;

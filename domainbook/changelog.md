@@ -12,6 +12,14 @@ depth live there. A purely-internal PR that touches no product or architecture m
 skip its version with a `Skip-Docs: <reason>` trailer instead. There are no
 per-domain changelogs; this file is the single timeline (`ADR-0007`).
 
+## [0.4.5] - 2026-08-21
+
+### Added
+
+- Token permanents render as cards on the board, with real token art pulled from the
+  Scryfall printing the engine picks (`token_image_ref`) and the text face as the
+  fallback when a token has no printing (`domains/board/index.md`).
+
 ## [0.4.4] - 2026-08-21
 
 ### Added

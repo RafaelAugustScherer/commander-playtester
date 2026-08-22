@@ -56,7 +56,9 @@ way whether they are playing or watching.
 - The engine's per-seat view already filters hidden information, so the board can
   render exactly what it is handed without leaking.
 - Card images are fetched from Scryfall at runtime and cached locally (`ADR-0003`);
-  the board does not bundle images.
+  the board does not bundle images. Minted tokens have no deck printing, so their
+  art comes from the Scryfall id the engine picks (`token_image_ref`); a token with
+  no printing falls back to the text face like any imageless card.
 - A four-seat pod fits the fixed layout, and so do one and two seats.
 
 ## Verification Metrics
