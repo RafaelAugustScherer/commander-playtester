@@ -20,6 +20,7 @@ import type { GameObject } from "../engine/types";
 import type { BoardView, SeatView } from "./boardView";
 import { seatColor } from "./seatColor";
 import { CardPreview, type Preview } from "./CardPreview";
+import { tokenImageUrl } from "./tokenArt";
 import { useI18n } from "../i18n/I18nContext";
 import { categoryLabel } from "../i18n/messages";
 import { XpScroll } from "../components/XpScroll";
@@ -789,7 +790,9 @@ function Card({
   castable?: boolean;
   onCast?: () => void;
 }) {
-  const url = obj.name ? images?.[obj.name.toLowerCase()] : undefined;
+  const url =
+    (obj.name ? images?.[obj.name.toLowerCase()] : undefined) ??
+    tokenImageUrl(obj);
   const isCreature = obj.card_types?.core_types?.includes("Creature") ?? false;
   const cls = [
     "card",
