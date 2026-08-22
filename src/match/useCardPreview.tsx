@@ -67,22 +67,33 @@ export function useCardPreview({
     else if (!canHover) setZoomed(c);
   };
 
+  const hoverHandlers = (c: PickCard) => ({
+    onMouseEnter: (e: MouseEvent) =>
+      setPreview(previewFor(c, e.currentTarget.getBoundingClientRect())),
+    onMouseLeave: () => setPreview(null),
+    onFocus: (e: FocusEvent) =>
+      setPreview(previewFor(c, e.currentTarget.getBoundingClientRect())),
+    onBlur: () => setPreview(null),
+  });
+
+  const touchHandlers = (c: PickCard) => ({
+    onTouchStart: () => startLongPress(c),
+    onTouchEnd: cancelLongPress,
+    onTouchMove: cancelLongPress,
+    onContextMenu: (e: MouseEvent) => e.preventDefault(),
+  });
+
   const cardProps = (c: PickCard) => ({
     onClick: () => onCardClick(c),
-    onMouseEnter: canHover
-      ? (e: MouseEvent) =>
-          setPreview(previewFor(c, e.currentTarget.getBoundingClientRect()))
-      : undefined,
-    onMouseLeave: canHover ? () => setPreview(null) : undefined,
-    onFocus: canHover
-      ? (e: FocusEvent) =>
-          setPreview(previewFor(c, e.currentTarget.getBoundingClientRect()))
-      : undefined,
-    onBlur: canHover ? () => setPreview(null) : undefined,
-    onTouchStart: canHover ? undefined : () => startLongPress(c),
-    onTouchEnd: canHover ? undefined : cancelLongPress,
-    onTouchMove: canHover ? undefined : cancelLongPress,
-    onContextMenu: canHover ? undefined : (e: MouseEvent) => e.preventDefault(),
+    onMouseEnter: undefined,
+    onMouseLeave: undefined,
+    onFocus: undefined,
+    onBlur: undefined,
+    onTouchStart: undefined,
+    onTouchEnd: undefined,
+    onTouchMove: undefined,
+    onContextMenu: undefined,
+    ...(canHover ? hoverHandlers(c) : touchHandlers(c)),
   });
 
   const overlay = (

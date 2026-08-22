@@ -26,13 +26,13 @@ export function normalizeCardName(input: string): string {
   let name = input.trim();
 
   // Remove a trailing foil/etched marker like "*F*" or "*E*".
-  name = name.replace(/\s*\*[a-z]\*\s*$/i, "");
+  name = name.replace(/\*[a-z]\*$/i, "").trimEnd();
 
   // Remove a trailing "(SET) collector" block. Set codes are 2-6 alnum chars.
-  name = name.replace(/\s*\([0-9a-z]{2,6}\)\s*[0-9a-z-]*\s*$/i, "");
+  name = name.replace(/\([0-9a-z]{2,6}\)(?:\s+[0-9a-z-]+)?$/i, "").trimEnd();
 
   // Remove a trailing category tag in square brackets.
-  name = name.replace(/\s*\[[^\]]*\]\s*$/g, "");
+  name = name.replace(/\[[^[\]]*\]$/, "").trimEnd();
 
   name = name.trim();
 
@@ -42,7 +42,10 @@ export function normalizeCardName(input: string): string {
   if (/^[^\s/]+(?:\/[^\s/]+)+$/.test(name)) {
     name = name.split("/").join(" // ");
   } else {
-    name = name.split(/\s+\/\/\s+/).join(" // ");
+    name = name
+      .split(/(?<=\s)\/\/(?=\s)/)
+      .map((face) => face.trim())
+      .join(" // ");
   }
 
   return name.trim();

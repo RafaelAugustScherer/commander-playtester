@@ -292,6 +292,13 @@ function slotAccepts(cat: string, o: GameObject): boolean {
   return coreTypes(o).includes(cat);
 }
 
+function classList(
+  base: string,
+  flags: Record<string, boolean | undefined>,
+): string {
+  return [base, ...Object.keys(flags).filter((k) => flags[k])].join(" ");
+}
+
 /** Render opponents (top) with the human seat centered and larger at the bottom. */
 export function Board({
   view,
@@ -452,126 +459,212 @@ function Seat({
   const seatTargetable = target?.playerSeats.has(seat.seat) ?? false;
   const seatTargeted = target?.chosenSeats.has(seat.seat) ?? false;
   const seatDefender = attack?.defenderSeats.has(seat.seat) ?? false;
-  const cls = [
-    "seat",
-    you ? "seat--you" : "",
-    seat.isActive && !gameOver ? "seat--active" : "",
-    seat.isEliminated ? "seat--out" : "",
-    won ? "seat--won" : "",
-    seatTargetable ? "seat--targetable" : "",
-    seatTargeted ? "seat--targeted" : "",
-    seatDefender ? "seat--defender" : "",
-  ]
-    .filter(Boolean)
-    .join(" ");
+  const cls = classList("seat", {
+    "seat--you": you,
+    "seat--active": seat.isActive && !gameOver,
+    "seat--out": seat.isEliminated,
+    "seat--won": won,
+    "seat--targetable": seatTargetable,
+    "seat--targeted": seatTargeted,
+    "seat--defender": seatDefender,
+  });
 
   const dragCard = play?.dragging != null
     ? seat.hand.find((o) => o.id === play.dragging)
     : undefined;
 
-  const seatClick = seatTargetable
-    ? () => target!.onChoosePlayer(seat.seat)
-    : seatDefender
-      ? () => attack!.onChooseDefender(seat.seat)
-      : undefined;
+  const seatClick = seatClickHandler(
+    seat,
+    seatTargetable,
+    seatDefender,
+    target,
+    attack,
+  );
+
+  const youPlay = you ? play : undefined;
+  const youAttack = you ? attack : undefined;
+  const youMana = you ? mana : undefined;
+  const youNinjutsu = you ? ninjutsu : undefined;
 
   return (
     <div className={cls} onClick={seatClick} data-seat={seat.seat}>
-      <div className="seat__head">
-        <div className="seat__id">
-          <span
-            className="seat__name"
-            style={you ? undefined : { color: seatColor(seat.seat) }}
-          >
-            {name}
-            {you && <span className="seat__tag">{t("board.you")}</span>}
-          </span>
-          <span className="seat__commander">{seat.commander}</span>
-        </div>
-        <div className="seat__life-wrap">
-          {seat.manaPool.length > 0 && (
-            <span className="seat__mana" title="Mana disponível">
-              {seat.manaPool.map((pip) => {
-                const color = MANA_COLOR[pip.color] ?? MANA_COLOR.Colorless;
-                return Array.from({ length: pip.count }, (_, i) => (
-                  <Circle
-                    key={`${pip.color}-${i}`}
-                    size={11}
-                    color={color}
-                    fill={color}
-                  />
-                ));
-              })}
-            </span>
-          )}
-          <span className="seat__life">
-            {seat.isEliminated ? <Skull size={22} /> : seat.life}
-          </span>
-        </div>
-      </div>
+      <SeatHead seat={seat} you={you} name={name} />
 
-      <div className="seat__zones">
-        <span>
-          <Hand size={13} /> {seat.handCount}
-        </span>
-        <span>
-          <Layers size={13} /> {seat.librarySize}
-        </span>
-        {seat.graveyardSize > 0 && onOpenGraveyard ? (
-          <button
-            type="button"
-            className="seat__zone-btn"
-            onClick={(e) => {
-              e.stopPropagation();
-              onOpenGraveyard(seat.seat);
-            }}
-            title={t("board.graveyardOpen")}
-          >
-            <Skull size={13} /> {seat.graveyardSize}
-          </button>
-        ) : (
-          <span>
-            <Skull size={13} /> {seat.graveyardSize}
-          </span>
-        )}
-        {seat.poison > 0 && (
-          <span>
-            <Biohazard size={13} /> {seat.poison}
-          </span>
-        )}
-      </div>
+      <SeatZones seat={seat} onOpenGraveyard={onOpenGraveyard} />
 
       <div className="seat__field">
         {seat.commanders.length > 0 && (
-          <div className="seat__cmd">
-            {seat.commanders.map((c) => (
-              <Card
-                key={c.id}
-                obj={c}
-                images={images}
-                onHover={onHover}
-                {...targetProps(c, target)}
-                {...abilityProps(c, ability)}
-                {...attackProps(c, you ? attack : undefined)}
-                {...(you ? blockerProps(c, block) : blockTargetProps(c, block))}
-                {...manaProps(c, you ? mana : undefined)}
-                {...commanderCastProps(c, you ? play : undefined)}
-                {...ninjutsuSourceProps(c, you ? ninjutsu : undefined)}
-              />
-            ))}
-          </div>
+          <CommandZone
+            commanders={seat.commanders}
+            images={images}
+            onHover={onHover}
+            target={target}
+            ability={ability}
+            attack={youAttack}
+            block={block}
+            mana={youMana}
+            play={youPlay}
+            ninjutsu={youNinjutsu}
+            you={you}
+          />
         )}
 
-        <Row label={t("board.rowCreatures")} cards={seat.creatures} images={images} onHover={onHover} target={target} ability={ability} ninjutsu={you ? ninjutsu : undefined} attack={you ? attack : undefined} block={block} you={you} mana={you ? mana : undefined} />
-        <Row label={t("board.rowOthers")} cards={seat.others} images={images} onHover={onHover} target={target} ability={ability} mana={you ? mana : undefined} />
-        <Row label={t("board.rowLands")} cards={seat.lands} images={images} onHover={onHover} target={target} ability={ability} mana={you ? mana : undefined} />
+        <Row label={t("board.rowCreatures")} cards={seat.creatures} images={images} onHover={onHover} target={target} ability={ability} ninjutsu={youNinjutsu} attack={youAttack} block={block} you={you} mana={youMana} />
+        <Row label={t("board.rowOthers")} cards={seat.others} images={images} onHover={onHover} target={target} ability={ability} mana={youMana} />
+        <Row label={t("board.rowLands")} cards={seat.lands} images={images} onHover={onHover} target={target} ability={ability} mana={youMana} />
 
         {play && dragCard && <DropLane card={dragCard} play={play} />}
       </div>
 
       {seat.hand.length > 0 && (
-        <HandRow seat={seat} images={images} onHover={onHover} play={play} target={target} ninjutsu={you ? ninjutsu : undefined} />
+        <HandRow seat={seat} images={images} onHover={onHover} play={play} target={target} ninjutsu={youNinjutsu} />
       )}
+    </div>
+  );
+}
+
+function seatClickHandler(
+  seat: SeatView,
+  seatTargetable: boolean,
+  seatDefender: boolean,
+  target?: TargetInteraction,
+  attack?: AttackInteraction,
+): (() => void) | undefined {
+  if (seatTargetable) return () => target!.onChoosePlayer(seat.seat);
+  if (seatDefender) return () => attack!.onChooseDefender(seat.seat);
+  return undefined;
+}
+
+function SeatHead({
+  seat,
+  you,
+  name,
+}: {
+  seat: SeatView;
+  you: boolean;
+  name: string;
+}) {
+  const { t } = useI18n();
+  return (
+    <div className="seat__head">
+      <div className="seat__id">
+        <span
+          className="seat__name"
+          style={you ? undefined : { color: seatColor(seat.seat) }}
+        >
+          {name}
+          {you && <span className="seat__tag">{t("board.you")}</span>}
+        </span>
+        <span className="seat__commander">{seat.commander}</span>
+      </div>
+      <div className="seat__life-wrap">
+        {seat.manaPool.length > 0 && (
+          <span className="seat__mana" title="Mana disponível">
+            {seat.manaPool.map((pip) => {
+              const color = MANA_COLOR[pip.color] ?? MANA_COLOR.Colorless;
+              return Array.from({ length: pip.count }, (_, i) => (
+                <Circle
+                  key={`${pip.color}-${i}`}
+                  size={11}
+                  color={color}
+                  fill={color}
+                />
+              ));
+            })}
+          </span>
+        )}
+        <span className="seat__life">
+          {seat.isEliminated ? <Skull size={22} /> : seat.life}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function SeatZones({
+  seat,
+  onOpenGraveyard,
+}: {
+  seat: SeatView;
+  onOpenGraveyard?: (seat: number) => void;
+}) {
+  const { t } = useI18n();
+  return (
+    <div className="seat__zones">
+      <span>
+        <Hand size={13} /> {seat.handCount}
+      </span>
+      <span>
+        <Layers size={13} /> {seat.librarySize}
+      </span>
+      {seat.graveyardSize > 0 && onOpenGraveyard ? (
+        <button
+          type="button"
+          className="seat__zone-btn"
+          onClick={(e) => {
+            e.stopPropagation();
+            onOpenGraveyard(seat.seat);
+          }}
+          title={t("board.graveyardOpen")}
+        >
+          <Skull size={13} /> {seat.graveyardSize}
+        </button>
+      ) : (
+        <span>
+          <Skull size={13} /> {seat.graveyardSize}
+        </span>
+      )}
+      {seat.poison > 0 && (
+        <span>
+          <Biohazard size={13} /> {seat.poison}
+        </span>
+      )}
+    </div>
+  );
+}
+
+function CommandZone({
+  commanders,
+  images,
+  onHover,
+  target,
+  ability,
+  attack,
+  block,
+  mana,
+  play,
+  ninjutsu,
+  you,
+}: {
+  commanders: GameObject[];
+  images?: Record<string, string>;
+  onHover?: (p: Preview | null) => void;
+  target?: TargetInteraction;
+  ability?: AbilityInteraction;
+  attack?: AttackInteraction;
+  block?: BlockInteraction;
+  mana?: ManaInteraction;
+  play?: PlayInteraction;
+  ninjutsu?: NinjutsuInteraction;
+  you: boolean;
+}) {
+  return (
+    <div className="seat__cmd">
+      {commanders.map((c) => (
+        <Card
+          key={c.id}
+          obj={c}
+          images={images}
+          onHover={onHover}
+          {...targetProps(c, target)}
+          {...abilityProps(c, ability)}
+          {...attackProps(c, attack)}
+          {...(you ? blockerProps(c, block) : blockTargetProps(c, block))}
+          {...manaProps(c, mana)}
+          {...commanderCastProps(c, play)}
+          {...ninjutsuSourceProps(c, ninjutsu)}
+        />
+      ))}
     </div>
   );
 }
@@ -794,30 +887,27 @@ function Card({
     (obj.name ? images?.[obj.name.toLowerCase()] : undefined) ??
     tokenImageUrl(obj);
   const isCreature = obj.card_types?.core_types?.includes("Creature") ?? false;
-  const cls = [
-    "card",
-    obj.tapped ? "card--tapped" : "",
-    draggable ? "card--draggable" : "",
-    selected ? "card--selected" : "",
-    playable === false ? "card--unplayable" : "",
-    targetable ? "card--targetable" : "",
-    targeted ? "card--targeted" : "",
-    activatable ? "card--activatable" : "",
-    ninjutsuSource ? "card--ninjutsu" : "",
-    ninjutsuChosen ? "card--ninjutsu-chosen" : "",
-    ninjutsuReturn ? "card--ninjutsu-return" : "",
-    attacker ? "card--attacker" : "",
-    attacking ? "card--attacking" : "",
-    attackerSelected ? "card--attacker-selected" : "",
-    blocker ? "card--blocker" : "",
-    blocking ? "card--blocking" : "",
-    blockSelected ? "card--block-selected" : "",
-    blockTarget ? "card--block-target" : "",
-    manaSource ? "card--mana-source" : "",
-    castable ? "card--castable" : "",
-  ]
-    .filter(Boolean)
-    .join(" ");
+  const cls = classList("card", {
+    "card--tapped": obj.tapped,
+    "card--draggable": draggable,
+    "card--selected": selected,
+    "card--unplayable": playable === false,
+    "card--targetable": targetable,
+    "card--targeted": targeted,
+    "card--activatable": activatable,
+    "card--ninjutsu": ninjutsuSource,
+    "card--ninjutsu-chosen": ninjutsuChosen,
+    "card--ninjutsu-return": ninjutsuReturn,
+    "card--attacker": attacker,
+    "card--attacking": attacking,
+    "card--attacker-selected": attackerSelected,
+    "card--blocker": blocker,
+    "card--blocking": blocking,
+    "card--block-selected": blockSelected,
+    "card--block-target": blockTarget,
+    "card--mana-source": manaSource,
+    "card--castable": castable,
+  });
 
   const enter = (e: ReactMouseEvent) =>
     onHover?.({

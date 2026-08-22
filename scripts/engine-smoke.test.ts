@@ -54,12 +54,10 @@ const REQUIRED_STATE_FIELDS = [
 describe.skipIf(!ENABLED)("phase-rs engine smoke", () => {
   it("has the fetched engine assets on disk", () => {
     const missing = [WASM, CARD_GZ].filter((p) => !existsSync(p));
-    if (missing.length) {
-      throw new Error(
-        `Engine assets missing: ${missing.join(", ")}\n` +
-          "Run `npm run fetch-engine` first.",
-      );
-    }
+    expect(
+      missing,
+      `Engine assets missing: ${missing.join(", ")}\nRun \`npm run fetch-engine\` first.`,
+    ).toHaveLength(0);
   });
 
   it(

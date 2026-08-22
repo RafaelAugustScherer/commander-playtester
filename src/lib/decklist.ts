@@ -56,8 +56,11 @@ export function parseDecklist(raw: string): ParsedDecklist {
 
 const COMMANDER_HEADER = /^commanders?\b/i;
 const IGNORED_HEADER = /^(sideboard|maybeboard|considering|tokens?|planes?)\b/i;
-const MAIN_HEADER =
-  /^(deck|mainboard|creatures?|lands?|instants?|sorceries|artifacts?|enchantments?|planeswalkers?|other|nonlands?)\b/i;
+const MAIN_HEADERS = [
+  /^(deck|mainboard|other|nonlands?)\b/i,
+  /^(creatures?|lands?|instants?|sorceries)\b/i,
+  /^(artifacts?|enchantments?|planeswalkers?)\b/i,
+];
 
 function detectSectionHeader(
   line: string,
@@ -66,14 +69,14 @@ function detectSectionHeader(
   if (/^\d+\s*x?\s+/i.test(line)) return null;
   if (COMMANDER_HEADER.test(line)) return "commander";
   if (IGNORED_HEADER.test(line)) return "ignored";
-  if (MAIN_HEADER.test(line)) return "main";
+  if (MAIN_HEADERS.some((re) => re.test(line))) return "main";
   return null;
 }
 
 /** Parse a single "N Card Name (SET) 123 *F*" line into an entry. */
 function parseLine(line: string): DecklistEntry | null {
   // Leading quantity: "1", "1x", "10 x". Optional — defaults to 1.
-  const qtyMatch = line.match(/^(\d+)\s*x?\s+(.*)$/i);
+  const qtyMatch = line.match(/^(\d+)(?:\s*x)?\s+(\S.*)$/i);
   let quantity = 1;
   let rest = line;
   if (qtyMatch) {

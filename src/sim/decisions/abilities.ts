@@ -2,7 +2,7 @@
 // `{ type: "ActivateAbility", data: { source_id, ability_index } }`. We group
 // them by the permanent that owns them so the board can offer click-to-activate.
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-explicit-any, sonarjs/redundant-type-aliases */
 
 export type LegalAction = any;
 

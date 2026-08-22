@@ -55,8 +55,7 @@ function isRamp(
 
 function isDraw(text: string): boolean {
   // "draw a card", "draw two cards", "draw X cards". Exclude pure "draw step".
-  if (/draw (a|one|two|three|four|five|\d+|x) cards?/.test(text)) return true;
-  return false;
+  return /draw (a|one|two|three|four|five|\d+|x) cards?/.test(text);
 }
 
 function isRemoval(text: string): boolean {

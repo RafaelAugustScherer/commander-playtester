@@ -5,7 +5,7 @@
 
 import type { GameObject, WaitingFor } from "../../engine/types";
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-explicit-any, sonarjs/redundant-type-aliases */
 
 // The vendored engine lists creatures with Defender in `valid_attacker_ids`
 // regardless of the keyword, so we drop them here — a Defender creature is
