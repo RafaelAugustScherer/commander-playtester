@@ -17,13 +17,137 @@ import iconDecks from "./assets/icon-decks.png";
 import iconPlay from "./assets/icon-play.png";
 
 type View = "decks" | "play";
+type EditingState = SavedDeck | "new" | null;
+type Translate = ReturnType<typeof useI18n>["t"];
+
+function getWindowTitle(
+  t: Translate,
+  {
+    playApp,
+    runConfig,
+    editing,
+    selected,
+  }: {
+    playApp: boolean;
+    runConfig: RunConfig | null;
+    editing: EditingState;
+    selected: SavedDeck | null;
+  },
+): string {
+  if (playApp) return runConfig ? t("run.match") : t("setup.title");
+  if (editing)
+    return editing === "new" ? t("editor.newTitle") : t("editor.editTitle");
+  if (selected) return t("win.reportTitle", { name: selected.name });
+  return t("library.title");
+}
+
+function DecksView({
+  decks,
+  editing,
+  selected,
+  save,
+  remove,
+  setEditing,
+  setSelected,
+  setPlayDeck,
+  setView,
+}: {
+  decks: SavedDeck[];
+  editing: EditingState;
+  selected: SavedDeck | null;
+  save: (deck: SavedDeck) => void;
+  remove: (id: string) => void;
+  setEditing: (value: EditingState) => void;
+  setSelected: (value: SavedDeck | null) => void;
+  setPlayDeck: (value: SavedDeck | null) => void;
+  setView: (value: View) => void;
+}) {
+  if (editing) {
+    return (
+      <DeckEditor
+        initial={editing === "new" ? undefined : editing}
+        onSave={(deck) => {
+          save(deck);
+          setEditing(null);
+        }}
+        onCancel={() => setEditing(null)}
+      />
+    );
+  }
+  if (selected) {
+    return (
+      <DeckDetail
+        deck={selected}
+        onBack={() => setSelected(null)}
+        onPlay={(deck) => {
+          setPlayDeck(deck);
+          setView("play");
+        }}
+      />
+    );
+  }
+  return (
+    <DeckLibrary
+      decks={decks}
+      save={save}
+      remove={remove}
+      onSelect={setSelected}
+      onNew={() => setEditing("new")}
+      onEdit={(deck) => setEditing(deck)}
+    />
+  );
+}
+
+function PlayView({
+  decks,
+  runConfig,
+  preferredDeckId,
+  setRunConfig,
+  t,
+}: {
+  decks: SavedDeck[];
+  runConfig: RunConfig | null;
+  preferredDeckId: string | undefined;
+  setRunConfig: (value: RunConfig | null) => void;
+  t: Translate;
+}) {
+  if (decks.length === 0) {
+    return (
+      <section className="panel">
+        <h2>{t("play.empty.title")}</h2>
+        <p className="hint">{t("play.empty.body")}</p>
+      </section>
+    );
+  }
+  if (runConfig) {
+    return (
+      <RunView
+        config={runConfig}
+        seatDecks={runConfig.seatDeckIds
+          .map((id) => decks.find((d) => d.id === id))
+          .filter((d): d is SavedDeck => !!d)}
+        onExit={() => setRunConfig(null)}
+      />
+    );
+  }
+  return (
+    <MatchSetup
+      decks={decks}
+      initialDeckId={preferredDeckId}
+      onStart={(config) => {
+        setLastPlayedDeckId(config.seatDeckIds[0]);
+        setRunConfig(config);
+      }}
+    />
+  );
+}
 
 export function App() {
   const { t } = useI18n();
   const { decks, save, remove } = useDecks();
   const [view, setView] = useState<View>("decks");
   const [selected, setSelected] = useState<SavedDeck | null>(null);
-  const [editing, setEditing] = useState<SavedDeck | "new" | null>(null);
+  const [editing, setEditing] = useState<EditingState>(null);
   const [playDeck, setPlayDeck] = useState<SavedDeck | null>(null);
   const [runConfig, setRunConfig] = useState<RunConfig | null>(null);
 
@@ -37,17 +161,7 @@ export function App() {
     undefined;
 
   // Window title + icon are derived from the active view and its sub-state.
-  const winTitle = playApp
-    ? runConfig
-      ? t("run.match")
-      : t("setup.title")
-    : editing
-      ? editing === "new"
-        ? t("editor.newTitle")
-        : t("editor.editTitle")
-      : selected
-        ? t("win.reportTitle", { name: selected.name })
-        : t("library.title");
+  const winTitle = getWindowTitle(t, { playApp, runConfig, editing, selected });
 
   return (
     <div className="xp-desktop">
@@ -64,60 +178,29 @@ export function App() {
           <XpScroll
             wrapperClassName={`xp-content ${wideContent ? "xp-content--wide" : "xp-content--narrow"}`}
           >
-            {view === "decks" &&
-              (editing ? (
-                <DeckEditor
-                  initial={editing === "new" ? undefined : editing}
-                  onSave={(deck) => {
-                    save(deck);
-                    setEditing(null);
-                  }}
-                  onCancel={() => setEditing(null)}
-                />
-              ) : selected ? (
-                <DeckDetail
-                  deck={selected}
-                  onBack={() => setSelected(null)}
-                  onPlay={(deck) => {
-                    setPlayDeck(deck);
-                    setView("play");
-                  }}
-                />
-              ) : (
-                <DeckLibrary
-                  decks={decks}
-                  save={save}
-                  remove={remove}
-                  onSelect={setSelected}
-                  onNew={() => setEditing("new")}
-                  onEdit={(deck) => setEditing(deck)}
-                />
-              ))}
+            {view === "decks" && (
+              <DecksView
+                decks={decks}
+                editing={editing}
+                selected={selected}
+                save={save}
+                remove={remove}
+                setEditing={setEditing}
+                setSelected={setSelected}
+                setPlayDeck={setPlayDeck}
+                setView={setView}
+              />
+            )}
 
-            {view === "play" &&
-              (decks.length === 0 ? (
-                <section className="panel">
-                  <h2>{t("play.empty.title")}</h2>
-                  <p className="hint">{t("play.empty.body")}</p>
-                </section>
-              ) : runConfig ? (
-                <RunView
-                  config={runConfig}
-                  seatDecks={runConfig.seatDeckIds
-                    .map((id) => decks.find((d) => d.id === id))
-                    .filter((d): d is SavedDeck => !!d)}
-                  onExit={() => setRunConfig(null)}
-                />
-              ) : (
-                <MatchSetup
-                  decks={decks}
-                  initialDeckId={preferredDeckId}
-                  onStart={(config) => {
-                    setLastPlayedDeckId(config.seatDeckIds[0]);
-                    setRunConfig(config);
-                  }}
-                />
-              ))}
+            {view === "play" && (
+              <PlayView
+                decks={decks}
+                runConfig={runConfig}
+                preferredDeckId={preferredDeckId}
+                setRunConfig={setRunConfig}
+                t={t}
+              />
+            )}
           </XpScroll>
         </div>
       </div>

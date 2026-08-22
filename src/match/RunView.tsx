@@ -1,4 +1,13 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type Dispatch,
+  type MutableRefObject,
+  type RefObject,
+  type SetStateAction,
+} from "react";
 import type { SavedDeck } from "../deck/model";
 import type { RunConfig } from "./config";
 import { getEngine } from "../engine/EngineClient";
@@ -12,6 +21,7 @@ import {
   type HumanChoice,
   type TargetPrompt,
   type TargetRef,
+  type DriverCallbacks,
 } from "../sim/driver";
 import {
   Board,
@@ -73,7 +83,12 @@ import { fetchCardsCached } from "../lib/scryfallCache";
 import { SearchableSelect } from "../components/SearchableSelect";
 import { useI18n } from "../i18n/I18nContext";
 import { useSettings } from "../settings/SettingsContext";
-import { phaseLabel, type Lang } from "../i18n/messages";
+import {
+  phaseLabel,
+  type Lang,
+  type MsgKey,
+  type Vars,
+} from "../i18n/messages";
 
 type Phase = "loading" | "running" | "done" | "error";
 type Speed = "slow" | "normal" | "fast";
@@ -205,6 +220,376 @@ interface ScryTurn {
   resolve: (choice: HumanChoice) => void;
 }
 
+function isTargetOptional(
+  targeting: TargetTurn | null,
+  chosen: TargetRef[],
+): boolean {
+  if (!targeting) return false;
+  if (targeting.prompt.multi) return targeting.prompt.min === 0;
+  const slotIdx = Math.min(chosen.length, targeting.prompt.slots.length - 1);
+  return targeting.prompt.slots[slotIdx]?.optional ?? false;
+}
+
+function partitionChosenRefs(chosen: TargetRef[]): {
+  chosenObjIds: Set<number>;
+  chosenSeats: Set<number>;
+} {
+  const chosenObjIds = new Set<number>();
+  const chosenSeats = new Set<number>();
+  for (const tr of chosen) {
+    if ("Object" in tr) chosenObjIds.add(tr.Object);
+    else chosenSeats.add(tr.Player);
+  }
+  return { chosenObjIds, chosenSeats };
+}
+
+function partitionTargetPool(
+  pool: TargetRef[],
+  multi: boolean,
+  chosenObjIds: Set<number>,
+  chosenSeats: Set<number>,
+): { objectIds: Set<number>; playerSeats: Set<number> } {
+  const objectIds = new Set<number>();
+  const playerSeats = new Set<number>();
+  for (const tr of pool) {
+    if ("Object" in tr) {
+      if (multi && chosenObjIds.has(tr.Object)) continue;
+      objectIds.add(tr.Object);
+    } else {
+      if (multi && chosenSeats.has(tr.Player)) continue;
+      playerSeats.add(tr.Player);
+    }
+  }
+  return { objectIds, playerSeats };
+}
+
+function resolveTargetPick(
+  targeting: TargetTurn,
+  chosen: TargetRef[],
+  ref: TargetRef,
+  setChosen: Dispatch<SetStateAction<TargetRef[]>>,
+) {
+  const { prompt } = targeting;
+  const next = [...chosen, ref];
+  const done = prompt.multi
+    ? next.length >= prompt.max
+    : next.length >= prompt.slots.length;
+  if (done) targeting.resolve({ action: selectTargetsAction(next) });
+  else setChosen(next);
+}
+
+function MatchStatusHeading({ board }: { board: BoardView }) {
+  const { t, lang } = useI18n();
+  if (!board.gameOver) {
+    return (
+      <>
+        <span className="match-status__turn">
+          {t("board.turn", { n: board.turn })}
+        </span>
+        <span className="match-status__phase">
+          {phaseLabel(lang, board.phase)}
+        </span>
+        <span className="match-status__active">
+          {t("board.activeTurn", {
+            name:
+              board.seats[board.activePlayer]?.name ||
+              t("board.player", { n: board.activePlayer + 1 }),
+          })}
+        </span>
+      </>
+    );
+  }
+  if (board.winner === null) return <>{t("board.draw")}</>;
+  return (
+    <>
+      {t("board.winner", {
+        name:
+          board.seats[board.winner]?.name ||
+          t("board.player", { n: board.winner + 1 }),
+      })}
+    </>
+  );
+}
+
+function describeRunError(
+  e: unknown,
+  t: (key: MsgKey, vars?: Vars) => string,
+): string {
+  if (e instanceof DeckRejectedError)
+    return t("run.invalidDeck", { reasons: e.reasons.join(" · ") });
+  if (e instanceof Error) return e.message;
+  return String(e);
+}
+
+interface RunnerCallbackDeps {
+  isCancelled: () => boolean;
+  seatMeta: SeatMeta[];
+  logIdRef: MutableRefObject<number>;
+  setBoard: Dispatch<SetStateAction<BoardView | null>>;
+  setCurrentMatch: Dispatch<SetStateAction<number>>;
+  setPassingTurn: Dispatch<SetStateAction<boolean>>;
+  setLogEntries: Dispatch<SetStateAction<LoggedEntry[]>>;
+  setResults: Dispatch<SetStateAction<MatchResult[]>>;
+  setHumanTurn: Dispatch<SetStateAction<HumanTurn | null>>;
+  setChosen: Dispatch<SetStateAction<TargetRef[]>>;
+  setTargeting: Dispatch<SetStateAction<TargetTurn | null>>;
+  setAttacks: Dispatch<SetStateAction<Map<number, AttackTargetRef>>>;
+  setSelectedAttacker: Dispatch<SetStateAction<number | null>>;
+  setAttacking: Dispatch<SetStateAction<AttackTurn | null>>;
+  setBlockAssign: Dispatch<SetStateAction<Map<number, number>>>;
+  setSelectedBlocker: Dispatch<SetStateAction<number | null>>;
+  setBlockingTurn: Dispatch<SetStateAction<BlockTurn | null>>;
+  setManaTurn: Dispatch<SetStateAction<ManaTurn | null>>;
+  setCreatureTypePick: Dispatch<SetStateAction<string>>;
+  setCreatureTypeTurn: Dispatch<SetStateAction<CreatureTypeTurn | null>>;
+  setBottomPick: Dispatch<SetStateAction<Set<number>>>;
+  setMulliganTurn: Dispatch<SetStateAction<MulliganTurn | null>>;
+  setDiscardPick: Dispatch<SetStateAction<Set<number>>>;
+  setDiscardTurn: Dispatch<SetStateAction<DiscardTurn | null>>;
+  setScryTurn: Dispatch<SetStateAction<ScryTurn | null>>;
+}
+
+function buildRunnerCallbacks(deps: RunnerCallbackDeps): DriverCallbacks {
+  const {
+    isCancelled,
+    seatMeta,
+    logIdRef,
+    setBoard,
+    setCurrentMatch,
+    setPassingTurn,
+    setLogEntries,
+    setResults,
+    setHumanTurn,
+    setChosen,
+    setTargeting,
+    setAttacks,
+    setSelectedAttacker,
+    setAttacking,
+    setBlockAssign,
+    setSelectedBlocker,
+    setBlockingTurn,
+    setManaTurn,
+    setCreatureTypePick,
+    setCreatureTypeTurn,
+    setBottomPick,
+    setMulliganTurn,
+    setDiscardPick,
+    setDiscardTurn,
+    setScryTurn,
+  } = deps;
+  return {
+    onFrame: (env) => {
+      if (!isCancelled()) setBoard(toBoardView(env, seatMeta));
+    },
+    onMatchStart: (m) => {
+      if (!isCancelled()) {
+        setCurrentMatch(m);
+        setPassingTurn(false);
+        setLogEntries([]);
+      }
+    },
+    onMatchEnd: (r) => {
+      if (!isCancelled()) setResults((prev) => [...prev, r]);
+    },
+    onLogEntries: (entries: LogEntry[]) => {
+      if (isCancelled()) return;
+      const tagged = entries.map((entry) => ({
+        id: logIdRef.current++,
+        entry,
+      }));
+      setLogEntries((prev) => {
+        const next = prev.concat(tagged);
+        return next.length > 800 ? next.slice(next.length - 800) : next;
+      });
+    },
+    requestHumanAction: (env, legal) =>
+      new Promise<HumanChoice>((resolve) => {
+        if (isCancelled()) {
+          resolve({ ai: true });
+          return;
+        }
+        const st = env.state;
+        const stack = st.stack ?? [];
+        setHumanTurn({
+          legal,
+          myTurn: st.active_player === 0,
+          opponentActed: stack.some(
+            (id) => (st.objects?.[id]?.controller ?? -1) !== 0,
+          ),
+          manaPool: readManaPool(st.players?.[0]),
+          objects: st.objects ?? {},
+          resolve: (choice) => {
+            setHumanTurn(null);
+            resolve(choice);
+          },
+        });
+      }),
+    requestHumanTargets: (_env, prompt) =>
+      new Promise<HumanChoice>((resolve) => {
+        if (isCancelled()) {
+          resolve({ ai: true });
+          return;
+        }
+        setChosen([]);
+        setTargeting({
+          prompt,
+          resolve: (choice) => {
+            setTargeting(null);
+            setChosen([]);
+            resolve(choice);
+          },
+        });
+      }),
+    requestHumanAttackers: (_env, prompt) =>
+      new Promise<HumanChoice>((resolve) => {
+        if (isCancelled()) {
+          resolve({ ai: true });
+          return;
+        }
+        setAttacks(new Map());
+        setSelectedAttacker(null);
+        setAttacking({
+          prompt,
+          resolve: (choice) => {
+            setAttacking(null);
+            setAttacks(new Map());
+            setSelectedAttacker(null);
+            resolve(choice);
+          },
+        });
+      }),
+    requestHumanBlockers: (_env, prompt) =>
+      new Promise<HumanChoice>((resolve) => {
+        if (isCancelled()) {
+          resolve({ ai: true });
+          return;
+        }
+        setBlockAssign(new Map());
+        setSelectedBlocker(null);
+        setBlockingTurn({
+          prompt,
+          resolve: (choice) => {
+            setBlockingTurn(null);
+            setBlockAssign(new Map());
+            setSelectedBlocker(null);
+            resolve(choice);
+          },
+        });
+      }),
+    requestHumanMana: (_env, prompt) =>
+      new Promise<HumanChoice>((resolve) => {
+        if (isCancelled()) {
+          resolve({ ai: true });
+          return;
+        }
+        setManaTurn({
+          prompt,
+          resolve: (choice) => {
+            setManaTurn(null);
+            resolve(choice);
+          },
+        });
+      }),
+    requestHumanCreatureType: (_env, prompt) =>
+      new Promise<HumanChoice>((resolve) => {
+        if (isCancelled()) {
+          resolve({ ai: true });
+          return;
+        }
+        setCreatureTypePick(prompt.aiChoice ?? prompt.options[0] ?? "");
+        setCreatureTypeTurn({
+          prompt,
+          resolve: (choice) => {
+            setCreatureTypeTurn(null);
+            resolve(choice);
+          },
+        });
+      }),
+    requestHumanMulligan: (_env, prompt) =>
+      new Promise<HumanChoice>((resolve) => {
+        if (isCancelled()) {
+          resolve({ ai: true });
+          return;
+        }
+        setBottomPick(new Set());
+        setMulliganTurn({
+          prompt,
+          resolve: (choice) => {
+            setMulliganTurn(null);
+            setBottomPick(new Set());
+            resolve(choice);
+          },
+        });
+      }),
+    requestHumanDiscard: (_env, prompt) =>
+      new Promise<HumanChoice>((resolve) => {
+        if (isCancelled()) {
+          resolve({ ai: true });
+          return;
+        }
+        setDiscardPick(new Set());
+        setDiscardTurn({
+          prompt,
+          resolve: (choice) => {
+            setDiscardTurn(null);
+            setDiscardPick(new Set());
+            resolve(choice);
+          },
+        });
+      }),
+    requestHumanScry: (_env, prompt) =>
+      new Promise<HumanChoice>((resolve) => {
+        if (isCancelled()) {
+          resolve({ ai: true });
+          return;
+        }
+        setScryTurn({
+          prompt,
+          resolve: (choice) => {
+            setScryTurn(null);
+            resolve(choice);
+          },
+        });
+      }),
+  };
+}
+
+/** Traps Tab focus inside a modal and restores focus to the opener on close. */
+function useFocusTrap(modalRef: RefObject<HTMLDivElement>) {
+  useEffect(() => {
+    const node = modalRef.current;
+    if (!node) return;
+    const prev = document.activeElement as HTMLElement | null;
+    const focusable = () =>
+      [
+        ...node.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+        ),
+      ];
+    focusable()[0]?.focus();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Tab") return;
+      const els = focusable();
+      if (els.length === 0) return;
+      const first = els[0];
+      const last = els[els.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+    node.addEventListener("keydown", onKey);
+    return () => {
+      node.removeEventListener("keydown", onKey);
+      prev?.focus?.();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+}
+
 /** Runs a configured series of matches and renders the live board + results. */
 export function RunView({
   config,
@@ -321,183 +706,33 @@ export function RunView({
             revealHands: config.revealHands,
             paceMs: PACE_MS.normal,
           },
-          {
-            onFrame: (env) => {
-              if (!cancelled) setBoard(toBoardView(env, seatMeta));
-            },
-            onMatchStart: (m) => {
-              if (!cancelled) {
-                setCurrentMatch(m);
-                setPassingTurn(false);
-                setLogEntries([]);
-              }
-            },
-            onMatchEnd: (r) => {
-              if (!cancelled) setResults((prev) => [...prev, r]);
-            },
-            onLogEntries: (entries: LogEntry[]) => {
-              if (cancelled) return;
-              const tagged = entries.map((entry) => ({
-                id: logIdRef.current++,
-                entry,
-              }));
-              setLogEntries((prev) => {
-                const next = prev.concat(tagged);
-                return next.length > 800
-                  ? next.slice(next.length - 800)
-                  : next;
-              });
-            },
-            requestHumanAction: (env, legal) =>
-              new Promise<HumanChoice>((resolve) => {
-                if (cancelled) {
-                  resolve({ ai: true });
-                  return;
-                }
-                const st = env.state;
-                const stack = st.stack ?? [];
-                setHumanTurn({
-                  legal,
-                  myTurn: st.active_player === 0,
-                  opponentActed: stack.some(
-                    (id) => (st.objects?.[id]?.controller ?? -1) !== 0,
-                  ),
-                  manaPool: readManaPool(st.players?.[0]),
-                  objects: st.objects ?? {},
-                  resolve: (choice) => {
-                    setHumanTurn(null);
-                    resolve(choice);
-                  },
-                });
-              }),
-            requestHumanTargets: (_env, prompt) =>
-              new Promise<HumanChoice>((resolve) => {
-                if (cancelled) {
-                  resolve({ ai: true });
-                  return;
-                }
-                setChosen([]);
-                setTargeting({
-                  prompt,
-                  resolve: (choice) => {
-                    setTargeting(null);
-                    setChosen([]);
-                    resolve(choice);
-                  },
-                });
-              }),
-            requestHumanAttackers: (_env, prompt) =>
-              new Promise<HumanChoice>((resolve) => {
-                if (cancelled) {
-                  resolve({ ai: true });
-                  return;
-                }
-                setAttacks(new Map());
-                setSelectedAttacker(null);
-                setAttacking({
-                  prompt,
-                  resolve: (choice) => {
-                    setAttacking(null);
-                    setAttacks(new Map());
-                    setSelectedAttacker(null);
-                    resolve(choice);
-                  },
-                });
-              }),
-            requestHumanBlockers: (_env, prompt) =>
-              new Promise<HumanChoice>((resolve) => {
-                if (cancelled) {
-                  resolve({ ai: true });
-                  return;
-                }
-                setBlockAssign(new Map());
-                setSelectedBlocker(null);
-                setBlockingTurn({
-                  prompt,
-                  resolve: (choice) => {
-                    setBlockingTurn(null);
-                    setBlockAssign(new Map());
-                    setSelectedBlocker(null);
-                    resolve(choice);
-                  },
-                });
-              }),
-            requestHumanMana: (_env, prompt) =>
-              new Promise<HumanChoice>((resolve) => {
-                if (cancelled) {
-                  resolve({ ai: true });
-                  return;
-                }
-                setManaTurn({
-                  prompt,
-                  resolve: (choice) => {
-                    setManaTurn(null);
-                    resolve(choice);
-                  },
-                });
-              }),
-            requestHumanCreatureType: (_env, prompt) =>
-              new Promise<HumanChoice>((resolve) => {
-                if (cancelled) {
-                  resolve({ ai: true });
-                  return;
-                }
-                setCreatureTypePick(prompt.aiChoice ?? prompt.options[0] ?? "");
-                setCreatureTypeTurn({
-                  prompt,
-                  resolve: (choice) => {
-                    setCreatureTypeTurn(null);
-                    resolve(choice);
-                  },
-                });
-              }),
-            requestHumanMulligan: (_env, prompt) =>
-              new Promise<HumanChoice>((resolve) => {
-                if (cancelled) {
-                  resolve({ ai: true });
-                  return;
-                }
-                setBottomPick(new Set());
-                setMulliganTurn({
-                  prompt,
-                  resolve: (choice) => {
-                    setMulliganTurn(null);
-                    setBottomPick(new Set());
-                    resolve(choice);
-                  },
-                });
-              }),
-            requestHumanDiscard: (_env, prompt) =>
-              new Promise<HumanChoice>((resolve) => {
-                if (cancelled) {
-                  resolve({ ai: true });
-                  return;
-                }
-                setDiscardPick(new Set());
-                setDiscardTurn({
-                  prompt,
-                  resolve: (choice) => {
-                    setDiscardTurn(null);
-                    setDiscardPick(new Set());
-                    resolve(choice);
-                  },
-                });
-              }),
-            requestHumanScry: (_env, prompt) =>
-              new Promise<HumanChoice>((resolve) => {
-                if (cancelled) {
-                  resolve({ ai: true });
-                  return;
-                }
-                setScryTurn({
-                  prompt,
-                  resolve: (choice) => {
-                    setScryTurn(null);
-                    resolve(choice);
-                  },
-                });
-              }),
-          },
+          buildRunnerCallbacks({
+            isCancelled: () => cancelled,
+            seatMeta,
+            logIdRef,
+            setBoard,
+            setCurrentMatch,
+            setPassingTurn,
+            setLogEntries,
+            setResults,
+            setHumanTurn,
+            setChosen,
+            setTargeting,
+            setAttacks,
+            setSelectedAttacker,
+            setAttacking,
+            setBlockAssign,
+            setSelectedBlocker,
+            setBlockingTurn,
+            setManaTurn,
+            setCreatureTypePick,
+            setCreatureTypeTurn,
+            setBottomPick,
+            setMulliganTurn,
+            setDiscardPick,
+            setDiscardTurn,
+            setScryTurn,
+          }),
         );
         runnerRef.current = runner;
         setPhase("running");
@@ -506,13 +741,7 @@ export function RunView({
       } catch (e) {
         if (!cancelled) {
           setPhase("error");
-          setMessage(
-            e instanceof DeckRejectedError
-              ? t("run.invalidDeck", { reasons: e.reasons.join(" · ") })
-              : e instanceof Error
-                ? e.message
-                : String(e),
-          );
+          setMessage(describeRunError(e, t));
         }
       }
     })();
@@ -720,33 +949,16 @@ export function RunView({
       : Math.min(chosen.length, prompt.slots.length - 1);
     const pool = prompt.slots[slotIdx]?.legalTargets ?? [];
 
-    const chosenObjIds = new Set<number>();
-    const chosenSeats = new Set<number>();
-    for (const tr of chosen) {
-      if ("Object" in tr) chosenObjIds.add(tr.Object);
-      else chosenSeats.add(tr.Player);
-    }
+    const { chosenObjIds, chosenSeats } = partitionChosenRefs(chosen);
+    const { objectIds, playerSeats } = partitionTargetPool(
+      pool,
+      prompt.multi,
+      chosenObjIds,
+      chosenSeats,
+    );
 
-    const objectIds = new Set<number>();
-    const playerSeats = new Set<number>();
-    for (const tr of pool) {
-      if ("Object" in tr) {
-        if (prompt.multi && chosenObjIds.has(tr.Object)) continue;
-        objectIds.add(tr.Object);
-      } else {
-        if (prompt.multi && chosenSeats.has(tr.Player)) continue;
-        playerSeats.add(tr.Player);
-      }
-    }
-
-    const pick = (ref: TargetRef) => {
-      const next = [...chosen, ref];
-      const done = prompt.multi
-        ? next.length >= prompt.max
-        : next.length >= prompt.slots.length;
-      if (done) targeting.resolve({ action: selectTargetsAction(next) });
-      else setChosen(next);
-    };
+    const pick = (ref: TargetRef) =>
+      resolveTargetPick(targeting, chosen, ref, setChosen);
 
     return {
       objectIds,
@@ -758,13 +970,7 @@ export function RunView({
     };
   }, [targeting, chosen]);
 
-  const targetOptional = targeting
-    ? targeting.prompt.multi
-      ? targeting.prompt.min === 0
-      : (targeting.prompt.slots[
-          Math.min(chosen.length, targeting.prompt.slots.length - 1)
-        ]?.optional ?? false)
-    : false;
+  const targetOptional = isTargetOptional(targeting, chosen);
   const canConfirmMulti =
     !!targeting && targeting.prompt.multi && chosen.length >= targeting.prompt.min;
 
@@ -987,33 +1193,7 @@ export function RunView({
         <section className="panel play-controls">
           <div className="panel__head">
             <h2 className="match-status">
-              {board.gameOver ? (
-                board.winner === null ? (
-                  t("board.draw")
-                ) : (
-                  t("board.winner", {
-                    name:
-                      board.seats[board.winner]?.name ||
-                      t("board.player", { n: board.winner + 1 }),
-                  })
-                )
-              ) : (
-                <>
-                  <span className="match-status__turn">
-                    {t("board.turn", { n: board.turn })}
-                  </span>
-                  <span className="match-status__phase">
-                    {phaseLabel(lang, board.phase)}
-                  </span>
-                  <span className="match-status__active">
-                    {t("board.activeTurn", {
-                      name:
-                        board.seats[board.activePlayer]?.name ||
-                        t("board.player", { n: board.activePlayer + 1 }),
-                    })}
-                  </span>
-                </>
-              )}
+              <MatchStatusHeading board={board} />
             </h2>
             {humanTurn && !compact && (
               <span className="hint">
@@ -1506,37 +1686,7 @@ function MulliganModal({
   const modalRef = useRef<HTMLDivElement>(null);
 
   // Move focus into the dialog, trap Tab within it, and restore focus on close.
-  useEffect(() => {
-    const node = modalRef.current;
-    if (!node) return;
-    const prev = document.activeElement as HTMLElement | null;
-    const focusable = () =>
-      [
-        ...node.querySelectorAll<HTMLElement>(
-          'button:not([disabled]), [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
-        ),
-      ];
-    focusable()[0]?.focus();
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key !== "Tab") return;
-      const els = focusable();
-      if (els.length === 0) return;
-      const first = els[0];
-      const last = els[els.length - 1];
-      if (e.shiftKey && document.activeElement === first) {
-        e.preventDefault();
-        last.focus();
-      } else if (!e.shiftKey && document.activeElement === last) {
-        e.preventDefault();
-        first.focus();
-      }
-    };
-    node.addEventListener("keydown", onKey);
-    return () => {
-      node.removeEventListener("keydown", onKey);
-      prev?.focus?.();
-    };
-  }, []);
+  useFocusTrap(modalRef);
 
   const { cardProps, overlay } = useCardPreview({
     images,
@@ -1544,21 +1694,24 @@ function MulliganModal({
     onToggle: onToggleBottom,
   });
 
+  let instruction: string;
+  if (bottoming) {
+    instruction = t("mulligan.bottomInstruction", { n: prompt.bottomCount });
+  } else if (prompt.mulliganCount === 0 && prompt.freeFirstMulligan) {
+    instruction = t("mulligan.freeHint", { n: prompt.nextKeepSize });
+  } else {
+    instruction = t("mulligan.takenHint", {
+      n: prompt.mulliganCount,
+      keep: prompt.keepSize,
+    });
+  }
+
   return (
     <div className="mull-overlay" role="dialog" aria-modal="true" aria-labelledby="mull-title">
       <div className="mull-modal" ref={modalRef}>
         <div className="mull-modal__head">
           <h2 id="mull-title">{bottoming ? t("mulligan.bottomTitle") : t("mulligan.title")}</h2>
-          <p className="hint">
-            {bottoming
-              ? t("mulligan.bottomInstruction", { n: prompt.bottomCount })
-              : prompt.mulliganCount === 0 && prompt.freeFirstMulligan
-                ? t("mulligan.freeHint", { n: prompt.nextKeepSize })
-                : t("mulligan.takenHint", {
-                    n: prompt.mulliganCount,
-                    keep: prompt.keepSize,
-                  })}
-          </p>
+          <p className="hint">{instruction}</p>
         </div>
 
         <div className="mull-hand">
@@ -1651,37 +1804,7 @@ function DiscardModal({
   const modalRef = useRef<HTMLDivElement>(null);
 
   // Move focus into the dialog, trap Tab within it, and restore focus on close.
-  useEffect(() => {
-    const node = modalRef.current;
-    if (!node) return;
-    const prev = document.activeElement as HTMLElement | null;
-    const focusable = () =>
-      [
-        ...node.querySelectorAll<HTMLElement>(
-          'button:not([disabled]), [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
-        ),
-      ];
-    focusable()[0]?.focus();
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key !== "Tab") return;
-      const els = focusable();
-      if (els.length === 0) return;
-      const first = els[0];
-      const last = els[els.length - 1];
-      if (e.shiftKey && document.activeElement === first) {
-        e.preventDefault();
-        last.focus();
-      } else if (!e.shiftKey && document.activeElement === last) {
-        e.preventDefault();
-        first.focus();
-      }
-    };
-    node.addEventListener("keydown", onKey);
-    return () => {
-      node.removeEventListener("keydown", onKey);
-      prev?.focus?.();
-    };
-  }, []);
+  useFocusTrap(modalRef);
 
   const { cardProps, overlay } = useCardPreview({
     images,
@@ -1883,20 +2006,20 @@ function RunReport({
           </tr>
         </thead>
         <tbody>
-          {results.map((r) => (
-            <tr key={r.matchIndex}>
-              <td>{r.matchIndex + 1}</td>
-              <td>
-                {r.stopped
-                  ? "—"
-                  : r.winner === null
-                    ? t("board.draw")
-                    : seatName(r.winner)}
-              </td>
-              <td>{r.turns}</td>
-              <td>{r.seconds.toFixed(0)}s</td>
-            </tr>
-          ))}
+          {results.map((r) => {
+            let winnerLabel: string;
+            if (r.stopped) winnerLabel = "—";
+            else if (r.winner === null) winnerLabel = t("board.draw");
+            else winnerLabel = seatName(r.winner);
+            return (
+              <tr key={r.matchIndex}>
+                <td>{r.matchIndex + 1}</td>
+                <td>{winnerLabel}</td>
+                <td>{r.turns}</td>
+                <td>{r.seconds.toFixed(0)}s</td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </section>

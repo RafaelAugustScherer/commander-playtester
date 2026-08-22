@@ -33,7 +33,7 @@ describe("parseCreatureTypePrompt", () => {
     expect(p.player).toBe(1);
     expect(p.sourceName).toBe("Secluded Courtyard");
     expect(p.options).toContain("Elf");
-    expect(p.options.length).toBe(5);
+    expect(p.options).toHaveLength(5);
   });
 
   it("also matches a constrained (object) CreatureType choice_type", () => {

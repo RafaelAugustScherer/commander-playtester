@@ -50,6 +50,24 @@ export interface LegalActions {
 /** A human's choice at a priority window: play an action, or let the AI act. */
 export type HumanChoice = { action: unknown } | { ai: true };
 
+/** A pending request for one human decision: run it to get the human's choice. */
+type HumanRequest = () => Promise<HumanChoice>;
+
+/** One play-loop step: keep going, or end the match with this winner/stopped. */
+type StepOutcome =
+  | { done: false }
+  | { done: true; winner: number | null; stopped: boolean };
+
+/** Pair a decision callback with its parsed prompt into a request, or null. */
+function humanRequest<P>(
+  env: GameStateEnvelope,
+  cb: ((env: GameStateEnvelope, prompt: P) => Promise<HumanChoice>) | undefined,
+  prompt: P | null,
+): HumanRequest | null {
+  if (!cb || prompt == null) return null;
+  return () => cb(env, prompt);
+}
+
 /** A single legal target: an object on the board, or a player seat. */
 export type TargetRef = { Object: number } | { Player: number };
 
@@ -395,127 +413,11 @@ export class MatchRunner {
         break;
       }
 
-      const acting = actingPlayer(wf);
-      const humanNonPriority = acting === humanSeat && wf?.type !== "Priority";
-      const humanPriority =
-        acting === humanSeat && wf?.type === "Priority" && !!cb.requestHumanAction;
-      const humanTargets =
-        humanNonPriority && cb.requestHumanTargets ? parseTargetPrompt(wf) : null;
-      const humanAttackers =
-        humanNonPriority && cb.requestHumanAttackers
-          ? parseAttackersPrompt(wf, env.state.objects)
-          : null;
-      const humanBlockers =
-        humanNonPriority && cb.requestHumanBlockers
-          ? parseBlockersPrompt(wf)
-          : null;
-      const humanMana =
-        humanNonPriority && cb.requestHumanMana ? parseManaPrompt(wf) : null;
-      const humanCreatureType =
-        humanNonPriority && cb.requestHumanCreatureType
-          ? parseCreatureTypePrompt(wf)
-          : null;
-      const humanMulligan =
-        humanNonPriority && cb.requestHumanMulligan
-          ? parseMulliganPrompt(wf, env.state, humanSeat)
-          : null;
-      const humanDiscard =
-        humanNonPriority && cb.requestHumanDiscard
-          ? parseDiscardPrompt(wf, env.state, humanSeat)
-          : null;
-      const humanScry =
-        humanNonPriority && cb.requestHumanScry
-          ? parseScryPrompt(wf, env.state, humanSeat)
-          : null;
-
-      // Run the human's choice: play their action, or hand this decision to the AI.
-      const applyChoice = async (choice: HumanChoice): Promise<void> => {
-        const res =
-          "action" in choice
-            ? await engine.humanAction(humanSeat, choice.action)
-            : await engine.aiStep(opts.difficulty, humanSeat, false);
-        this.emitLog(res);
-      };
-
-      if (humanPriority) {
-        const legal: LegalActions = await engine.legalActions();
-        const choice = await cb.requestHumanAction!(env, legal);
-        if (this.aborted) {
-          stopped = true;
-          break;
-        }
-        await applyChoice(choice);
-      } else if (humanTargets) {
-        const choice = await cb.requestHumanTargets!(env, humanTargets);
-        if (this.aborted) {
-          stopped = true;
-          break;
-        }
-        await applyChoice(choice);
-      } else if (humanAttackers) {
-        const choice = await cb.requestHumanAttackers!(env, humanAttackers);
-        if (this.aborted) {
-          stopped = true;
-          break;
-        }
-        await applyChoice(choice);
-      } else if (humanBlockers) {
-        const choice = await cb.requestHumanBlockers!(env, humanBlockers);
-        if (this.aborted) {
-          stopped = true;
-          break;
-        }
-        await applyChoice(choice);
-      } else if (humanMana) {
-        const choice = await cb.requestHumanMana!(env, humanMana);
-        if (this.aborted) {
-          stopped = true;
-          break;
-        }
-        await applyChoice(choice);
-      } else if (humanCreatureType) {
-        const hint = await engine.aiProposal(opts.difficulty, humanSeat);
-        const suggested = hint?.action?.data?.choice;
-        const choice = await cb.requestHumanCreatureType!(env, {
-          ...humanCreatureType,
-          aiChoice: typeof suggested === "string" ? suggested : null,
-        });
-        if (this.aborted) {
-          stopped = true;
-          break;
-        }
-        await applyChoice(choice);
-      } else if (humanMulligan) {
-        const choice = await cb.requestHumanMulligan!(env, humanMulligan);
-        if (this.aborted) {
-          stopped = true;
-          break;
-        }
-        await applyChoice(choice);
-      } else if (humanDiscard) {
-        const choice = await cb.requestHumanDiscard!(env, humanDiscard);
-        if (this.aborted) {
-          stopped = true;
-          break;
-        }
-        await applyChoice(choice);
-      } else if (humanScry) {
-        const choice = await cb.requestHumanScry!(env, humanScry);
-        if (this.aborted) {
-          stopped = true;
-          break;
-        }
-        await applyChoice(choice);
-      } else {
-        // AI seats, and the human's non-priority sub-decisions, are AI-driven.
-        const res = await engine.aiStep(opts.difficulty, acting, false);
-        this.emitLog(res);
-        if (!res.applied) {
-          const wf2 = res.state?.state.waiting_for;
-          if (wf2?.type === "GameOver") winner = wf2.data?.winner ?? null;
-          else stopped = true;
-          break;
-        }
+      const outcome = await this.playStep(env, wf, humanSeat);
+      if (outcome.done) {
+        winner = outcome.winner;
+        stopped = outcome.stopped;
+        break;
       }
     }
 
@@ -526,6 +428,127 @@ export class MatchRunner {
       actions,
       stopped,
       seconds: (performance.now() - t0) / 1000,
+    };
+  }
+
+  /** Advance one action: run the human's decision if they own it, else the AI. */
+  private async playStep(
+    env: GameStateEnvelope,
+    wf: WaitingFor | undefined,
+    humanSeat: number,
+  ): Promise<StepOutcome> {
+    const { engine, opts } = this;
+    const acting = actingPlayer(wf);
+    const request = this.humanRequestFor(env, wf, humanSeat, acting);
+
+    if (request) {
+      const choice = await request();
+      if (this.aborted) return { done: true, winner: null, stopped: true };
+      await this.applyHumanChoice(humanSeat, choice);
+      return { done: false };
+    }
+
+    // AI seats, and the human's non-priority sub-decisions, are AI-driven.
+    const res = await engine.aiStep(opts.difficulty, acting, false);
+    this.emitLog(res);
+    if (res.applied) return { done: false };
+    const wf2 = res.state?.state.waiting_for;
+    const over = wf2?.type === "GameOver";
+    return { done: true, winner: over ? (wf2?.data?.winner ?? null) : null, stopped: !over };
+  }
+
+  /** Play the human's chosen action, or let the AI act if they deferred. */
+  private async applyHumanChoice(
+    humanSeat: number,
+    choice: HumanChoice,
+  ): Promise<void> {
+    const { engine, opts } = this;
+    const res =
+      "action" in choice
+        ? await engine.humanAction(humanSeat, choice.action)
+        : await engine.aiStep(opts.difficulty, humanSeat, false);
+    this.emitLog(res);
+  }
+
+  /** The request for whatever decision the human owns right now, or null for AI. */
+  private humanRequestFor(
+    env: GameStateEnvelope,
+    wf: WaitingFor | undefined,
+    humanSeat: number,
+    acting: number | null,
+  ): HumanRequest | null {
+    const { engine, cb } = this;
+    const isHuman = acting === humanSeat;
+    if (isHuman && wf?.type === "Priority") {
+      if (!cb.requestHumanAction) return null;
+      return async () => cb.requestHumanAction!(env, await engine.legalActions());
+    }
+    if (!isHuman || wf?.type === "Priority") return null;
+    return this.nonPriorityRequest(env, wf, humanSeat);
+  }
+
+  /** Match a human non-priority sub-decision (targets, combat, mulligan, …). */
+  private nonPriorityRequest(
+    env: GameStateEnvelope,
+    wf: WaitingFor | undefined,
+    humanSeat: number,
+  ): HumanRequest | null {
+    const { cb } = this;
+    const state = env.state;
+    const resolvers: Array<() => HumanRequest | null> = [
+      () => humanRequest(env, cb.requestHumanTargets, parseTargetPrompt(wf)),
+      () =>
+        humanRequest(
+          env,
+          cb.requestHumanAttackers,
+          parseAttackersPrompt(wf, state.objects),
+        ),
+      () => humanRequest(env, cb.requestHumanBlockers, parseBlockersPrompt(wf)),
+      () => humanRequest(env, cb.requestHumanMana, parseManaPrompt(wf)),
+      () => this.creatureTypeRequest(env, wf, humanSeat),
+      () =>
+        humanRequest(
+          env,
+          cb.requestHumanMulligan,
+          parseMulliganPrompt(wf, state, humanSeat),
+        ),
+      () =>
+        humanRequest(
+          env,
+          cb.requestHumanDiscard,
+          parseDiscardPrompt(wf, state, humanSeat),
+        ),
+      () =>
+        humanRequest(
+          env,
+          cb.requestHumanScry,
+          parseScryPrompt(wf, state, humanSeat),
+        ),
+    ];
+    for (const resolve of resolvers) {
+      const req = resolve();
+      if (req) return req;
+    }
+    return null;
+  }
+
+  /** Creature-type choice: seed the human prompt with the AI's suggested pick. */
+  private creatureTypeRequest(
+    env: GameStateEnvelope,
+    wf: WaitingFor | undefined,
+    humanSeat: number,
+  ): HumanRequest | null {
+    const { engine, opts, cb } = this;
+    if (!cb.requestHumanCreatureType) return null;
+    const prompt = parseCreatureTypePrompt(wf);
+    if (!prompt) return null;
+    return async () => {
+      const hint = await engine.aiProposal(opts.difficulty, humanSeat);
+      const suggested = hint?.action?.data?.choice;
+      return cb.requestHumanCreatureType!(env, {
+        ...prompt,
+        aiChoice: typeof suggested === "string" ? suggested : null,
+      });
     };
   }
 }

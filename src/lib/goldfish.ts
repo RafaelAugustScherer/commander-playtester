@@ -136,6 +136,27 @@ function drawOpeningHand(
   }
 }
 
+/** Index of the highest mana-value nonland spell (least castable early), or -1. */
+function highestManaValueNonlandIndex(cards: Card[]): number {
+  let idx = -1;
+  let maxMv = -1;
+  for (let j = 0; j < cards.length; j++) {
+    if (!isLand(cards[j]) && cards[j].manaValue > maxMv) {
+      maxMv = cards[j].manaValue;
+      idx = j;
+    }
+  }
+  return idx;
+}
+
+/** Pick which card to bottom: an excess land, else the priciest nonland spell. */
+function indexToBottom(cards: Card[], targetLands: number): number {
+  const landCount = cards.filter(isLand).length;
+  if (landCount > targetLands) return cards.findIndex(isLand);
+  const idx = highestManaValueNonlandIndex(cards);
+  return idx === -1 ? 0 : idx; // all lands: bottom one anyway
+}
+
 /** Bottom `count` cards from a kept 7, trimming toward a healthy land count. */
 function bottomCards(hand: Card[], count: number): Card[] {
   if (count <= 0) return hand;
@@ -143,24 +164,7 @@ function bottomCards(hand: Card[], count: number): Card[] {
   const targetLands = 3;
 
   for (let i = 0; i < count && kept.length > 0; i++) {
-    const landCount = kept.filter(isLand).length;
-    if (landCount > targetLands) {
-      // Bottom an excess land.
-      const idx = kept.findIndex(isLand);
-      kept.splice(idx, 1);
-    } else {
-      // Bottom the highest mana-value nonland spell (least castable early).
-      let idx = -1;
-      let maxMv = -1;
-      for (let j = 0; j < kept.length; j++) {
-        if (!isLand(kept[j]) && kept[j].manaValue > maxMv) {
-          maxMv = kept[j].manaValue;
-          idx = j;
-        }
-      }
-      if (idx === -1) idx = 0; // all lands: bottom one anyway
-      kept.splice(idx, 1);
-    }
+    kept.splice(indexToBottom(kept, targetLands), 1);
   }
   return kept;
 }
@@ -213,24 +217,29 @@ function simulateGame(
     }
     landDropByTurn.push(madeLandDrop);
 
-    // Available mana this turn.
-    let availableMana = state.battlefieldLands + state.rampMana;
-
     // Greedily cast affordable ramp to accelerate future turns.
-    for (;;) {
-      const idx = cheapestCastableRamp(state.hand, availableMana);
-      if (idx === -1) break;
-      const spell = state.hand[idx];
-      availableMana -= spell.manaValue;
-      state.hand.splice(idx, 1);
-      state.rampMana += 1; // each ramp piece yields ~1 extra mana going forward
-      if (turn <= 3) rampByTurn3 = true;
-    }
+    if (castAffordableRamp(state) && turn <= 3) rampByTurn3 = true;
 
     manaByTurn.push(state.battlefieldLands + state.rampMana);
   }
 
   return { mulligans, openingLands, landDropByTurn, manaByTurn, rampByTurn3 };
+}
+
+/** Greedily cast every affordable ramp spell in hand; returns whether any was cast. */
+function castAffordableRamp(state: GameState): boolean {
+  let availableMana = state.battlefieldLands + state.rampMana;
+  let castAny = false;
+  for (;;) {
+    const idx = cheapestCastableRamp(state.hand, availableMana);
+    if (idx === -1) break;
+    const spell = state.hand[idx];
+    availableMana -= spell.manaValue;
+    state.hand.splice(idx, 1);
+    state.rampMana += 1; // each ramp piece yields ~1 extra mana going forward
+    castAny = true;
+  }
+  return castAny;
 }
 
 /** Find the cheapest ramp spell in hand castable with the given mana. */
