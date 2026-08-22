@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import type { GameObject } from "../engine/types";
 import type { BoardView, SeatView } from "./boardView";
+import { seatColor } from "./seatColor";
 import { CardPreview, type Preview } from "./CardPreview";
 import { useI18n } from "../i18n/I18nContext";
 import { categoryLabel } from "../i18n/messages";
@@ -123,14 +124,23 @@ function ninjutsuReturnProps(
   };
 }
 
-/** Declare-attackers interaction: toggle your creatures, aim at a defender. */
+/** Declare-attackers interaction: toggle your creatures, aim each at a defender. */
 export interface AttackInteraction {
   /** Your creatures that may attack (click to toggle). */
   attackerIds: Set<number>;
   /** Attackers currently declared (highlighted). */
   declaredIds: Set<number>;
-  onToggleAttacker: (id: number) => void;
-  /** Opponent seats you may aim declared attackers at (multiplayer choice). */
+  /** Whether multiple defenders make per-attacker aiming meaningful. */
+  multiDefender: boolean;
+  /** The declared attacker focused for re-aiming (multiplayer), or null. */
+  selectedAttackerId: number | null;
+  /** attackerId -> the seat it is aimed at. */
+  assignments: Map<number, number>;
+  /** seat -> short display name, for the on-card target badge. */
+  defenderNames: Map<number, string>;
+  /** Click one of your creatures (toggles it, or focuses it for aiming). */
+  onAttackerClick: (id: number) => void;
+  /** Opponent seats you may aim the focused attacker at (multiplayer choice). */
   defenderSeats: Set<number>;
   onChooseDefender: (seat: number) => void;
 }
@@ -138,12 +148,25 @@ export interface AttackInteraction {
 function attackProps(
   o: GameObject,
   attack?: AttackInteraction,
-): { attacker?: boolean; attacking?: boolean; onToggleAttack?: () => void } {
+): {
+  attacker?: boolean;
+  attacking?: boolean;
+  attackerSelected?: boolean;
+  attackTarget?: string;
+  attackTargetColor?: string;
+  onToggleAttack?: () => void;
+} {
   if (!attack || !attack.attackerIds.has(o.id)) return {};
+  const declared = attack.declaredIds.has(o.id);
+  const seat = attack.assignments.get(o.id);
+  const aimed = attack.multiDefender && declared && seat !== undefined;
   return {
     attacker: true,
-    attacking: attack.declaredIds.has(o.id),
-    onToggleAttack: () => attack.onToggleAttacker(o.id),
+    attacking: declared,
+    attackerSelected: attack.multiDefender && attack.selectedAttackerId === o.id,
+    attackTarget: aimed ? attack.defenderNames.get(seat!) : undefined,
+    attackTargetColor: aimed ? seatColor(seat!) : undefined,
+    onToggleAttack: () => attack.onAttackerClick(o.id),
   };
 }
 
@@ -455,7 +478,10 @@ function Seat({
     <div className={cls} onClick={seatClick} data-seat={seat.seat}>
       <div className="seat__head">
         <div className="seat__id">
-          <span className="seat__name">
+          <span
+            className="seat__name"
+            style={you ? undefined : { color: seatColor(seat.seat) }}
+          >
             {name}
             {you && <span className="seat__tag">{t("board.you")}</span>}
           </span>
@@ -712,6 +738,9 @@ function Card({
   onNinjutsuReturn,
   attacker,
   attacking,
+  attackerSelected,
+  attackTarget,
+  attackTargetColor,
   onToggleAttack,
   blocker,
   blocking,
@@ -745,6 +774,9 @@ function Card({
   onNinjutsuReturn?: () => void;
   attacker?: boolean;
   attacking?: boolean;
+  attackerSelected?: boolean;
+  attackTarget?: string;
+  attackTargetColor?: string;
   onToggleAttack?: () => void;
   blocker?: boolean;
   blocking?: boolean;
@@ -773,6 +805,7 @@ function Card({
     ninjutsuReturn ? "card--ninjutsu-return" : "",
     attacker ? "card--attacker" : "",
     attacking ? "card--attacking" : "",
+    attackerSelected ? "card--attacker-selected" : "",
     blocker ? "card--blocker" : "",
     blocking ? "card--blocking" : "",
     blockSelected ? "card--block-selected" : "",
@@ -797,6 +830,20 @@ function Card({
   const pt = isCreature ? (
     <span className="card__pt">
       {obj.power ?? 0}/{obj.toughness ?? 0}
+    </span>
+  ) : null;
+
+  const targetBadge = attackTarget ? (
+    <span
+      className="card__attack-target"
+      title={attackTarget}
+      style={
+        attackTargetColor
+          ? { background: attackTargetColor, color: "#1b1206" }
+          : undefined
+      }
+    >
+      ⚔ {attackTarget}
     </span>
   ) : null;
 
@@ -838,6 +885,7 @@ function Card({
       <div {...common}>
         <img className="card__img" src={url} alt={obj.name ?? ""} loading="lazy" />
         {pt}
+        {targetBadge}
       </div>
     );
   }
@@ -845,6 +893,7 @@ function Card({
     <div {...common}>
       <span className="card__name">{obj.name ?? "?"}</span>
       {pt}
+      {targetBadge}
     </div>
   );
 }

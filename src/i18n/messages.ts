@@ -206,9 +206,10 @@ export const messages = {
     en: "Click your highlighted creatures to attack.",
   },
   "attack.defenderHint": {
-    pt: "Clique em um oponente destacado para direcionar os atacantes.",
-    en: "Click a highlighted opponent to aim your attackers.",
+    pt: "Selecione um atacante e clique em um oponente destacado para direcioná-lo.",
+    en: "Select an attacker, then click a highlighted opponent to aim it.",
   },
+  "attack.noTarget": { pt: "sem alvo", en: "no target" },
   "attack.confirm": { pt: "Confirmar ataque", en: "Confirm attack" },
   "attack.none": { pt: "Sem ataque", en: "No attack" },
   "attack.letAi": { pt: "IA decide o combate", en: "Let the AI attack" },

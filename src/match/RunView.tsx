@@ -32,6 +32,9 @@ import { scryAction, type ScryPrompt } from "../sim/decisions/scry";
 import { XpWindow } from "../components/XpWindow";
 import {
   declareAttackersAction,
+  clickAttacker,
+  aimAtDefender,
+  type AttackDraft,
   type AttackersPrompt,
   type AttackTargetRef,
 } from "../sim/decisions/attackers";
@@ -55,6 +58,7 @@ import {
   type MulliganPrompt,
 } from "../sim/decisions/mulligan";
 import { toBoardView, type BoardView, type SeatMeta } from "../board/boardView";
+import { seatColor } from "../board/seatColor";
 import { GameSidebar, type LoggedEntry } from "../board/GameSidebar";
 import type { LogEntry } from "../engine/types";
 import { abilitiesBySource } from "../sim/decisions/abilities";
@@ -221,6 +225,7 @@ export function RunView({
   const [attacks, setAttacks] = useState<Map<number, AttackTargetRef>>(
     new Map(),
   );
+  const [selectedAttacker, setSelectedAttacker] = useState<number | null>(null);
   const [blockingTurn, setBlockingTurn] = useState<BlockTurn | null>(null);
   const [blockAssign, setBlockAssign] = useState<Map<number, number>>(new Map());
   const [selectedBlocker, setSelectedBlocker] = useState<number | null>(null);
@@ -370,11 +375,13 @@ export function RunView({
                   return;
                 }
                 setAttacks(new Map());
+                setSelectedAttacker(null);
                 setAttacking({
                   prompt,
                   resolve: (choice) => {
                     setAttacking(null);
                     setAttacks(new Map());
+                    setSelectedAttacker(null);
                     resolve(choice);
                   },
                 });
@@ -731,7 +738,8 @@ export function RunView({
   const canConfirmMulti =
     !!targeting && targeting.prompt.multi && chosen.length >= targeting.prompt.min;
 
-  // Toggle attackers and (in multiplayer) aim them at a defending player.
+  // Toggle attackers and, in multiplayer, aim each one at its own defender:
+  // focus a declared attacker, then click a defending player to assign it.
   const attack: AttackInteraction | undefined = useMemo(() => {
     if (!attacking) return undefined;
     const { prompt } = attacking;
@@ -743,41 +751,44 @@ export function RunView({
         if (tgt?.type === "Player") allDefenders.add(tgt.data);
       }
     }
+    const multiDefender = allDefenders.size > 1;
+
+    const assignments = new Map<number, number>();
+    for (const [id, ref] of attacks) {
+      if (ref?.type === "Player") assignments.set(id, ref.data);
+    }
+    const defenderNames = new Map<number, string>();
+    for (const seat of allDefenders) {
+      defenderNames.set(
+        seat,
+        seatMeta[seat]?.name || t("board.player", { n: seat + 1 }),
+      );
+    }
+
+    const apply = (draft: AttackDraft) => {
+      setAttacks(draft.attacks);
+      setSelectedAttacker(draft.selected);
+    };
+    const draft: AttackDraft = { attacks, selected: selectedAttacker };
+
     return {
       attackerIds,
       declaredIds,
-      onToggleAttacker: (id: number) => {
-        setAttacks((prev) => {
-          const next = new Map(prev);
-          if (next.has(id)) {
-            next.delete(id);
-          } else {
-            const opt = prompt.attackers.find((a) => a.attackerId === id);
-            if (opt?.targets[0] !== undefined) next.set(id, opt.targets[0]);
-          }
-          return next;
-        });
-      },
-      // Only offer a defender choice when there's a real one to make.
+      multiDefender,
+      selectedAttackerId: multiDefender ? selectedAttacker : null,
+      assignments,
+      defenderNames,
+      onAttackerClick: (id: number) =>
+        apply(clickAttacker(draft, id, prompt, multiDefender)),
+      // A defender is clickable only once an attacker is focused to receive it.
       defenderSeats:
-        declaredIds.size > 0 && allDefenders.size > 1
+        multiDefender && selectedAttacker != null && attacks.has(selectedAttacker)
           ? allDefenders
           : new Set<number>(),
-      onChooseDefender: (seat: number) => {
-        setAttacks((prev) => {
-          const next = new Map(prev);
-          for (const id of next.keys()) {
-            const opt = prompt.attackers.find((a) => a.attackerId === id);
-            const t = opt?.targets.find(
-              (x) => x?.type === "Player" && x?.data === seat,
-            );
-            if (t !== undefined) next.set(id, t);
-          }
-          return next;
-        });
-      },
+      onChooseDefender: (seat: number) =>
+        apply(aimAtDefender(draft, seat, prompt)),
     };
-  }, [attacking, attacks]);
+  }, [attacking, attacks, selectedAttacker, seatMeta, t]);
 
   // Pick a blocker, then click the attacker it should block.
   const block: BlockInteraction | undefined = useMemo(() => {
@@ -823,6 +834,15 @@ export function RunView({
       },
     };
   }, [manaTurn]);
+
+  // Name a declared attacker (always one of the human seat's permanents).
+  const attackerName = (id: number): string => {
+    const you = board?.seats.find((s) => s.seat === 0);
+    const owned = you
+      ? [...you.creatures, ...you.commanders, ...you.others, ...you.lands]
+      : [];
+    return owned.find((o) => o.id === id)?.name ?? `#${id}`;
+  };
 
   return (
     <div>
@@ -1086,8 +1106,44 @@ export function RunView({
                 </span>
               </div>
               <p className="hint">{t("attack.instruction")}</p>
-              {attack && attack.defenderSeats.size > 0 && (
+              {attack?.multiDefender && (
                 <p className="hint">{t("attack.defenderHint")}</p>
+              )}
+              {attack?.multiDefender && attacks.size > 0 && (
+                <ul className="attack-summary">
+                  {[...attacks.entries()].map(([id, ref]) => {
+                    const seat = ref?.type === "Player" ? ref.data : undefined;
+                    const def =
+                      seat !== undefined
+                        ? attack.defenderNames.get(seat)
+                        : undefined;
+                    return (
+                      <li
+                        key={id}
+                        className={
+                          selectedAttacker === id
+                            ? "attack-summary__row attack-summary__row--sel"
+                            : "attack-summary__row"
+                        }
+                      >
+                        <span className="attack-summary__from">
+                          {attackerName(id)}
+                        </span>
+                        <span className="attack-summary__arrow">→</span>
+                        <span
+                          className="attack-summary__to"
+                          style={
+                            seat !== undefined
+                              ? { color: seatColor(seat) }
+                              : undefined
+                          }
+                        >
+                          {def ?? t("attack.noTarget")}
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ul>
               )}
               <div className="import__row">
                 <button

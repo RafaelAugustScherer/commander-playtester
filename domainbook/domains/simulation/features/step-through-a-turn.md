@@ -80,6 +80,20 @@ Example: A defender wall is not declarable as an attacker
   And only creatures without defender can be declared
 ```
 
+## Rule: The engine gives each attacker its own legal targets, so an attack can be split
+
+The engine reports the legal targets per attacker, not one shared list, and we echo
+the chosen ref straight back per attacker — so different attackers can be declared
+against different opponents in a pod. Choosing and reviewing those targets is the
+board's job (`domains/board/features/aim-attackers-at-defenders.md`).
+
+```gherkin
+Example: Two attackers declared at two different opponents
+  Given it is your combat with two opponents you could attack
+  When you declare two attackers, one aimed at each opponent
+  Then the submitted declaration pairs each attacker with its own defender
+```
+
 ## Rule: You put cards into play by dragging or tapping from hand, or clicking the commander in its zone
 
 ```gherkin

@@ -12,6 +12,17 @@ depth live there. A purely-internal PR that touches no product or architecture m
 skip its version with a `Skip-Docs: <reason>` trailer instead. There are no
 per-domain changelogs; this file is the single timeline (`ADR-0007`).
 
+## [0.4.4] - 2026-08-21
+
+### Added
+
+- Declaring attackers in a pod now aims each attacker at its own opponent: focus a
+  creature and click a defender to aim it, see the target on each attacker and in a
+  summary, and confirm a split attack before passing priority. Each opponent has an
+  identity color on its board name, badge, and summary row so same-named seats stay
+  distinct (`domains/board/features/aim-attackers-at-defenders.md`,
+  `domains/simulation/features/step-through-a-turn.md`).
+
 ## [0.4.3] - 2026-08-21
 
 ### Fixed
