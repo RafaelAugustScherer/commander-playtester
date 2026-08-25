@@ -12,6 +12,17 @@ depth live there. A purely-internal PR that touches no product or architecture m
 skip its version with a `Skip-Docs: <reason>` trailer instead. There are no
 per-domain changelogs; this file is the single timeline (`ADR-0007`).
 
+## [0.4.7] - 2026-08-25
+
+### Changed
+
+- Re-pinned the vendored phase-rs engine snapshot from v0.55.0 to v0.56.0 — glue,
+  WASM, and card-data updated as one matched, digest-verified set and mirrored for
+  durability. A maintenance release (engine and card fixes, MTGJSON refresh); the
+  only wire-shape change is an optional display field on the already-AI-driven
+  alternative-cast decision, so no new by-hand interactions were wired
+  (`ADR-0006`, `docs/engine-upgrade.md`).
+
 ## [0.4.6] - 2026-08-21
 
 ### Added
