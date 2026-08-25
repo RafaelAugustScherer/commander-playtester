@@ -58,9 +58,14 @@ cargo +"$TOOLCHAIN" build --release --target wasm32-unknown-unknown -p "$WASM_CR
 
 RAW_WASM="target/wasm32-unknown-unknown/release/${WASM_CRATE//-/_}.wasm"
 
-# --- 4. wasm-bindgen glue (matches the vendored engine_wasm.js) --------------
-# The app vendors the `--target web` output. CONFIRM the flag set against the
-# repo's own wasm-bindgen invocation (some builds also run wasm-opt).
+# --- 4. wasm-bindgen glue ----------------------------------------------------
+# NOTE: the vendored src/engine/vendor/engine_wasm.js is normally the frontend
+# build's MINIFIED Vite chunk (engine_wasm-<hash>.js) — the output below is raw
+# `--target web` glue: unminified, full-symbol, functionally equivalent but
+# differently shaped, so it will NOT byte-match the previously vendored file.
+# That is expected on the source-build fallback; vendor this output as-is.
+# CONFIRM the flag set against the repo's own wasm-bindgen invocation (some
+# builds also run wasm-opt).
 wasm-bindgen "$RAW_WASM" --out-dir "$OUT" --target web --out-name engine_wasm
 echo "  glue + _bg.wasm → $OUT (engine_wasm.js, engine_wasm_bg.wasm)"
 

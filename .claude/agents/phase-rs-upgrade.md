@@ -32,7 +32,7 @@ is behind the adapter in `src/engine/`.
 ## Non-negotiable guardrails
 
 - **Pin, never chase.** Upgrade to a specific chosen tag. Never wire the app to a "latest" URL.
-- **Glue is verbatim.** Replace `engine_wasm.js` wholesale with upstream output; never hand-edit it.
+- **Glue is verbatim.** Replace `engine_wasm.js` wholesale with the frontend build's minified `engine_wasm-<hash>.js` chunk (Vite output, not raw wasm-bindgen); recover it with `scripts/engine-assets-from-ci.sh <tag>`. Never hand-edit it.
 - **Digests must verify.** Every asset is checked against its manifest sha256 by `scripts/fetch-engine.sh`. Never bypass or weaken that check. The content hash in a CDN filename is the first 16 hex of its sha256 — use it as a cross-check.
 - **Adapter-only changes.** Keep every engine-shape change inside `src/engine/` (types, worker, `.d.ts`) and the `src/sim/decisions/` handlers. Nothing else should learn about the engine's wire format.
 - **The smoke gate is mandatory.** `npm run engine-smoke` (real WASM, full match to GameOver) must pass before you open a PR. If it fails, the upgrade is not done.
@@ -47,9 +47,15 @@ is behind the adapter in `src/engine/`.
 2. **Read the release notes** for every version from just after the current pin
    through the target. Produce a concrete list of changes, splitting out **new or
    changed player decisions/actions** (targeting, "choose …", modes, new action
-   types) from everything else.
-3. **Acquire the target's web assets + glue** (live build preferred; source build as
-   fallback). Compute sha256 for wasm and raw card-data.
+   types) from everything else. The prose is a weak signal — for positive evidence
+   diff the phase client's `client/src/adapter/types.ts` (the canonical
+   `WaitingFor`/action union) between the two tags; a new variant is interaction work,
+   an added optional field usually is not.
+3. **Acquire the target's web assets + glue.** The live app serves only *latest*, so
+   that route dies once upstream ships past your target — recover the exact tagged
+   assets from the CI `frontend-dist` artifact with `scripts/engine-assets-from-ci.sh
+   <tag>` (retained ~90 days; source build once expired). Compute sha256 for wasm and
+   raw card-data.
 4. **Replace the glue verbatim**; update the manifest (version, source, all URLs and
    digests, glue sha).
 5. **`npm run fetch-engine`** (verifies digests), then **`scripts/mirror-engine.sh`**

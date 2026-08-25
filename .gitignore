@@ -23,3 +23,6 @@ scripts/.artifacts
 public/engine/card-data.json
 public/engine/card-data.json.gz
 public/engine/engine_wasm_bg.wasm
+
+# phase-rs upgrade scratch (glue recovered by scripts/engine-assets-from-ci.sh)
+.engine-ci
