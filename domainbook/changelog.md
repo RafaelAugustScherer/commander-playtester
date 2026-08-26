@@ -12,6 +12,13 @@ depth live there. A purely-internal PR that touches no product or architecture m
 skip its version with a `Skip-Docs: <reason>` trailer instead. There are no
 per-domain changelogs; this file is the single timeline (`ADR-0007`).
 
+## [0.4.10] - 2026-08-25
+
+### Changed
+
+- Re-pinned the vendored phase-rs engine from v0.58.0 to v0.63.0; no by-hand
+  interaction needed changing (`ADR-0006`, `docs/engine-upgrade.md`).
+
 ## [0.4.9] - 2026-08-25
 
 ### Changed
