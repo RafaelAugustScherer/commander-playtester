@@ -66,8 +66,10 @@ is behind the adapter in `src/engine/`.
 7. **Implement new player interactions** (see below) — the core value-add.
 8. **Verify everything**: `npm run typecheck`, `npm run lint`, `npm test`,
    `npm run duplication`, `npm run engine-smoke`, `npx domainbook check --range origin/main..HEAD`.
-9. **Document**: add a `Changed` entry to `domainbook/domains/simulation/changelog.md`
-   (version bump + interactions added), update the README asset note if sizes changed.
+9. **Document**: add a `Changed` entry to `domainbook/changelog.md` — only what
+   matters on our side (the version delta and any by-hand interaction added/changed),
+   not a rephrase of the phase-rs release notes; a bump that wires nothing is one
+   line. Update the README asset note if sizes changed.
 10. **Open a PR** on the working branch summarizing the version delta, the ABI
     reconciliation, and each new interaction. Do not merge.
 

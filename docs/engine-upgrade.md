@@ -177,8 +177,11 @@ The smoke is the key gate: it catches ABI/JSON-shape breaks that unit tests can'
 
 ### 9. Document and open the PR
 
-- Add a `Changed` entry to `domainbook/domains/simulation/changelog.md` (naming the
-  version bump and any new interactions).
+- Add a `Changed` entry to `domainbook/changelog.md`. Keep it to what matters on our
+  side: the version delta and any by-hand interaction we had to add or change. Don't
+  re-narrate the phase-rs release notes — a pure bump that wires nothing is one line
+  ("Re-pinned the vendored phase-rs engine from vX to vY; no by-hand interaction
+  needed changing").
 - Update the README asset-size note if sizes moved.
 - Commit and open a PR summarizing the version delta and the interactions added.
 
