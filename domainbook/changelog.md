@@ -12,6 +12,20 @@ depth live there. A purely-internal PR that touches no product or architecture m
 skip its version with a `Skip-Docs: <reason>` trailer instead. There are no
 per-domain changelogs; this file is the single timeline (`ADR-0007`).
 
+## [0.4.8] - 2026-08-25
+
+### Changed
+
+- Re-pinned the vendored phase-rs engine snapshot from v0.56.0 to v0.57.0 — glue,
+  WASM, and card-data updated as one matched, digest-verified set and mirrored for
+  durability. The wasm-bindgen ABI is byte-identical (only the embedded default
+  wasm URL hash changed). v0.57.0 adds a "Resolve All" standing-pass consent
+  protocol (`ResolveAllConsent`/`ResolveAllReady` decisions); its sole initiator
+  (`BeginResolveAll`) is a client-only convenience action absent from the engine's
+  legal-actions and AI-candidate pipelines, so it is never surfaced or triggered in
+  this app — the decisions stay AI-driven and no by-hand interaction was wired
+  (`ADR-0006`, `docs/engine-upgrade.md`).
+
 ## [0.4.7] - 2026-08-25
 
 ### Changed
