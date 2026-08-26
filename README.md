@@ -59,7 +59,7 @@ glue that pairs with them (`src/engine/vendor/engine_wasm.js`) **is** committed.
 
 The pinned version, download URLs, and expected SHA-256 digests all live in one
 place — [`src/engine/vendor/engine-manifest.json`](src/engine/vendor/engine-manifest.json)
-(currently phase-rs **v0.56.0**). `fetch-engine.sh` reads it and verifies each
+(currently phase-rs **v0.57.0**). `fetch-engine.sh` reads it and verifies each
 asset's digest, so the glue + WASM + card-data always stay a matched set. The CDN
 URLs are content-hashed and may eventually 404 as phase-rs ships new builds; the
 manifest supports a durable `mirror.base` fallback (`scripts/mirror-engine.sh`),
