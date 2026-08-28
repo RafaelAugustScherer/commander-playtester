@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { MouseEvent as ReactMouseEvent } from "react";
 import {
+  Ban,
   Biohazard,
   Circle,
   Cog,
@@ -324,11 +325,13 @@ export function Board({
   const { t } = useI18n();
   const [preview, setPreview] = useState<Preview | null>(null);
   const [graveSeat, setGraveSeat] = useState<number | null>(null);
+  const [exileSeat, setExileSeat] = useState<number | null>(null);
   const oppScrollRef = useRef<HTMLDivElement | null>(null);
 
   const you = view.seats.find((s) => s.seat === 0);
   const opponents = view.seats.filter((s) => s.seat !== 0);
   const graveView = view.seats.find((s) => s.seat === graveSeat);
+  const exileView = view.seats.find((s) => s.seat === exileSeat);
 
   // In the mobile opponents gallery, follow the active opponent into view. When
   // the human (seat 0) is active, leave the gallery on the last-shown opponent.
@@ -370,6 +373,7 @@ export function Board({
             images={images}
             onHover={onHover}
             onOpenGraveyard={setGraveSeat}
+            onOpenExile={setExileSeat}
             target={target}
             attack={attack}
             block={block}
@@ -388,6 +392,7 @@ export function Board({
             images={images}
             onHover={onHover}
             onOpenGraveyard={setGraveSeat}
+            onOpenExile={setExileSeat}
             play={play}
             target={target}
             ability={ability}
@@ -400,24 +405,52 @@ export function Board({
       )}
 
       {graveView && graveView.graveyard.length > 0 && (
-        <XpWindow
+        <ZoneWindow
           title={t("board.graveyardOf", { name: seatName(graveView) })}
+          cards={graveView.graveyard}
+          images={images}
+          onHover={onHover}
           onClose={() => setGraveSeat(null)}
-        >
-          <XpScroll
-            axis="x"
-            wrapperClassName="gy-window"
-            className="gy-window__row"
-          >
-            {graveView.graveyard.map((o) => (
-              <Card key={o.id} obj={o} images={images} onHover={onHover} />
-            ))}
-          </XpScroll>
-        </XpWindow>
+        />
+      )}
+
+      {exileView && exileView.exile.length > 0 && (
+        <ZoneWindow
+          title={t("board.exileOf", { name: seatName(exileView) })}
+          cards={exileView.exile}
+          images={images}
+          onHover={onHover}
+          onClose={() => setExileSeat(null)}
+        />
       )}
 
       {preview && play?.dragging == null && <CardPreview preview={preview} />}
     </div>
+  );
+}
+
+/** A floating window listing a seat's cards in a shared zone (graveyard, exile). */
+function ZoneWindow({
+  title,
+  cards,
+  images,
+  onHover,
+  onClose,
+}: {
+  title: string;
+  cards: GameObject[];
+  images?: Record<string, string>;
+  onHover?: (p: Preview | null) => void;
+  onClose: () => void;
+}) {
+  return (
+    <XpWindow title={title} onClose={onClose}>
+      <XpScroll axis="x" wrapperClassName="zone-window" className="zone-window__row">
+        {cards.map((o) => (
+          <Card key={o.id} obj={o} images={images} onHover={onHover} />
+        ))}
+      </XpScroll>
+    </XpWindow>
   );
 }
 
@@ -430,6 +463,7 @@ function Seat({
   images,
   onHover,
   onOpenGraveyard,
+  onOpenExile,
   play,
   target,
   ability,
@@ -446,6 +480,7 @@ function Seat({
   images?: Record<string, string>;
   onHover?: (p: Preview | null) => void;
   onOpenGraveyard?: (seat: number) => void;
+  onOpenExile?: (seat: number) => void;
   play?: PlayInteraction;
   target?: TargetInteraction;
   ability?: AbilityInteraction;
@@ -490,7 +525,7 @@ function Seat({
     <div className={cls} onClick={seatClick} data-seat={seat.seat}>
       <SeatHead seat={seat} you={you} name={name} />
 
-      <SeatZones seat={seat} onOpenGraveyard={onOpenGraveyard} />
+      <SeatZones seat={seat} onOpenGraveyard={onOpenGraveyard} onOpenExile={onOpenExile} />
 
       <div className="seat__field">
         {seat.commanders.length > 0 && (
@@ -581,12 +616,48 @@ function SeatHead({
   );
 }
 
+/** A zone count in the seat header: a button when there's something to open. */
+function ZoneCount({
+  icon: Icon,
+  count,
+  onOpen,
+  title,
+}: {
+  icon: LucideIcon;
+  count: number;
+  onOpen?: () => void;
+  title: string;
+}) {
+  if (count > 0 && onOpen) {
+    return (
+      <button
+        type="button"
+        className="seat__zone-btn"
+        onClick={(e) => {
+          e.stopPropagation();
+          onOpen();
+        }}
+        title={title}
+      >
+        <Icon size={13} /> {count}
+      </button>
+    );
+  }
+  return (
+    <span>
+      <Icon size={13} /> {count}
+    </span>
+  );
+}
+
 function SeatZones({
   seat,
   onOpenGraveyard,
+  onOpenExile,
 }: {
   seat: SeatView;
   onOpenGraveyard?: (seat: number) => void;
+  onOpenExile?: (seat: number) => void;
 }) {
   const { t } = useI18n();
   return (
@@ -597,23 +668,18 @@ function SeatZones({
       <span>
         <Layers size={13} /> {seat.librarySize}
       </span>
-      {seat.graveyardSize > 0 && onOpenGraveyard ? (
-        <button
-          type="button"
-          className="seat__zone-btn"
-          onClick={(e) => {
-            e.stopPropagation();
-            onOpenGraveyard(seat.seat);
-          }}
-          title={t("board.graveyardOpen")}
-        >
-          <Skull size={13} /> {seat.graveyardSize}
-        </button>
-      ) : (
-        <span>
-          <Skull size={13} /> {seat.graveyardSize}
-        </span>
-      )}
+      <ZoneCount
+        icon={Skull}
+        count={seat.graveyardSize}
+        onOpen={onOpenGraveyard ? () => onOpenGraveyard(seat.seat) : undefined}
+        title={t("board.graveyardOpen")}
+      />
+      <ZoneCount
+        icon={Ban}
+        count={seat.exileSize}
+        onOpen={onOpenExile ? () => onOpenExile(seat.seat) : undefined}
+        title={t("board.exileOpen")}
+      />
       {seat.poison > 0 && (
         <span>
           <Biohazard size={13} /> {seat.poison}
