@@ -35,8 +35,8 @@ Example: One row of cards, titled by owner
 
 Example: Move it out of the way
   Given the graveyard window is open
-  When I hold its title bar and drag
-  Then the window follows the pointer and stays within the screen
+  When I hold or touch its title bar and drag
+  Then the window follows the pointer (or finger) and stays within the screen
 
 Example: Dismiss it
   Given the graveyard window is open
@@ -47,6 +47,12 @@ Example: Read a card up close
   Given the graveyard window is open
   When I hover a card in it
   Then an enlarged preview of that card is shown, above the window
+
+Example: Several zone windows at once
+  Given I open one seat's graveyard
+  When I open another seat's graveyard, or that seat's exile zone
+  Then both windows stay open side by side, each independently draggable
+  And opening the same seat's already-open graveyard again does not duplicate it
 ```
 
 ## Rule: Graveyard cards are shown untapped

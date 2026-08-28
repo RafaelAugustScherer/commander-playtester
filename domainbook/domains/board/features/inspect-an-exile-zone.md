@@ -44,8 +44,8 @@ Example: One row of cards, titled by owner
 
 Example: Move it out of the way
   Given the exile window is open
-  When I hold its title bar and drag
-  Then the window follows the pointer and stays within the screen
+  When I hold or touch its title bar and drag
+  Then the window follows the pointer (or finger) and stays within the screen
 
 Example: Dismiss it
   Given the exile window is open
@@ -56,6 +56,12 @@ Example: Read a card up close
   Given the exile window is open
   When I hover a card in it
   Then an enlarged preview of that card is shown, above the window
+
+Example: Several zone windows at once
+  Given I open one seat's exile zone
+  When I open another seat's exile zone, or that seat's graveyard
+  Then both windows stay open side by side, each independently draggable
+  And opening the same seat's already-open exile zone again does not duplicate it
 ```
 
 ## Rule: Exiled cards are shown untapped

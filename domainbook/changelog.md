@@ -12,6 +12,14 @@ depth live there. A purely-internal PR that touches no product or architecture m
 skip its version with a `Skip-Docs: <reason>` trailer instead. There are no
 per-domain changelogs; this file is the single timeline (`ADR-0007`).
 
+## [0.4.12] - 2026-08-28
+
+### Fixed
+
+- Zone windows (graveyard, exile) can now be open several at once instead of
+  one replacing another, and their title bar can be dragged by touch, not
+  just mouse (`inspect-a-graveyard`, `inspect-an-exile-zone`).
+
 ## [0.4.11] - 2026-08-28
 
 ### Added

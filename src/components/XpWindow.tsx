@@ -11,7 +11,8 @@ interface XpWindowProps {
 
 /**
  * A floating Windows XP window: copper title bar, a close button, and a body.
- * Drag it anywhere by holding the title bar; Escape or the close button shuts it.
+ * Drag it anywhere by holding (or touching) the title bar; Escape or the
+ * close button shuts it.
  */
 export function XpWindow({ title, onClose, children }: XpWindowProps) {
   const { t } = useI18n();
@@ -26,28 +27,45 @@ export function XpWindow({ title, onClose, children }: XpWindowProps) {
     return () => document.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  function onBarDown(e: React.MouseEvent) {
+  function onBarDown(e: React.MouseEvent | React.TouchEvent) {
     const el = ref.current;
     if (!el || (e.target as HTMLElement).closest(".xpwin__close")) return;
+    const point = "touches" in e ? e.touches[0] : e;
+    if (!point) return;
     e.preventDefault();
     const rect = el.getBoundingClientRect();
-    const offX = e.clientX - rect.left;
-    const offY = e.clientY - rect.top;
+    const offX = point.clientX - rect.left;
+    const offY = point.clientY - rect.top;
     const maxX = Math.max(0, window.innerWidth - rect.width);
     const maxY = Math.max(0, window.innerHeight - rect.height);
-    function move(ev: MouseEvent) {
+    function moveTo(clientX: number, clientY: number) {
       setPos({
-        x: Math.min(Math.max(0, ev.clientX - offX), maxX),
-        y: Math.min(Math.max(0, ev.clientY - offY), maxY),
+        x: Math.min(Math.max(0, clientX - offX), maxX),
+        y: Math.min(Math.max(0, clientY - offY), maxY),
       });
     }
-    function up() {
-      document.removeEventListener("mousemove", move);
-      document.removeEventListener("mouseup", up);
+    function onMouseMove(ev: MouseEvent) {
+      moveTo(ev.clientX, ev.clientY);
+    }
+    function onTouchMove(ev: TouchEvent) {
+      const t = ev.touches[0];
+      if (!t) return;
+      ev.preventDefault();
+      moveTo(t.clientX, t.clientY);
+    }
+    function end() {
+      document.removeEventListener("mousemove", onMouseMove);
+      document.removeEventListener("mouseup", end);
+      document.removeEventListener("touchmove", onTouchMove);
+      document.removeEventListener("touchend", end);
+      document.removeEventListener("touchcancel", end);
       document.body.classList.remove("xpscroll-dragging");
     }
-    document.addEventListener("mousemove", move);
-    document.addEventListener("mouseup", up);
+    document.addEventListener("mousemove", onMouseMove);
+    document.addEventListener("mouseup", end);
+    document.addEventListener("touchmove", onTouchMove, { passive: false });
+    document.addEventListener("touchend", end);
+    document.addEventListener("touchcancel", end);
     document.body.classList.add("xpscroll-dragging");
   }
 
@@ -59,7 +77,7 @@ export function XpWindow({ title, onClose, children }: XpWindowProps) {
       role="dialog"
       aria-label={title}
     >
-      <div className="xpwin__bar" onMouseDown={onBarDown}>
+      <div className="xpwin__bar" onMouseDown={onBarDown} onTouchStart={onBarDown}>
         <span className="xpwin__title">{title}</span>
         <button
           type="button"
