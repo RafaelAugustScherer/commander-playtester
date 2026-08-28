@@ -1290,7 +1290,7 @@ th {
   margin-top: 0.35rem;
 }
 
-/* ── XpWindow: draggable floating window (graveyard, …) ─────────── */
+/* ── XpWindow: draggable floating window (graveyard, exile, …) ──── */
 .xpwin {
   position: fixed;
   z-index: 75;
@@ -1354,25 +1354,25 @@ th {
   background: var(--inset);
   box-shadow: var(--bevel-well);
 }
-.gy-window {
+.zone-window {
   width: min(88vw, 604px);
 }
-.gy-window__row {
+.zone-window__row {
   display: flex;
   gap: 0.4rem;
   align-items: flex-start;
 }
-.gy-window__row .card {
+.zone-window__row .card {
   flex: 0 0 auto;
   width: 92px;
   height: 128px;
 }
-.gy-window__row .card__img {
+.zone-window__row .card__img {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
-.gy-window__row .card--text {
+.zone-window__row .card--text {
   max-width: none;
   padding: 0.35rem;
   white-space: normal;

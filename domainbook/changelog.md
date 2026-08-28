@@ -12,6 +12,13 @@ depth live there. A purely-internal PR that touches no product or architecture m
 skip its version with a `Skip-Docs: <reason>` trailer instead. There are no
 per-domain changelogs; this file is the single timeline (`ADR-0007`).
 
+## [0.4.11] - 2026-08-28
+
+### Added
+
+- A visible exile zone per seat, opened the same way as the graveyard
+  (`inspect-an-exile-zone`).
+
 ## [0.4.10] - 2026-08-25
 
 ### Changed

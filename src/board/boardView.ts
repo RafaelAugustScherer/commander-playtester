@@ -16,6 +16,9 @@ export interface SeatView {
   graveyardSize: number;
   /** Cards in this player's graveyard, in the engine's order. */
   graveyard: GameObject[];
+  exileSize: number;
+  /** This player's cards sitting in the (shared) exile zone, in the engine's order. */
+  exile: GameObject[];
   lands: GameObject[];
   creatures: GameObject[];
   others: GameObject[];
@@ -77,6 +80,12 @@ export function toBoardView(
       .map((id) => objects[id])
       .filter((o): o is GameObject => !!o)
       .map((o) => (o.tapped ? { ...o, tapped: false } : o));
+    // Exile is one shared zone in the engine's state (unlike each player's own
+    // graveyard), so split it by owner to show each seat its own cards.
+    const exile = (st.exile ?? [])
+      .map((id) => objects[id])
+      .filter((o): o is GameObject => !!o && o.owner === seat)
+      .map((o) => (o.tapped ? { ...o, tapped: false } : o));
 
     return {
       seat,
@@ -90,6 +99,8 @@ export function toBoardView(
       librarySize: p.library?.length ?? 0,
       graveyardSize: p.graveyard?.length ?? 0,
       graveyard,
+      exileSize: exile.length,
+      exile,
       lands,
       creatures,
       others,

@@ -351,6 +351,11 @@ export const messages = {
     pt: "Cemitério de {name}",
     en: "{name}'s graveyard",
   },
+  "board.exileOpen": { pt: "Abrir exílio", en: "Open exile" },
+  "board.exileOf": {
+    pt: "Exílio de {name}",
+    en: "{name}'s exile",
+  },
   "common.close": { pt: "Fechar", en: "Close" },
 
   "goldfish.title": { pt: "Consistência (goldfishing)", en: "Consistency (goldfishing)" },
