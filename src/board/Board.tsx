@@ -27,6 +27,14 @@ import { categoryLabel } from "../i18n/messages";
 import { XpScroll } from "../components/XpScroll";
 import { XpWindow } from "../components/XpWindow";
 
+/** A shared zone with a floating card-list window (graveyard, exile). */
+type ZoneKind = "graveyard" | "exile";
+/** One open zone window: which seat, which of that seat's shared zones. */
+interface ZoneRef {
+  kind: ZoneKind;
+  seat: number;
+}
+
 /** Play-mode interaction for the human's seat: drag a hand card to a slot, or
  * click the commander in the command zone to cast it. */
 export interface PlayInteraction {
@@ -324,14 +332,27 @@ export function Board({
 }) {
   const { t } = useI18n();
   const [preview, setPreview] = useState<Preview | null>(null);
-  const [graveSeat, setGraveSeat] = useState<number | null>(null);
-  const [exileSeat, setExileSeat] = useState<number | null>(null);
+  // Every zone window currently open (a seat's graveyard or exile). Each is
+  // independent, so several can be open — even several at once for the same
+  // seat, or the same zone kind across different seats.
+  const [openZones, setOpenZones] = useState<ZoneRef[]>([]);
   const oppScrollRef = useRef<HTMLDivElement | null>(null);
 
   const you = view.seats.find((s) => s.seat === 0);
   const opponents = view.seats.filter((s) => s.seat !== 0);
-  const graveView = view.seats.find((s) => s.seat === graveSeat);
-  const exileView = view.seats.find((s) => s.seat === exileSeat);
+
+  function openZone(kind: ZoneKind, seat: number) {
+    setOpenZones((prev) =>
+      prev.some((z) => z.kind === kind && z.seat === seat)
+        ? prev
+        : [...prev, { kind, seat }],
+    );
+  }
+  function closeZone(kind: ZoneKind, seat: number) {
+    setOpenZones((prev) => prev.filter((z) => z.kind !== kind || z.seat !== seat));
+  }
+  const openGraveyard = (seat: number) => openZone("graveyard", seat);
+  const openExile = (seat: number) => openZone("exile", seat);
 
   // In the mobile opponents gallery, follow the active opponent into view. When
   // the human (seat 0) is active, leave the gallery on the last-shown opponent.
@@ -372,8 +393,8 @@ export function Board({
             winner={view.winner}
             images={images}
             onHover={onHover}
-            onOpenGraveyard={setGraveSeat}
-            onOpenExile={setExileSeat}
+            onOpenGraveyard={openGraveyard}
+            onOpenExile={openExile}
             target={target}
             attack={attack}
             block={block}
@@ -391,8 +412,8 @@ export function Board({
             winner={view.winner}
             images={images}
             onHover={onHover}
-            onOpenGraveyard={setGraveSeat}
-            onOpenExile={setExileSeat}
+            onOpenGraveyard={openGraveyard}
+            onOpenExile={openExile}
             play={play}
             target={target}
             ability={ability}
@@ -404,25 +425,26 @@ export function Board({
         </div>
       )}
 
-      {graveView && graveView.graveyard.length > 0 && (
-        <ZoneWindow
-          title={t("board.graveyardOf", { name: seatName(graveView) })}
-          cards={graveView.graveyard}
-          images={images}
-          onHover={onHover}
-          onClose={() => setGraveSeat(null)}
-        />
-      )}
-
-      {exileView && exileView.exile.length > 0 && (
-        <ZoneWindow
-          title={t("board.exileOf", { name: seatName(exileView) })}
-          cards={exileView.exile}
-          images={images}
-          onHover={onHover}
-          onClose={() => setExileSeat(null)}
-        />
-      )}
+      {openZones.map(({ kind, seat }) => {
+        const seatView = view.seats.find((s) => s.seat === seat);
+        if (!seatView) return null;
+        const cards = kind === "graveyard" ? seatView.graveyard : seatView.exile;
+        if (cards.length === 0) return null;
+        const title =
+          kind === "graveyard"
+            ? t("board.graveyardOf", { name: seatName(seatView) })
+            : t("board.exileOf", { name: seatName(seatView) });
+        return (
+          <ZoneWindow
+            key={`${kind}-${seat}`}
+            title={title}
+            cards={cards}
+            images={images}
+            onHover={onHover}
+            onClose={() => closeZone(kind, seat)}
+          />
+        );
+      })}
 
       {preview && play?.dragging == null && <CardPreview preview={preview} />}
     </div>
