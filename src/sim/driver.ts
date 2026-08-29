@@ -20,6 +20,7 @@ import {
   parseCreatureTypePrompt,
   type CreatureTypePrompt,
 } from "./decisions/creatureType";
+import { parseModesPrompt, type ModesPrompt } from "./decisions/modes";
 import {
   parseMulliganPrompt,
   type MulliganPrompt,
@@ -212,6 +213,11 @@ export interface DriverCallbacks {
   requestHumanCreatureType?: (
     env: GameStateEnvelope,
     prompt: CreatureTypePrompt & { aiChoice: string | null },
+  ) => Promise<HumanChoice>;
+  /** Called when the human must choose one or more modes on a modal spell/ability. */
+  requestHumanModes?: (
+    env: GameStateEnvelope,
+    prompt: ModesPrompt,
   ) => Promise<HumanChoice>;
   /** Called at game start for the human's opening mulligan (keep / mulligan / bottom). */
   requestHumanMulligan?: (
@@ -506,6 +512,12 @@ export class MatchRunner {
       () => humanRequest(env, cb.requestHumanBlockers, parseBlockersPrompt(wf)),
       () => humanRequest(env, cb.requestHumanMana, parseManaPrompt(wf)),
       () => this.creatureTypeRequest(env, wf, humanSeat),
+      () =>
+        humanRequest(
+          env,
+          cb.requestHumanModes,
+          parseModesPrompt(wf, state.objects),
+        ),
       () =>
         humanRequest(
           env,

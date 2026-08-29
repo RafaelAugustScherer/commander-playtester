@@ -2021,3 +2021,117 @@ th {
   font-weight: 700;
   text-align: center;
 }
+
+/* ── Modal spell/ability mode-choice popup ─────────────────────── */
+.modes-modal {
+  position: relative;
+  width: min(560px, 100%);
+}
+.modes-peek {
+  position: absolute;
+  top: 0.6rem;
+  right: 0.6rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--panel-2);
+  color: var(--muted);
+  cursor: pointer;
+}
+.modes-peek:hover {
+  color: var(--text);
+  border-color: var(--accent);
+}
+.modes-peek[aria-pressed="true"] {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.modes-modal__body {
+  transition: opacity 0.15s ease;
+}
+.mull-overlay--peeking {
+  background: transparent;
+  backdrop-filter: none;
+}
+.mull-overlay--peeking .modes-modal {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+.mull-overlay--peeking .modes-modal__body {
+  opacity: 0;
+  pointer-events: none;
+  visibility: hidden;
+}
+.modes-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.modes-choice {
+  display: block;
+  width: 100%;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--panel-2);
+  color: var(--text);
+  text-align: left;
+  line-height: 1.35;
+  cursor: pointer;
+}
+.modes-choice:hover {
+  border-color: var(--accent);
+}
+.modes-choice--picked {
+  border-color: var(--warn);
+  box-shadow: 0 0 0 2px var(--warn) inset;
+}
+.modes-choice--stepper {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  cursor: default;
+}
+.modes-choice__text {
+  flex: 1;
+}
+.modes-stepper {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+.modes-stepper__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.6rem;
+  height: 1.6rem;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--panel);
+  color: var(--text);
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+.modes-stepper__btn:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+.modes-stepper__btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.modes-stepper__count {
+  min-width: 1.2rem;
+  text-align: center;
+  font-weight: 700;
+}
