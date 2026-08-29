@@ -271,6 +271,31 @@ export const messages = {
   "creatureType.confirm": { pt: "Confirmar", en: "Confirm" },
   "creatureType.letAi": { pt: "IA decide", en: "Let the AI decide" },
 
+  "modes.title": { pt: "Escolher modo", en: "Choose a mode" },
+  "modes.source": {
+    pt: "{name} pede uma escolha de modo.",
+    en: "{name} asks for a mode.",
+  },
+  "modes.instructionOne": {
+    pt: "Escolha um modo.",
+    en: "Choose one mode.",
+  },
+  "modes.instructionExact": {
+    pt: "Escolha {n} modos.",
+    en: "Choose {n} modes.",
+  },
+  "modes.instructionRange": {
+    pt: "Escolha de {min} a {max} modos.",
+    en: "Choose {min}–{max} modes.",
+  },
+  "modes.progress": { pt: "Selecionados: {n} / {max}", en: "Selected: {n} / {max}" },
+  "modes.confirm": { pt: "Confirmar", en: "Confirm" },
+  "modes.letAi": { pt: "IA decide", en: "Let the AI decide" },
+  "modes.peek": { pt: "Espiar o tabuleiro", en: "Peek at the board" },
+  "modes.hide": { pt: "Ocultar e escolher", en: "Hide and choose" },
+  "modes.addOne": { pt: "Escolher este modo de novo", en: "Pick this mode again" },
+  "modes.removeOne": { pt: "Remover uma escolha", en: "Remove one pick" },
+
   "mulligan.title": { pt: "Mão inicial", en: "Opening hand" },
   "mulligan.keepCount": { pt: "Ficar com {n}", en: "Keep {n}" },
   "mulligan.keepAll": { pt: "Ficar com a mão", en: "Keep hand" },

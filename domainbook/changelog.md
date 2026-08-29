@@ -12,6 +12,16 @@ depth live there. A purely-internal PR that touches no product or architecture m
 skip its version with a `Skip-Docs: <reason>` trailer instead. There are no
 per-domain changelogs; this file is the single timeline (`ADR-0007`).
 
+## [0.4.13] - 2026-08-29
+
+### Added
+
+- A centered, board-dimming popup for "choose one or more —" modal spells and
+  abilities, so the player picks the mode(s) instead of the AI; a stepper
+  (instead of a plain toggle) on a card that allows repeating a mode, and an
+  eye button to peek at the board mid-choice without losing picks
+  (`domains/simulation/features/choose-modes-on-a-modal-spell-or-ability.md`).
+
 ## [0.4.12] - 2026-08-28
 
 ### Fixed

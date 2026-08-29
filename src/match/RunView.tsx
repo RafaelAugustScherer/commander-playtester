@@ -66,6 +66,7 @@ import {
   chooseOptionAction,
   type CreatureTypePrompt,
 } from "../sim/decisions/creatureType";
+import { selectModesAction, type ModesPrompt } from "../sim/decisions/modes";
 import {
   mulliganKeepAction,
   mulliganTakeAction,
@@ -81,6 +82,7 @@ import { ninjutsuBySource } from "../sim/decisions/ninjutsu";
 import { aggregate } from "../analysis/matchStats";
 import { fetchCardsCached } from "../lib/scryfallCache";
 import { SearchableSelect } from "../components/SearchableSelect";
+import { Eye, EyeOff } from "lucide-react";
 import { useI18n } from "../i18n/I18nContext";
 import { useSettings } from "../settings/SettingsContext";
 import {
@@ -202,6 +204,11 @@ interface ManaTurn {
 
 interface CreatureTypeTurn {
   prompt: CreatureTypePrompt & { aiChoice: string | null };
+  resolve: (choice: HumanChoice) => void;
+}
+
+interface ModesTurn {
+  prompt: ModesPrompt;
   resolve: (choice: HumanChoice) => void;
 }
 
@@ -342,6 +349,8 @@ interface RunnerCallbackDeps {
   setManaTurn: Dispatch<SetStateAction<ManaTurn | null>>;
   setCreatureTypePick: Dispatch<SetStateAction<string>>;
   setCreatureTypeTurn: Dispatch<SetStateAction<CreatureTypeTurn | null>>;
+  setModesPick: Dispatch<SetStateAction<number[]>>;
+  setModesTurn: Dispatch<SetStateAction<ModesTurn | null>>;
   setBottomPick: Dispatch<SetStateAction<Set<number>>>;
   setMulliganTurn: Dispatch<SetStateAction<MulliganTurn | null>>;
   setDiscardPick: Dispatch<SetStateAction<Set<number>>>;
@@ -371,6 +380,8 @@ function buildRunnerCallbacks(deps: RunnerCallbackDeps): DriverCallbacks {
     setManaTurn,
     setCreatureTypePick,
     setCreatureTypeTurn,
+    setModesPick,
+    setModesTurn,
     setBottomPick,
     setMulliganTurn,
     setDiscardPick,
@@ -505,6 +516,22 @@ function buildRunnerCallbacks(deps: RunnerCallbackDeps): DriverCallbacks {
           },
         });
       }),
+    requestHumanModes: (_env, prompt) =>
+      new Promise<HumanChoice>((resolve) => {
+        if (isCancelled()) {
+          resolve({ ai: true });
+          return;
+        }
+        setModesPick([]);
+        setModesTurn({
+          prompt,
+          resolve: (choice) => {
+            setModesTurn(null);
+            setModesPick([]);
+            resolve(choice);
+          },
+        });
+      }),
     requestHumanMulligan: (_env, prompt) =>
       new Promise<HumanChoice>((resolve) => {
         if (isCancelled()) {
@@ -634,6 +661,8 @@ export function RunView({
   const [creatureTypeTurn, setCreatureTypeTurn] =
     useState<CreatureTypeTurn | null>(null);
   const [creatureTypePick, setCreatureTypePick] = useState("");
+  const [modesTurn, setModesTurn] = useState<ModesTurn | null>(null);
+  const [modesPick, setModesPick] = useState<number[]>([]);
   const [mulliganTurn, setMulliganTurn] = useState<MulliganTurn | null>(null);
   const [bottomPick, setBottomPick] = useState<Set<number>>(new Set());
   const [discardTurn, setDiscardTurn] = useState<DiscardTurn | null>(null);
@@ -727,6 +756,8 @@ export function RunView({
             setManaTurn,
             setCreatureTypePick,
             setCreatureTypeTurn,
+            setModesPick,
+            setModesTurn,
             setBottomPick,
             setMulliganTurn,
             setDiscardPick,
@@ -853,11 +884,24 @@ export function RunView({
   useEffect(() => {
     if (
       passingTurn &&
-      (targeting || manaTurn || blockingTurn || creatureTypeTurn || scryTurn)
+      (targeting ||
+        manaTurn ||
+        blockingTurn ||
+        creatureTypeTurn ||
+        modesTurn ||
+        scryTurn)
     ) {
       setPassingTurn(false);
     }
-  }, [passingTurn, targeting, manaTurn, blockingTurn, creatureTypeTurn, scryTurn]);
+  }, [
+    passingTurn,
+    targeting,
+    manaTurn,
+    blockingTurn,
+    creatureTypeTurn,
+    modesTurn,
+    scryTurn,
+  ]);
 
   // Map draggable hand cards to their play actions for the current window.
   // With manual mana on, a normal cast is offered only when the floating reserve
@@ -1638,6 +1682,33 @@ export function RunView({
         />
       )}
 
+      {modesTurn && (
+        <ModesModal
+          prompt={modesTurn.prompt}
+          pick={modesPick}
+          onAdd={(i) =>
+            setModesPick((prev) => {
+              if (prev.length >= modesTurn.prompt.maxChoices) return prev;
+              if (!modesTurn.prompt.allowRepeatModes && prev.includes(i)) {
+                return prev;
+              }
+              return [...prev, i];
+            })
+          }
+          onRemove={(i) =>
+            setModesPick((prev) => {
+              const idx = prev.lastIndexOf(i);
+              if (idx === -1) return prev;
+              return [...prev.slice(0, idx), ...prev.slice(idx + 1)];
+            })
+          }
+          onConfirm={() =>
+            modesTurn.resolve({ action: selectModesAction(modesPick) })
+          }
+          onLetAi={() => modesTurn.resolve({ ai: true })}
+        />
+      )}
+
       {scryTurn && (
         <ScryWindow
           prompt={scryTurn.prompt}
@@ -1868,6 +1939,153 @@ function DiscardModal({
       </div>
 
       {overlay}
+    </div>
+  );
+}
+
+function modesInstruction(
+  prompt: ModesPrompt,
+  t: (key: MsgKey, vars?: Vars) => string,
+): string {
+  if (prompt.minChoices === prompt.maxChoices) {
+    return prompt.maxChoices <= 1
+      ? t("modes.instructionOne")
+      : t("modes.instructionExact", { n: prompt.maxChoices });
+  }
+  return t("modes.instructionRange", {
+    min: prompt.minChoices,
+    max: prompt.maxChoices,
+  });
+}
+
+/**
+ * Modal spell/ability popup: the board dims behind it so a mode must be
+ * chosen before play continues. The eye button lets the player peek at the
+ * board (e.g. to check a target's stats) without losing their picks.
+ */
+function ModesModal({
+  prompt,
+  pick,
+  onAdd,
+  onRemove,
+  onConfirm,
+  onLetAi,
+}: {
+  prompt: ModesPrompt;
+  pick: number[];
+  onAdd: (index: number) => void;
+  onRemove: (index: number) => void;
+  onConfirm: () => void;
+  onLetAi: () => void;
+}) {
+  const { t } = useI18n();
+  const modalRef = useRef<HTMLDivElement>(null);
+  const [peeking, setPeeking] = useState(false);
+
+  // Move focus into the dialog, trap Tab within it, and restore focus on close.
+  useFocusTrap(modalRef);
+
+  return (
+    <div
+      className={`mull-overlay${peeking ? " mull-overlay--peeking" : ""}`}
+      role="dialog"
+      aria-modal={!peeking}
+      aria-labelledby="modes-title"
+    >
+      <div className="mull-modal modes-modal" ref={modalRef}>
+        <button
+          type="button"
+          className="modes-peek"
+          onClick={() => setPeeking((v) => !v)}
+          aria-pressed={peeking}
+          aria-label={peeking ? t("modes.hide") : t("modes.peek")}
+          title={peeking ? t("modes.hide") : t("modes.peek")}
+        >
+          {peeking ? <EyeOff size={18} /> : <Eye size={18} />}
+        </button>
+
+        <div className="modes-modal__body">
+          <div className="mull-modal__head">
+            <h2 id="modes-title">{t("modes.title")}</h2>
+            {prompt.sourceName && (
+              <p className="hint">
+                {t("modes.source", { name: prompt.sourceName })}
+              </p>
+            )}
+            <p className="hint">{modesInstruction(prompt, t)}</p>
+          </div>
+
+          <div className="modes-list">
+            {prompt.modes.map((mode, i) => {
+              const count = pick.filter((p) => p === i).length;
+              const canAddMore =
+                pick.length < prompt.maxChoices &&
+                (prompt.allowRepeatModes || count === 0);
+
+              if (!prompt.allowRepeatModes) {
+                return (
+                  <button
+                    key={i}
+                    type="button"
+                    className={`modes-choice${count > 0 ? " modes-choice--picked" : ""}`}
+                    onClick={() => (count > 0 ? onRemove(i) : onAdd(i))}
+                  >
+                    {mode}
+                  </button>
+                );
+              }
+
+              return (
+                <div
+                  key={i}
+                  className={`modes-choice modes-choice--stepper${
+                    count > 0 ? " modes-choice--picked" : ""
+                  }`}
+                >
+                  <span className="modes-choice__text">{mode}</span>
+                  <span className="modes-stepper">
+                    <button
+                      type="button"
+                      className="modes-stepper__btn"
+                      disabled={count === 0}
+                      onClick={() => onRemove(i)}
+                      aria-label={t("modes.removeOne")}
+                    >
+                      −
+                    </button>
+                    <span className="modes-stepper__count">{count}</span>
+                    <button
+                      type="button"
+                      className="modes-stepper__btn"
+                      disabled={!canAddMore}
+                      onClick={() => onAdd(i)}
+                      aria-label={t("modes.addOne")}
+                    >
+                      +
+                    </button>
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="mull-actions">
+            <span className="hint">
+              {t("modes.progress", { n: pick.length, max: prompt.maxChoices })}
+            </span>
+            <button
+              className="btn"
+              disabled={pick.length < prompt.minChoices}
+              onClick={onConfirm}
+            >
+              {t("modes.confirm")}
+            </button>
+            <button className="btn btn--ghost" onClick={onLetAi}>
+              {t("modes.letAi")}
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
