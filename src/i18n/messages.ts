@@ -271,6 +271,18 @@ export const messages = {
   "creatureType.confirm": { pt: "Confirmar", en: "Confirm" },
   "creatureType.letAi": { pt: "IA decide", en: "Let the AI decide" },
 
+  "resolutionOptionalPayment.title": {
+    pt: "Pagamento opcional",
+    en: "Optional payment",
+  },
+  "resolutionOptionalPayment.source": {
+    pt: "{name} oferece um pagamento opcional.",
+    en: "{name} offers an optional payment.",
+  },
+  "resolutionOptionalPayment.pay": { pt: "Pagar {cost}", en: "Pay {cost}" },
+  "resolutionOptionalPayment.decline": { pt: "Recusar", en: "Decline" },
+  "resolutionOptionalPayment.letAi": { pt: "IA decide", en: "Let the AI decide" },
+
   "modes.title": { pt: "Escolher modo", en: "Choose a mode" },
   "modes.source": {
     pt: "{name} pede uma escolha de modo.",

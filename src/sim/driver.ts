@@ -27,6 +27,10 @@ import {
 } from "./decisions/mulligan";
 import { parseDiscardPrompt, type DiscardPrompt } from "./decisions/discard";
 import { parseScryPrompt, type ScryPrompt } from "./decisions/scry";
+import {
+  parseResolutionOptionalPaymentPrompt,
+  type ResolutionOptionalPaymentPrompt,
+} from "./decisions/resolutionOptionalPayment";
 
 export interface MatchResult {
   matchIndex: number;
@@ -233,6 +237,11 @@ export interface DriverCallbacks {
   requestHumanScry?: (
     env: GameStateEnvelope,
     prompt: ScryPrompt,
+  ) => Promise<HumanChoice>;
+  /** Called when a resolving spell/ability offers the human a "pay X or Y" optional cost. */
+  requestHumanResolutionOptionalPayment?: (
+    env: GameStateEnvelope,
+    prompt: ResolutionOptionalPaymentPrompt,
   ) => Promise<HumanChoice>;
 }
 
@@ -535,6 +544,12 @@ export class MatchRunner {
           env,
           cb.requestHumanScry,
           parseScryPrompt(wf, state, humanSeat),
+        ),
+      () =>
+        humanRequest(
+          env,
+          cb.requestHumanResolutionOptionalPayment,
+          parseResolutionOptionalPaymentPrompt(wf, state.objects),
         ),
     ];
     for (const resolve of resolvers) {
