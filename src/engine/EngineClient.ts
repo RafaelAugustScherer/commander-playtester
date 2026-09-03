@@ -5,6 +5,13 @@ import type {
   GameStateEnvelope,
   LogEntry,
 } from "./types";
+import type {
+  BracketDeckInput,
+  BracketEstimate,
+  ClassifyDeckResult,
+  SearchCardsQuery,
+  SearchCardsResult,
+} from "./draftQueries";
 
 interface Pending {
   resolve: (v: any) => void;
@@ -103,6 +110,21 @@ export class EngineClient {
     player: number,
   ): Promise<{ action: any }> {
     return this.req("aiProposal", { difficulty, player });
+  }
+
+  /** Game-independent card search over the engine's own card database. */
+  searchCards(query: SearchCardsQuery): Promise<SearchCardsResult> {
+    return this.req("searchCards", query);
+  }
+
+  /** Game-independent WotC bracket estimate for a (possibly partial) deck. */
+  estimateBracket(deck: BracketDeckInput): Promise<BracketEstimate | null> {
+    return this.req("estimateBracket", deck);
+  }
+
+  /** Game-independent archetype classification for a flat list of card names. */
+  classifyDeck(names: string[]): Promise<ClassifyDeckResult> {
+    return this.req("classifyDeck", { names });
   }
 
   terminate(): void {

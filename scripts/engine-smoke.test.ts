@@ -30,6 +30,7 @@ import init, {
 import { STARTER_DECKS } from "../src/deck/starterDecks";
 import { buildDeckList } from "../src/engine/deckPayload";
 import type { SavedDeck } from "../src/deck/model";
+import { draftQueries } from "../src/engine/draftQueries";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const WASM = resolve(ROOT, "public/engine/engine_wasm_bg.wasm");
@@ -137,6 +138,78 @@ describe.skipIf(!ENABLED)("phase-rs engine smoke", () => {
       ).toBe("gameover");
       // A Commander game ends with a winner or a draw; both are valid.
       expect(winner === null || typeof winner === "number").toBe(true);
+    },
+  );
+});
+
+// Guard for the three game-independent deck-draft query functions
+// (search_cards_js, estimate_bracket_for_deck, classify_deck_js). They are
+// real exports of the vendored glue but untyped in engine_wasm.d.ts
+// (src/engine/draftQueries.ts supplies the app-owned typing); this locks
+// their runtime contract so a future engine upgrade's ABI drift fails here
+// rather than silently in the draft worker (deck-draft/ADR-0001, TDR-0001).
+describe.skipIf(!ENABLED)("phase-rs deck-draft query functions", () => {
+  it(
+    "boots the WASM, loads the DB, and locks the search/bracket/classify contracts",
+    { timeout: 60_000 },
+    async () => {
+      const bytes = new Uint8Array(readFileSync(WASM));
+      await init({ module_or_path: bytes });
+      init_panic_hook();
+
+      const cardJson = gunzipSync(readFileSync(CARD_GZ)).toString("utf8");
+      load_card_database(cardJson);
+
+      const commander = "Krenko, Mob Boss";
+      const mainDeck = ["Mountain", "Lightning Bolt"];
+
+      const search = draftQueries.search_cards_js({
+        text: "Goblin",
+        colors: ["R"],
+        limit: 10,
+      });
+      expect(Array.isArray(search.results), "search_cards_js should return .results[]").toBe(
+        true,
+      );
+      expect(typeof search.total).toBe("number");
+      expect(search.results.length, "the Goblin/red search should find cards").toBeGreaterThan(0);
+      const row = search.results[0];
+      expect(typeof row.name).toBe("string");
+      expect(typeof row.oracle_id).toBe("string");
+      expect(typeof row.mana_value).toBe("number");
+      expect(Array.isArray(row.color_identity)).toBe(true);
+      expect(typeof row.legalities).toBe("object");
+
+      const bracket = draftQueries.estimate_bracket_for_deck({
+        commander: [commander],
+        main_deck: mainDeck,
+      });
+      expect(
+        bracket,
+        "estimate_bracket_for_deck should return a result when a commander is given",
+      ).toBeTruthy();
+      expect(typeof bracket!.tier).toBe("string");
+      expect(typeof bracket!.contributing).toBe("object");
+
+      const bracketNoCommander = draftQueries.estimate_bracket_for_deck({
+        main_deck: mainDeck,
+      } as any);
+      expect(
+        bracketNoCommander,
+        "estimate_bracket_for_deck should return null when the commander is omitted",
+      ).toBeNull();
+
+      const classify = draftQueries.classify_deck_js([commander, ...mainDeck]);
+      expect(typeof classify.archetype).toBe("string");
+
+      const classifyEmpty = draftQueries.classify_deck_js([]);
+      expect(
+        typeof classifyEmpty.archetype,
+        "classify_deck_js should tolerate an empty name list",
+      ).toBe("string");
+
+      const panic = take_last_panic_message();
+      expect(panic, `engine panicked: ${panic}`).toBeFalsy();
     },
   );
 });

@@ -16,6 +16,7 @@ import init, {
   get_legal_actions_js,
   submit_action,
 } from "./vendor/engine_wasm.js";
+import { draftQueries } from "./draftQueries";
 
 // Absolute base URL for engine assets, supplied by the main thread on "ready".
 // It must be resolved against the *page* location, not the worker's: a relative
@@ -121,6 +122,24 @@ async function handle(cmd: string, args: any): Promise<any> {
         logEntries: res?.log_entries ?? [],
         state: get_game_state(),
       };
+    }
+    case "searchCards": {
+      await ensureStarted();
+      await ensureDb();
+      const { text, colors, limit } = args ?? {};
+      return draftQueries.search_cards_js({ text, colors, limit });
+    }
+    case "estimateBracket": {
+      await ensureStarted();
+      await ensureDb();
+      const { commander, main_deck } = args ?? {};
+      return draftQueries.estimate_bracket_for_deck({ commander, main_deck });
+    }
+    case "classifyDeck": {
+      await ensureStarted();
+      await ensureDb();
+      const { names } = args ?? {};
+      return draftQueries.classify_deck_js(names ?? []);
     }
     default:
       throw new Error(`unknown engine command: ${cmd}`);
