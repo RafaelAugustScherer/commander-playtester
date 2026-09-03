@@ -31,6 +31,18 @@ context surfaces these at authoring time, not at game start (`TDR-0002`).
 - **Aliases:** not-implemented card
 - **Status:** validated
 
+## Partial deck
+
+A `deck` that is not yet exactly 100 cards — most often one left mid-build by the assisted
+`deck draft`. It can be saved and copied out, but it is flagged in the library and cannot
+be chosen to play; playability is derived from the 100-card rule, not stored
+(`deck-library/ADR-0002`).
+
+- **Aliases:** incomplete deck, draft deck
+- **Status:** draft
+- **Example:** A saved deck showing 62 cards is partial and cannot be started in
+  `match setup`.
+
 ## Deck author
 
 The person building decks — the only role this context serves. There is no

@@ -37,6 +37,9 @@ and the finished-game result.
 | `StartSession`       | match-setup  | Command |
 | `SubmitPlayerAction` | board        | Command |
 | `AdvancePhase`       | board        | Command |
+| `QueryCardPool`      | deck-draft   | Query   |
+| `EstimateBracket`    | deck-draft   | Query   |
+| `ClassifyDeck`       | deck-draft   | Query   |
 
 ## Outbound Communication
 
@@ -44,6 +47,9 @@ and the finished-game result.
 | --------------------- | ----------------- | ------- |
 | `GetAiActionProposal` | phase-rs (extern) | Query   |
 | `SubmitAction`        | phase-rs (extern) | Command |
+| `SearchCards`         | phase-rs (extern) | Query   |
+| `EstimateBracket`     | phase-rs (extern) | Query   |
+| `ClassifyDeck`        | phase-rs (extern) | Query   |
 | `GameStateChanged`    | board             | Event   |
 | `MatchEnded`          | analysis          | Event   |
 
@@ -60,6 +66,10 @@ and the finished-game result.
   the only face the engine's card database keys on (`src/engine/deckPayload.ts`).
 - One game runs per WASM instance, in a Web Worker; a `run` plays its matches
   sequentially (`ADR-0005`).
+- The `engine adapter` also answers `deck draft`'s game-independent card queries —
+  `search_cards_js`, `estimate_bracket_for_deck`, `classify_deck_js`. These read only the
+  loaded card database, not a running game, so they sit outside the one-game-per-instance
+  rule and keep the adapter the sole thing that talks to phase-rs (`ADR-0009`).
 - A match takes a seed from the session, so games are reproducible.
 
 ## Assumptions
