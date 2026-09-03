@@ -62,6 +62,19 @@ Example: A count above the cap is refused
   Then it is not accepted above 50
 ```
 
+## Rule: A partial deck cannot start a match
+
+A deck that is not exactly 100 cards is stored but unplayable
+(`deck-library/ADR-0002`). Setup marks it in the deck pickers, and the start
+control refuses to begin a run while one is chosen, for you or an opponent.
+
+```gherkin
+Example: Starting is refused with a partial deck chosen
+  Given a partial deck is chosen as your deck or an opponent's
+  When you look at the start control
+  Then it is disabled with a reason explaining that a chosen deck is partial
+```
+
 ## Rule: The same seed and decks reproduce the same run
 
 ```gherkin

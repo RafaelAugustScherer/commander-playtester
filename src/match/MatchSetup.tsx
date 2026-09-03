@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { SavedDeck } from "../deck/model";
+import { isHundredCards } from "../deck/model";
 import type { PlayMode, RunConfig, SeatCount } from "./config";
 import { SEAT_COUNTS, MIN_MATCHES, MAX_MATCHES, clampMatchCount } from "./config";
 import type { AiDifficulty } from "../engine/types";
@@ -42,6 +43,12 @@ export function MatchSetup({
   const yourDeck = decks.find((d) => d.id === yourDeckId) ?? decks[0];
   const opponentDecks = decks.filter((d) => d.id !== yourDeck.id);
 
+  function deckLabel(deck: SavedDeck): string {
+    return isHundredCards(deck)
+      ? deck.name
+      : deck.name + t("setup.partialSuffix");
+  }
+
   function opponentAt(index: number): string {
     const chosen = opponentIds[index];
     if (chosen && opponentDecks.some((d) => d.id === chosen)) return chosen;
@@ -55,17 +62,21 @@ export function MatchSetup({
   }
 
   const opponentSeats = seatCount - 1;
+  const chosenOpponentIds = Array.from({ length: opponentSeats }, (_, i) =>
+    opponentAt(i),
+  );
   const allChosen =
-    opponentDecks.length > 0 &&
-    Array.from({ length: opponentSeats }, (_, i) => opponentAt(i)).every(
-      Boolean,
-    );
+    opponentDecks.length > 0 && chosenOpponentIds.every(Boolean);
+  const chosenDecks = [
+    yourDeck,
+    ...chosenOpponentIds
+      .map((id) => decks.find((d) => d.id === id))
+      .filter((d): d is SavedDeck => !!d),
+  ];
+  const hasPartialChosen = chosenDecks.some((d) => !isHundredCards(d));
 
   function handleStart() {
-    const seatDeckIds = [
-      yourDeck.id,
-      ...Array.from({ length: opponentSeats }, (_, i) => opponentAt(i)),
-    ];
+    const seatDeckIds = [yourDeck.id, ...chosenOpponentIds];
     onStart({
       seatDeckIds,
       mode,
@@ -83,7 +94,10 @@ export function MatchSetup({
       <div className="field">
         <span className="field__label">{t("setup.yourDeck")}</span>
         <XpSelect
-          options={decks.map((deck) => ({ value: deck.id, label: deck.name }))}
+          options={decks.map((deck) => ({
+            value: deck.id,
+            label: deckLabel(deck),
+          }))}
           value={yourDeck.id}
           onChange={setYourDeckId}
           ariaLabel={t("setup.yourDeck")}
@@ -121,7 +135,7 @@ export function MatchSetup({
                   <XpSelect
                     options={opponentDecks.map((deck) => ({
                       value: deck.id,
-                      label: deck.name,
+                      label: deckLabel(deck),
                     }))}
                     value={opponentAt(i)}
                     onChange={(id) => setOpponentAt(i, id)}
@@ -209,11 +223,12 @@ export function MatchSetup({
       </label>
 
       <p className="hint">{t("setup.timeHint")}</p>
+      {hasPartialChosen && <p className="error">{t("setup.partialChosen")}</p>}
       <div className="import__row">
         <button
           className="btn"
           onClick={handleStart}
-          disabled={opponentSeats > 0 && !allChosen}
+          disabled={(opponentSeats > 0 && !allChosen) || hasPartialChosen}
         >
           {matchCount > 1
             ? t("setup.startN", { n: clampMatchCount(matchCount) })

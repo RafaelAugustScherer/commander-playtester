@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { totalCards, deckToText } from "./model";
+import { totalCards, isHundredCards, deckToText } from "./model";
 import type { SavedDeck } from "./model";
 import { parseDecklist } from "../lib/decklist";
 import { SAMPLE_DECK } from "../lib/sampleDeck";
@@ -35,5 +35,17 @@ describe("deck model", () => {
     );
     expect(total).toBe(100);
     expect(parsed.warnings).toEqual([]);
+  });
+
+  it("a deck short of 100 cards is not playable", () => {
+    expect(isHundredCards(deck)).toBe(false);
+  });
+
+  it("a deck with exactly 100 cards is playable", () => {
+    const full: SavedDeck = {
+      ...deck,
+      mainboard: [{ quantity: 99, name: "Forest" }],
+    };
+    expect(isHundredCards(full)).toBe(true);
   });
 });

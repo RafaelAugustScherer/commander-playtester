@@ -32,11 +32,16 @@ Example: A duplicate nonland is rejected
 ```
 
 ```gherkin
-Example: A deck that isn't exactly 100 cards can't be saved
+Example: A deck that isn't exactly 100 cards can still be saved, but flagged
   Given a decklist with 99 cards (or any count other than 100)
-  When the author looks at the editor
-  Then saving is refused and the count is flagged with the 100-card rule
+  When the author saves it
+  Then the deck is saved and appears in the library flagged as partial
+  And it cannot be chosen to start a match until it reaches 100 cards
 ```
+
+Whether a saved deck is playable is derived from its card count, not stored
+(`deck-library/ADR-0002`) — so a partial deck completed later becomes playable
+with nothing to reconcile.
 
 ## Rule: A deck left unnamed takes its commander's name
 
@@ -69,4 +74,5 @@ Example: Reload yields the same list
 ## Open Questions
 
 - Whether to also block on singleton and color-identity at save, or keep the
-  engine as the arbiter for those (only the exact-100 count is enforced here).
+  engine as the arbiter for those (only the card count is checked here, and
+  since `deck-library/ADR-0002` that check flags rather than blocks).

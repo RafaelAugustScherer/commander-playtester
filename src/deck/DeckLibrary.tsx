@@ -1,5 +1,5 @@
 import type { SavedDeck } from "./model";
-import { totalCards } from "./model";
+import { isHundredCards, totalCards } from "./model";
 import { STARTER_DECKS } from "./starterDecks";
 import { useI18n } from "../i18n/I18nContext";
 
@@ -59,7 +59,17 @@ export function DeckLibrary({
                 className="deck-list__info"
                 onClick={() => onSelect(deck)}
               >
-                <span className="deck-list__name">{deck.name}</span>
+                <span className="deck-list__name">
+                  {deck.name}
+                  {!isHundredCards(deck) && (
+                    <span
+                      className="chip"
+                      style={{ color: "var(--warn)", marginLeft: "0.5rem" }}
+                    >
+                      {t("deck.partial")}
+                    </span>
+                  )}
+                </span>
                 <span className="deck-list__meta">
                   {deck.commanders.map((c) => c.name).join(", ") ||
                     t("deck.noCommander")}{" "}

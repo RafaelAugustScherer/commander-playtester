@@ -48,6 +48,7 @@ export const messages = {
 
   "deck.noCommander": { pt: "sem comandante", en: "no commander" },
   "deck.cards": { pt: "{n} cartas", en: "{n} cards" },
+  "deck.partial": { pt: "Incompleto", en: "Partial" },
 
   "editor.editTitle": { pt: "Editar deck", en: "Edit deck" },
   "editor.newTitle": { pt: "Novo deck", en: "New deck" },
@@ -60,9 +61,9 @@ export const messages = {
   },
   "editor.linesUnread": { pt: "{n} linhas não lidas", en: "{n} lines not read" },
   "editor.unread": { pt: "Não lidas: {list}", en: "Not read: {list}" },
-  "editor.needHundred": {
-    pt: "Um deck de Commander precisa de exatamente 100 cartas (comandante + 99). Este tem {n}.",
-    en: "A Commander deck needs exactly 100 cards (commander + 99). This one has {n}.",
+  "editor.needHundredWarning": {
+    pt: "Um deck de Commander precisa de exatamente 100 cartas (comandante + 99). Este tem {n} — pode salvar como rascunho, mas não poderá ser jogado até completar.",
+    en: "A Commander deck needs exactly 100 cards (commander + 99). This one has {n} — you can save it as a draft, but it can't be played until it's complete.",
   },
   "editor.untitled": { pt: "Deck sem nome", en: "Untitled deck" },
   "editor.save": { pt: "Salvar deck", en: "Save deck" },
@@ -116,6 +117,10 @@ export const messages = {
   "detail.back": { pt: "← Voltar", en: "← Back" },
   "detail.play": { pt: "Testar em partida →", en: "Test in a match →" },
   "detail.notFound": { pt: "{n} não encontradas", en: "{n} not found" },
+  "detail.partialReason": {
+    pt: "Este deck está incompleto e não pode ser jogado até ter exatamente 100 cartas.",
+    en: "This deck is partial and can't be played until it has exactly 100 cards.",
+  },
 
   "setup.title": { pt: "Configurar partida", en: "Match setup" },
   "setup.yourDeck": { pt: "Seu deck", en: "Your deck" },
@@ -124,6 +129,11 @@ export const messages = {
   "setup.opponents": { pt: "Oponentes (IA)", en: "Opponents (AI)" },
   "setup.opponentN": { pt: "Oponente {n}", en: "Opponent {n}" },
   "setup.needOpponent": { pt: "Crie outro deck para usar como oponente.", en: "Create another deck to use as an opponent." },
+  "setup.partialSuffix": { pt: " (incompleto)", en: " (partial)" },
+  "setup.partialChosen": {
+    pt: "Um dos decks escolhidos está incompleto e não pode ser jogado. Complete-o ou escolha outro.",
+    en: "One of the chosen decks is partial and can't be played. Complete it or choose another.",
+  },
   "setup.mode": { pt: "Modo", en: "Mode" },
   "setup.modePlay": { pt: "Jogar (você pilota)", en: "Play (you pilot)" },
   "setup.modeWatch": { pt: "Assistir (IA joga)", en: "Watch (AI plays)" },
