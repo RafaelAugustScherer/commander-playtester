@@ -51,6 +51,13 @@ interface DraftQueryExports {
   search_cards_js(query: SearchCardsQuery): SearchCardsResult;
   estimate_bracket_for_deck(deck: BracketDeckInput): BracketEstimate | null;
   classify_deck_js(names: string[]): ClassifyDeckResult;
+  /**
+   * Single-arg form: true when the named card is legendary-creature-or-else
+   * commander-eligible. The two-arg `isCardCommanderEligibleForFormat` also
+   * exists in the vendored glue but a runtime spike found it unreliable, so
+   * this app only calls the single-arg form.
+   */
+  is_card_commander_eligible(name: string): boolean;
 }
 
 export const draftQueries = engineWasm as unknown as DraftQueryExports;

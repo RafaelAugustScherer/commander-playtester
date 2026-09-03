@@ -127,6 +127,11 @@ export class EngineClient {
     return this.req("classifyDeck", { names });
   }
 
+  /** Game-independent commander eligibility check for a single card name. */
+  isCommanderEligible(name: string): Promise<boolean> {
+    return this.req("isCommanderEligible", { name });
+  }
+
   terminate(): void {
     this.worker.terminate();
     this.pending.clear();

@@ -141,6 +141,12 @@ async function handle(cmd: string, args: any): Promise<any> {
       const { names } = args ?? {};
       return draftQueries.classify_deck_js(names ?? []);
     }
+    case "isCommanderEligible": {
+      await ensureStarted();
+      await ensureDb();
+      const { name } = args ?? {};
+      return draftQueries.is_card_commander_eligible(name);
+    }
     default:
       throw new Error(`unknown engine command: ${cmd}`);
   }

@@ -208,6 +208,15 @@ describe.skipIf(!ENABLED)("phase-rs deck-draft query functions", () => {
         "classify_deck_js should tolerate an empty name list",
       ).toBe("string");
 
+      expect(
+        draftQueries.is_card_commander_eligible(commander),
+        "a legendary creature should be commander-eligible",
+      ).toBe(true);
+      expect(
+        draftQueries.is_card_commander_eligible("Sol Ring"),
+        "a non-legendary artifact should not be commander-eligible",
+      ).toBe(false);
+
       const panic = take_last_panic_message();
       expect(panic, `engine panicked: ${panic}`).toBeFalsy();
     },
