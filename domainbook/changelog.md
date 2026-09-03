@@ -12,6 +12,20 @@ depth live there. A purely-internal PR that touches no product or architecture m
 skip its version with a `Skip-Docs: <reason>` trailer instead. There are no
 per-domain changelogs; this file is the single timeline (`ADR-0007`).
 
+## [0.4.14] - 2026-09-02
+
+### Changed
+
+- Re-pinned the vendored phase-rs engine from v0.63.0 to v0.71.0
+  (`ADR-0006`, `docs/engine-upgrade.md`).
+
+### Added
+
+- A play-controls choice for a resolving spell/ability's "you may pay X or Y"
+  optional payment (the engine's new `ResolutionOptionalPaymentChoice`), so the
+  player picks a branch or declines instead of the AI
+  (`domains/simulation/features/choose-an-optional-resolution-payment.md`).
+
 ## [0.4.13] - 2026-08-29
 
 ### Added

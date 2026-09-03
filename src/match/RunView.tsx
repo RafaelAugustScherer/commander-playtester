@@ -39,6 +39,11 @@ import {
   type DiscardPrompt,
 } from "../sim/decisions/discard";
 import { scryAction, type ScryPrompt } from "../sim/decisions/scry";
+import {
+  declineResolutionOptionalPaymentAction,
+  payResolutionOptionalPaymentAction,
+  type ResolutionOptionalPaymentPrompt,
+} from "../sim/decisions/resolutionOptionalPayment";
 import { XpWindow } from "../components/XpWindow";
 import {
   declareAttackersAction,
@@ -227,6 +232,11 @@ interface ScryTurn {
   resolve: (choice: HumanChoice) => void;
 }
 
+interface ResolutionOptionalPaymentTurn {
+  prompt: ResolutionOptionalPaymentPrompt;
+  resolve: (choice: HumanChoice) => void;
+}
+
 function isTargetOptional(
   targeting: TargetTurn | null,
   chosen: TargetRef[],
@@ -356,6 +366,9 @@ interface RunnerCallbackDeps {
   setDiscardPick: Dispatch<SetStateAction<Set<number>>>;
   setDiscardTurn: Dispatch<SetStateAction<DiscardTurn | null>>;
   setScryTurn: Dispatch<SetStateAction<ScryTurn | null>>;
+  setResolutionOptionalPaymentTurn: Dispatch<
+    SetStateAction<ResolutionOptionalPaymentTurn | null>
+  >;
 }
 
 function buildRunnerCallbacks(deps: RunnerCallbackDeps): DriverCallbacks {
@@ -387,6 +400,7 @@ function buildRunnerCallbacks(deps: RunnerCallbackDeps): DriverCallbacks {
     setDiscardPick,
     setDiscardTurn,
     setScryTurn,
+    setResolutionOptionalPaymentTurn,
   } = deps;
   return {
     onFrame: (env) => {
@@ -578,6 +592,20 @@ function buildRunnerCallbacks(deps: RunnerCallbackDeps): DriverCallbacks {
           },
         });
       }),
+    requestHumanResolutionOptionalPayment: (_env, prompt) =>
+      new Promise<HumanChoice>((resolve) => {
+        if (isCancelled()) {
+          resolve({ ai: true });
+          return;
+        }
+        setResolutionOptionalPaymentTurn({
+          prompt,
+          resolve: (choice) => {
+            setResolutionOptionalPaymentTurn(null);
+            resolve(choice);
+          },
+        });
+      }),
   };
 }
 
@@ -668,6 +696,8 @@ export function RunView({
   const [discardTurn, setDiscardTurn] = useState<DiscardTurn | null>(null);
   const [discardPick, setDiscardPick] = useState<Set<number>>(new Set());
   const [scryTurn, setScryTurn] = useState<ScryTurn | null>(null);
+  const [resolutionOptionalPaymentTurn, setResolutionOptionalPaymentTurn] =
+    useState<ResolutionOptionalPaymentTurn | null>(null);
   const [passingTurn, setPassingTurn] = useState(false);
   const [logEntries, setLogEntries] = useState<LoggedEntry[]>([]);
   // On mobile the log is a full-screen drawer, so it always starts closed and
@@ -763,6 +793,7 @@ export function RunView({
             setDiscardPick,
             setDiscardTurn,
             setScryTurn,
+            setResolutionOptionalPaymentTurn,
           }),
         );
         runnerRef.current = runner;
@@ -889,7 +920,8 @@ export function RunView({
         blockingTurn ||
         creatureTypeTurn ||
         modesTurn ||
-        scryTurn)
+        scryTurn ||
+        resolutionOptionalPaymentTurn)
     ) {
       setPassingTurn(false);
     }
@@ -901,6 +933,7 @@ export function RunView({
     creatureTypeTurn,
     modesTurn,
     scryTurn,
+    resolutionOptionalPaymentTurn,
   ]);
 
   // Map draggable hand cards to their play actions for the current window.
@@ -1600,6 +1633,52 @@ export function RunView({
                   onClick={() => creatureTypeTurn.resolve({ ai: true })}
                 >
                   {t("creatureType.letAi")}
+                </button>
+              </div>
+            </>
+          )}
+
+          {resolutionOptionalPaymentTurn && (
+            <>
+              <div className="control-title">
+                <strong>{t("resolutionOptionalPayment.title")}</strong>
+              </div>
+              {resolutionOptionalPaymentTurn.prompt.sourceName && (
+                <p className="hint">
+                  {t("resolutionOptionalPayment.source", {
+                    name: resolutionOptionalPaymentTurn.prompt.sourceName,
+                  })}
+                </p>
+              )}
+              <div className="import__row">
+                {resolutionOptionalPaymentTurn.prompt.options.map((opt) => (
+                  <button
+                    key={opt.index}
+                    className="btn"
+                    onClick={() =>
+                      resolutionOptionalPaymentTurn.resolve({
+                        action: payResolutionOptionalPaymentAction(opt.index),
+                      })
+                    }
+                  >
+                    {t("resolutionOptionalPayment.pay", { cost: opt.label })}
+                  </button>
+                ))}
+                <button
+                  className="btn btn--ghost"
+                  onClick={() =>
+                    resolutionOptionalPaymentTurn.resolve({
+                      action: declineResolutionOptionalPaymentAction(),
+                    })
+                  }
+                >
+                  {t("resolutionOptionalPayment.decline")}
+                </button>
+                <button
+                  className="btn btn--ghost"
+                  onClick={() => resolutionOptionalPaymentTurn.resolve({ ai: true })}
+                >
+                  {t("resolutionOptionalPayment.letAi")}
                 </button>
               </div>
             </>
