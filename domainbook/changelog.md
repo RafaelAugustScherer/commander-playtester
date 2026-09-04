@@ -12,6 +12,25 @@ depth live there. A purely-internal PR that touches no product or architecture m
 skip its version with a `Skip-Docs: <reason>` trailer instead. There are no
 per-domain changelogs; this file is the single timeline (`ADR-0007`).
 
+## [0.5.0] - 2026-09-03
+
+### Added
+
+- A **Draft a deck** mode: seed three or more cards (optionally flagging a
+  commander) and get rounds of up to three synergistic, in-identity
+  suggestions to add — each refreshable — steered by a selectable power
+  bracket (default Focused). The engine narrows the pool and measures power
+  and archetype; a self-built heuristic ranks by synergy. Reached from the
+  deck library; leave any time to copy or save the deck so far
+  (`domains/deck-draft/features/draft-a-deck.md`, `ADR-0009`).
+
+### Changed
+
+- Decks that aren't exactly 100 cards can now be saved: they are flagged as
+  partial in the library and deck detail and cannot be started in a match,
+  and the editor's 100-card block is now a warning instead
+  (`deck-library/ADR-0002`).
+
 ## [0.4.14] - 2026-09-02
 
 ### Changed
