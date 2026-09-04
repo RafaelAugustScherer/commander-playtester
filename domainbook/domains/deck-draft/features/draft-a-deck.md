@@ -1,7 +1,7 @@
 ---
 id: draft-a-deck
 name: Draft a deck
-status: draft
+status: implemented
 ---
 
 ## Story

@@ -11,6 +11,7 @@ export function DeckLibrary({
   onSelect,
   onNew,
   onEdit,
+  onDraft,
 }: {
   decks: SavedDeck[];
   save: (deck: SavedDeck) => void;
@@ -18,6 +19,7 @@ export function DeckLibrary({
   onSelect: (deck: SavedDeck) => void;
   onNew: () => void;
   onEdit: (deck: SavedDeck) => void;
+  onDraft: () => void;
 }) {
   const { t } = useI18n();
 
@@ -39,9 +41,14 @@ export function DeckLibrary({
     <section className="panel">
       <div className="panel__head">
         <h2>{t("library.title")}</h2>
-        <button className="btn" onClick={onNew}>
-          {t("library.new")}
-        </button>
+        <div className="import__row" style={{ margin: 0 }}>
+          <button className="btn" onClick={onNew}>
+            {t("library.new")}
+          </button>
+          <button className="btn btn--ghost" onClick={onDraft}>
+            {t("library.draft")}
+          </button>
+        </div>
       </div>
 
       {decks.length === 0 ? (

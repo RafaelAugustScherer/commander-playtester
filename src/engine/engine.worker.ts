@@ -17,6 +17,7 @@ import init, {
   submit_action,
 } from "./vendor/engine_wasm.js";
 import { draftQueries } from "./draftQueries";
+import type { SearchCardsQuery } from "./draftQueries";
 
 // Absolute base URL for engine assets, supplied by the main thread on "ready".
 // It must be resolved against the *page* location, not the worker's: a relative
@@ -127,7 +128,11 @@ async function handle(cmd: string, args: any): Promise<any> {
       await ensureStarted();
       await ensureDb();
       const { text, colors, limit } = args ?? {};
-      return draftQueries.search_cards_js({ text, colors, limit });
+      const query: SearchCardsQuery = {};
+      if (text !== undefined) query.text = text;
+      if (colors !== undefined) query.colors = colors;
+      if (limit !== undefined) query.limit = limit;
+      return draftQueries.search_cards_js(query);
     }
     case "estimateBracket": {
       await ensureStarted();
