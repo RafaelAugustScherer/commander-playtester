@@ -1,5 +1,7 @@
+import type { MouseEvent as ReactMouseEvent } from "react";
 import type { RankedCandidate } from "./candidates";
 import { useI18n } from "../i18n/I18nContext";
+import type { Preview } from "../board/CardPreview";
 
 /** One suggested card in a `suggestion round`: art, rationale chips, and its actions. */
 export function DraftCandidateCard({
@@ -8,15 +10,41 @@ export function DraftCandidateCard({
   primaryLabel,
   onPrimary,
   onRefresh,
+  onHover,
+  preview,
 }: {
   candidate: RankedCandidate;
   busy: boolean;
   primaryLabel: string;
   onPrimary: () => void;
   onRefresh: () => void;
+  onHover: (p: Preview | null) => void;
+  preview: Preview | null;
 }) {
   const { t } = useI18n();
   const { card, score, bracketTilt } = candidate;
+
+  function enter(e: ReactMouseEvent) {
+    onHover({
+      url: card.imageUrl,
+      name: card.name,
+      isCreature: false,
+      rect: (e.currentTarget as HTMLElement).getBoundingClientRect(),
+    });
+  }
+
+  function toggle(e: ReactMouseEvent) {
+    onHover(
+      preview && preview.name === card.name && preview.url === card.imageUrl
+        ? null
+        : {
+            url: card.imageUrl,
+            name: card.name,
+            isCreature: false,
+            rect: (e.currentTarget as HTMLElement).getBoundingClientRect(),
+          },
+    );
+  }
 
   return (
     <div className="draft-card">
@@ -26,6 +54,9 @@ export function DraftCandidateCard({
           src={card.imageUrl}
           alt={card.name}
           loading="lazy"
+          onMouseEnter={enter}
+          onMouseLeave={() => onHover(null)}
+          onClick={toggle}
         />
       ) : (
         <div className="draft-card__img draft-card__img--placeholder">

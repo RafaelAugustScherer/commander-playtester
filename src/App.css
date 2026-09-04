@@ -729,6 +729,7 @@ th {
 
 .draft-card {
   display: flex;
+  align-items: flex-start;
   gap: 0.6rem;
   background: var(--panel-2);
   border: 1px solid var(--line);
@@ -737,13 +738,14 @@ th {
 
 .draft-card__img {
   width: 84px;
-  height: auto;
+  aspect-ratio: 0.716;
+  object-fit: cover;
   flex-shrink: 0;
   border-radius: 4px;
   display: block;
 }
 .draft-card__img--placeholder {
-  min-height: 117px;
+  aspect-ratio: 0.716;
   background: var(--inset);
   border: 1px solid var(--line);
   display: flex;

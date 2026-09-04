@@ -8,6 +8,7 @@ import { DraftSession } from "./draftSession";
 import { engineDraftEngine, scryfallCardResolver } from "./candidates";
 import { BRACKET_TARGETS, DEFAULT_BRACKET_TARGET, type BracketTarget } from "./bracket";
 import { DraftCandidateCard } from "./DraftCandidateCard";
+import { CardPreview, type Preview } from "../board/CardPreview";
 import { useI18n } from "../i18n/I18nContext";
 import type { MsgKey } from "../i18n/messages";
 
@@ -274,6 +275,8 @@ function DraftCommanderPanel({
   onPick,
   onRefresh,
   onExit,
+  onHover,
+  preview,
 }: {
   session: DraftSession;
   roundBusy: RoundBusy;
@@ -281,6 +284,8 @@ function DraftCommanderPanel({
   onPick: (index: number) => void;
   onRefresh: (index: number) => void;
   onExit: () => void;
+  onHover: (p: Preview | null) => void;
+  preview: Preview | null;
 }) {
   const { t } = useI18n();
   return (
@@ -305,6 +310,8 @@ function DraftCommanderPanel({
               primaryLabel={t("draft.commander.choose")}
               onPrimary={() => onPick(i)}
               onRefresh={() => onRefresh(i)}
+              onHover={onHover}
+              preview={preview}
             />
           ))}
         </div>
@@ -384,12 +391,16 @@ function DraftRoundPanel({
   roundError,
   onAdd,
   onRefresh,
+  onHover,
+  preview,
 }: {
   session: DraftSession;
   roundBusy: RoundBusy;
   roundError: string | null;
   onAdd: (index: number) => void;
   onRefresh: (index: number) => void;
+  onHover: (p: Preview | null) => void;
+  preview: Preview | null;
 }) {
   const { t } = useI18n();
   const loadingNext = roundBusy === "all";
@@ -409,6 +420,8 @@ function DraftRoundPanel({
               primaryLabel={t("draft.round.add")}
               onPrimary={() => onAdd(i)}
               onRefresh={() => onRefresh(i)}
+              onHover={onHover}
+              preview={preview}
             />
           ))}
         </div>
@@ -490,6 +503,7 @@ function DraftSessionView({
   const [target, setTarget] = useState<BracketTarget>(session.target);
   const [saveName, setSaveName] = useState("");
   const [copied, setCopied] = useState(false);
+  const [preview, setPreview] = useState<Preview | null>(null);
   const copyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const { archetype, bracket, loading: measuresLoading } = useDeckMeasures(
@@ -555,19 +569,25 @@ function DraftSessionView({
 
   if (session.phase === "commander-selection") {
     return (
-      <DraftCommanderPanel
-        session={session}
-        roundBusy={roundBusy}
-        roundError={roundError}
-        onPick={handlePick}
-        onRefresh={handleRefresh}
-        onExit={onExit}
-      />
+      <>
+        {preview && <CardPreview preview={preview} />}
+        <DraftCommanderPanel
+          session={session}
+          roundBusy={roundBusy}
+          roundError={roundError}
+          onPick={handlePick}
+          onRefresh={handleRefresh}
+          onExit={onExit}
+          onHover={setPreview}
+          preview={preview}
+        />
+      </>
     );
   }
 
   return (
     <div>
+      {preview && <CardPreview preview={preview} />}
       <DraftSummaryPanel
         session={session}
         target={target}
@@ -584,6 +604,8 @@ function DraftSessionView({
         roundError={roundError}
         onAdd={handleAdd}
         onRefresh={handleRefresh}
+        onHover={setPreview}
+        preview={preview}
       />
       <DraftLeavePanel
         session={session}
