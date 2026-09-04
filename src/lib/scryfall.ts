@@ -17,6 +17,7 @@ interface ScryfallCard {
   type_line?: string;
   oracle_text?: string;
   colors?: string[];
+  color_identity?: string[];
   produced_mana?: string[];
   image_uris?: { normal?: string };
   card_faces?: Array<{
@@ -50,6 +51,7 @@ export function toCard(sc: ScryfallCard): Card {
       .join("\n") ??
     "";
   const colors = sc.colors ?? sc.card_faces?.[0]?.colors ?? [];
+  const colorIdentity = sc.color_identity ?? [];
   const producedMana = sc.produced_mana ?? [];
   const manaValue = sc.cmc ?? 0;
   const imageUrl =
@@ -61,6 +63,7 @@ export function toCard(sc: ScryfallCard): Card {
     typeLine,
     oracleText,
     colors,
+    colorIdentity,
     producedMana,
     imageUrl,
     roles: classifyRoles({ typeLine, oracleText, manaValue, producedMana }),

@@ -90,6 +90,22 @@ function isCommanderLegal(row: SearchCardRow): boolean {
   return row.legalities?.commander === "legal";
 }
 
+/** A legendary Background (e.g. "Legendary Enchantment — Background"). */
+export function isBackground(card: Card): boolean {
+  return /\bBackground\b/.test(card.typeLine);
+}
+
+/** Carries the "Choose a Background" keyword, printed verbatim on the card. */
+export function hasChooseABackground(card: Card): boolean {
+  return /\bchoose a background\b/i.test(card.oracleText);
+}
+
+/** The one Background among `cards`, or null if there are zero or several (ambiguous). */
+export function singleBackgroundAmong(cards: Card[]): Card | null {
+  const backgrounds = cards.filter(isBackground);
+  return backgrounds.length === 1 ? backgrounds[0] : null;
+}
+
 interface CandidatePool {
   /** Row + summed weight of the tokens whose queries surfaced it, by lowercase name. */
   rows: Map<string, { row: SearchCardRow; weight: number }>;
@@ -221,8 +237,13 @@ export interface SuggestCommandersOptions {
 
 /**
  * Rank commander-eligible candidates for a seed of base cards (no color
- * identity is known yet, since no commander has been chosen). Sorted highest
- * fit to the base cards first.
+ * identity is known yet, since no commander has been chosen). A candidate is
+ * only offered if the union of the base cards' color identities fits inside
+ * its own — the same hard rule that governs a real Commander deck — unless
+ * exactly one base card is a Background and the candidate has "Choose a
+ * Background", in which case the candidate's identity may union with the
+ * Background's to cover the base cards. Sorted highest fit to the base cards
+ * first.
  */
 export async function suggestCommanders(
   baseCards: Card[],
@@ -253,7 +274,22 @@ export async function suggestCommanders(
   }
 
   const scored = await enrichAndScore(resolver, eligible, profile);
-  return scored
+
+  const requiredIdentity = [...new Set(baseCards.flatMap((c) => c.colorIdentity))];
+  const background = singleBackgroundAmong(baseCards);
+  const covering = scored.filter(({ card }) => {
+    if (isWithinColorIdentity(requiredIdentity, card.colorIdentity)) return true;
+    return (
+      background !== null &&
+      hasChooseABackground(card) &&
+      isWithinColorIdentity(requiredIdentity, [
+        ...card.colorIdentity,
+        ...background.colorIdentity,
+      ])
+    );
+  });
+
+  return covering
     .map(({ card, score }) => ({ card, score, bracketTilt: 0, total: score.total }))
     .sort((a, b) => b.total - a.total);
 }

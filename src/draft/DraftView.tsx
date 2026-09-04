@@ -344,6 +344,9 @@ function DraftSummaryPanel({
   const tierLabel = bracket
     ? t(ENGINE_TIER_LABEL[bracket.tier] ?? "draft.bracket.exhibition")
     : "—";
+  const commanderName = session.background
+    ? `${session.commander?.name} + ${session.background.name}`
+    : (session.commander?.name ?? t("deck.noCommander"));
 
   return (
     <section className="panel">
@@ -356,9 +359,7 @@ function DraftSummaryPanel({
       <div className="chips">
         <span className="chip">{t("draft.summary.cards", { n: totalCards })}</span>
         <span className="chip">
-          {t("draft.summary.commander", {
-            name: session.commander?.name ?? t("deck.noCommander"),
-          })}
+          {t("draft.summary.commander", { name: commanderName })}
         </span>
         {session.profile.colorIdentity.length > 0 && (
           <span className="chip">

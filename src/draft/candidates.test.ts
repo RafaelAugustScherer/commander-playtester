@@ -17,6 +17,7 @@ function card(overrides: Partial<Card> = {}): Card {
     typeLine: "Creature — Elf",
     oracleText: "",
     colors: ["G"],
+    colorIdentity: ["G"],
     producedMana: [],
     roles: ["other"],
     ...overrides,
@@ -186,5 +187,103 @@ describe("suggestCommanders", () => {
       resolver,
     });
     expect(results.map((r) => r.card.name)).not.toContain("Base Elf One");
+  });
+});
+
+describe("suggestCommanders color identity coverage", () => {
+  // Union of the base cards' color identities: green + blue.
+  const greenCard = card({ name: "Green Base Card", colorIdentity: ["G"] });
+  const blueCard = card({ name: "Blue Base Card", colorIdentity: ["U"] });
+  const blueBackground = card({
+    name: "Blue Background",
+    typeLine: "Legendary Enchantment — Background",
+    colorIdentity: ["U"],
+  });
+
+  function makeEngine(rows: SearchCardRow[]): DraftEngine {
+    return {
+      searchCards: async (): Promise<SearchCardsResult> => ({ results: rows, total: rows.length }),
+      estimateBracket: async (): Promise<BracketEstimate | null> => null,
+      isCommanderEligible: async () => true,
+    };
+  }
+
+  it("excludes a candidate whose color identity doesn't cover the base cards", async () => {
+    const baseCards = [greenCard, blueCard];
+    const offColor = card({
+      name: "Mono Black Legendary",
+      typeLine: "Legendary Creature — Zombie",
+      colorIdentity: ["B"],
+    });
+    const covering = card({
+      name: "Simic Legendary",
+      typeLine: "Legendary Creature — Merfolk",
+      colorIdentity: ["G", "U"],
+    });
+    const rows = [row({ name: offColor.name }), row({ name: covering.name })];
+    const resolver = makeResolver([...baseCards, offColor, covering]);
+
+    const results = await suggestCommanders(baseCards, {
+      engine: makeEngine(rows),
+      resolver,
+    });
+    const names = results.map((r) => r.card.name);
+    expect(names).toContain("Simic Legendary");
+    expect(names).not.toContain("Mono Black Legendary");
+  });
+
+  it("includes a Choose-a-Background candidate when candidate + Background union covers the base cards", async () => {
+    const baseCards = [greenCard, blueBackground];
+    const partnerCommander = card({
+      name: "Green Choose-a-Background Commander",
+      typeLine: "Legendary Creature — Human",
+      colorIdentity: ["G"],
+      oracleText: "Choose a Background (You can have a Background as a second commander.)",
+    });
+    const rows = [row({ name: partnerCommander.name })];
+    const resolver = makeResolver([...baseCards, partnerCommander]);
+
+    const results = await suggestCommanders(baseCards, {
+      engine: makeEngine(rows),
+      resolver,
+    });
+    expect(results.map((r) => r.card.name)).toContain("Green Choose-a-Background Commander");
+  });
+
+  it("excludes a Choose-a-Background candidate when even the union with the Background doesn't cover", async () => {
+    const baseCards = [greenCard, blueBackground];
+    const offColorPartner = card({
+      name: "Black Choose-a-Background Commander",
+      typeLine: "Legendary Creature — Zombie",
+      colorIdentity: ["B"],
+      oracleText: "Choose a Background (You can have a Background as a second commander.)",
+    });
+    const rows = [row({ name: offColorPartner.name })];
+    const resolver = makeResolver([...baseCards, offColorPartner]);
+
+    const results = await suggestCommanders(baseCards, {
+      engine: makeEngine(rows),
+      resolver,
+    });
+    expect(results.map((r) => r.card.name)).not.toContain(
+      "Black Choose-a-Background Commander",
+    );
+  });
+
+  it("excludes a legendary lacking Choose a Background even when a Background base card is present", async () => {
+    const baseCards = [greenCard, blueBackground];
+    const plainGreenCommander = card({
+      name: "Plain Green Commander",
+      typeLine: "Legendary Creature — Elf",
+      colorIdentity: ["G"],
+    });
+    const rows = [row({ name: plainGreenCommander.name })];
+    const resolver = makeResolver([...baseCards, plainGreenCommander]);
+
+    const results = await suggestCommanders(baseCards, {
+      engine: makeEngine(rows),
+      resolver,
+    });
+    expect(results.map((r) => r.card.name)).not.toContain("Plain Green Commander");
   });
 });

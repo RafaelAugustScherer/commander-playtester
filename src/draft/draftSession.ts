@@ -7,6 +7,8 @@ import {
   suggestCandidates,
   suggestCommanders,
   createTokenSearchCache,
+  hasChooseABackground,
+  singleBackgroundAmong,
   type DraftEngine,
   type CardResolver,
   type RankedCandidate,
@@ -48,6 +50,8 @@ export interface DraftSessionDeps {
 export class DraftSession {
   phase: DraftPhase = "commander-selection";
   commander: Card | null = null;
+  /** The Background paired with `commander` via "Choose a Background", if any. */
+  background: Card | null = null;
   target: BracketTarget = DEFAULT_BRACKET_TARGET;
   commanders: DecklistEntry[] = [];
   mainboard: DecklistEntry[] = [];
@@ -68,6 +72,11 @@ export class DraftSession {
     return this.mainboard
       .map((entry) => this.resolved.get(entry.name.toLowerCase()))
       .filter((c): c is Card => c !== undefined);
+  }
+
+  /** `commander` plus `background`, when paired — for `extractThemeProfile`. */
+  private commanderCards(): Card[] {
+    return [this.commander, this.background].filter((c): c is Card => c !== null);
   }
 
   private deckNames(): { commanders: string[]; mainboard: string[] } {
@@ -176,14 +185,26 @@ export class DraftSession {
       if (!commanderCard) throw new DraftSessionError("commander-not-in-base-cards");
 
       const others = baseCards.filter((c) => c !== commanderCard);
+      const background = hasChooseABackground(commanderCard)
+        ? singleBackgroundAmong(others)
+        : null;
+      const mainboardCards = background ? others.filter((c) => c !== background) : others;
+
       this.commander = commanderCard;
-      this.commanders = [{ quantity: 1, name: commanderCard.name }];
-      this.mainboard = others.map((c) => ({ quantity: 1, name: c.name }));
+      this.background = background;
+      this.commanders = background
+        ? [
+            { quantity: 1, name: commanderCard.name },
+            { quantity: 1, name: background.name },
+          ]
+        : [{ quantity: 1, name: commanderCard.name }];
+      this.mainboard = mainboardCards.map((c) => ({ quantity: 1, name: c.name }));
       this.phase = "drafting";
-      this.profile = extractThemeProfile([commanderCard], others);
+      this.profile = extractThemeProfile(this.commanderCards(), mainboardCards);
       await this.openRound();
     } else {
       this.commander = null;
+      this.background = null;
       this.commanders = [];
       this.mainboard = baseCards.map((c) => ({ quantity: 1, name: c.name }));
       this.phase = "commander-selection";
@@ -207,12 +228,27 @@ export class DraftSession {
       card = resolvedMap.get(key);
     }
     if (!card) throw new DraftSessionError("commander-not-found");
+    this.rememberResolved([card]);
+
+    const background = hasChooseABackground(card)
+      ? singleBackgroundAmong(this.mainboardCards())
+      : null;
 
     this.commander = card;
-    this.commanders = [{ quantity: 1, name: card.name }];
-    this.rememberResolved([card]);
+    this.background = background;
+    if (background) {
+      this.commanders = [
+        { quantity: 1, name: card.name },
+        { quantity: 1, name: background.name },
+      ];
+      this.mainboard = this.mainboard.filter(
+        (e) => e.name.toLowerCase() !== background.name.toLowerCase(),
+      );
+    } else {
+      this.commanders = [{ quantity: 1, name: card.name }];
+    }
     this.phase = "drafting";
-    this.profile = extractThemeProfile([card], this.mainboardCards());
+    this.profile = extractThemeProfile(this.commanderCards(), this.mainboardCards());
     await this.openRound();
   }
 
@@ -254,10 +290,7 @@ export class DraftSession {
     }
     const card = this.round[index].card;
     this.addToMainboard(card);
-    this.profile = extractThemeProfile(
-      this.commander ? [this.commander] : [],
-      this.mainboardCards(),
-    );
+    this.profile = extractThemeProfile(this.commanderCards(), this.mainboardCards());
     await this.openRound();
   }
 

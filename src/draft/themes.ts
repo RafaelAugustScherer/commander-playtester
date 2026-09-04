@@ -74,7 +74,7 @@ function addCurveAndRoles(
 function colorIdentityOf(commanders: Card[]): string[] {
   const colors = new Set<string>();
   for (const commander of commanders) {
-    for (const color of commander.colors) colors.add(color);
+    for (const color of commander.colorIdentity) colors.add(color);
   }
   return [...colors].sort();
 }

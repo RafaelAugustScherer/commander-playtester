@@ -50,6 +50,34 @@ Example: The first round picks a commander
   And the next round's suggestions all fall within that identity
 ```
 
+## Rule: Only candidates that can cover every base card's color identity are offered
+
+When no `base card` is flagged commander, the first `suggestion round` offers only
+commander-eligible candidates whose `color identity` is a superset of the union of every
+base card's own color identity — the same subset rule that governs a legal Commander deck,
+enforced up front instead of left to chance. A candidate that would leave some base card
+outside the eventual commander's identity is never offered, in either direction.
+
+The one exception is a **Background**: a legendary Background enchantment among the base
+cards may pair with a candidate that has **Choose a Background**, unioning their two
+identities to cover the base cards. This only applies when exactly one Background is among
+the base cards — with more than one, pairing is ambiguous and every candidate falls back to
+the solo-coverage rule.
+
+```gherkin
+Example: An off-color candidate is never offered
+  Given base cards whose color identities union to green and blue only
+  When the first round offers commander candidates
+  Then no candidate has a color identity outside green and blue
+
+Example: A Choose a Background candidate may cover with its Background
+  Given base cards that include exactly one Background, blue
+  And another base card is green
+  When the first round offers commander candidates
+  Then a green candidate with Choose a Background is offered
+  And picking it makes both cards commanders, with their identities unioned
+```
+
 ## Rule: The commander leads the ranking
 
 Cards are ranked by `synergy score`, and `theme token`s from the `commander card` weigh

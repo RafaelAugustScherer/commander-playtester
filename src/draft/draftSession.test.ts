@@ -16,6 +16,7 @@ function card(overrides: Partial<Card> = {}): Card {
     typeLine: "Creature — Bear",
     oracleText: "",
     colors: ["G"],
+    colorIdentity: ["G"],
     producedMana: [],
     roles: ["other"],
     ...overrides,
@@ -222,5 +223,106 @@ describe("DraftSession", () => {
     expect(deck.commanders).toEqual(session.commanders);
     expect(deck.mainboard).toEqual(session.mainboard);
     expect(typeof deck.id).toBe("string");
+  });
+});
+
+describe("DraftSession Choose-a-Background pairing", () => {
+  const background = card({
+    name: "Blue Background",
+    typeLine: "Legendary Enchantment — Background",
+    colorIdentity: ["U"],
+  });
+  const partnerCommander = card({
+    name: "Green Choose-a-Background Commander",
+    typeLine: "Legendary Creature — Human",
+    colorIdentity: ["G"],
+    oracleText: "Choose a Background (You can have a Background as a second commander.)",
+  });
+  const otherGreenCard = card({ name: "Other Green Card", colorIdentity: ["G"] });
+  const thirdGreenCard = card({ name: "Third Green Card", colorIdentity: ["G"] });
+
+  function makeBgEngine(rows: SearchCardRow[], eligible: Set<string>): DraftEngine {
+    return {
+      searchCards: async (): Promise<SearchCardsResult> => ({ results: rows, total: rows.length }),
+      estimateBracket: async (): Promise<BracketEstimate | null> => ({
+        tier: "exhibition",
+        axes: {},
+        axis_caps_at_tier: {},
+        contributing: {},
+        violations: {},
+        data_version: "test",
+      }),
+      isCommanderEligible: async (name: string) => eligible.has(name),
+    };
+  }
+
+  function makeBgResolver(cards: Card[]): CardResolver {
+    const byName = new Map(cards.map((c) => [c.name.toLowerCase(), c]));
+    return {
+      resolve: async (names) => {
+        const out = new Map<string, Card>();
+        for (const name of names) {
+          const found = byName.get(name.trim().toLowerCase());
+          if (found) out.set(name.trim().toLowerCase(), found);
+        }
+        return out;
+      },
+    };
+  }
+
+  it("start() pairs a flagged Choose-a-Background commander with the base cards' Background", async () => {
+    const baseCards = [partnerCommander, background, otherGreenCard];
+    const session = new DraftSession({
+      engine: makeBgEngine([], new Set()),
+      resolver: makeBgResolver(baseCards),
+    });
+
+    await session.start(
+      baseCards.map((c) => c.name),
+      partnerCommander.name,
+    );
+
+    expect(session.phase).toBe("drafting");
+    expect(session.commander?.name).toBe(partnerCommander.name);
+    expect(session.background?.name).toBe(background.name);
+    expect(session.commanders.map((e) => e.name).sort()).toEqual(
+      [partnerCommander.name, background.name].sort(),
+    );
+    // The Background is a commander now, not a mainboard card.
+    expect(session.mainboard.map((e) => e.name)).toEqual([otherGreenCard.name]);
+    expect(session.profile.colorIdentity).toEqual(["G", "U"]);
+  });
+
+  it("pickCommander() pairs a picked Choose-a-Background commander with the base cards' Background", async () => {
+    const baseCards = [background, otherGreenCard, thirdGreenCard];
+    const pool = [partnerCommander];
+    const rows = pool.map((c) => row(c.name, c.colorIdentity));
+    const session = new DraftSession({
+      engine: makeBgEngine(
+        rows,
+        new Set(pool.map((c) => c.name)),
+      ),
+      resolver: makeBgResolver([...baseCards, ...pool]),
+    });
+
+    await session.start(
+      baseCards.map((c) => c.name),
+      null,
+    );
+    expect(session.phase).toBe("commander-selection");
+    expect(session.round.map((c) => c.card.name)).toContain(partnerCommander.name);
+
+    await session.pickCommander(partnerCommander.name);
+
+    expect(session.phase).toBe("drafting");
+    expect(session.commander?.name).toBe(partnerCommander.name);
+    expect(session.background?.name).toBe(background.name);
+    expect(session.commanders.map((e) => e.name).sort()).toEqual(
+      [partnerCommander.name, background.name].sort(),
+    );
+    expect(session.mainboard.map((e) => e.name).sort()).toEqual(
+      [otherGreenCard.name, thirdGreenCard.name].sort(),
+    );
+    expect(session.profile.colorIdentity).toEqual(["G", "U"]);
   });
 });

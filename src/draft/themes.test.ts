@@ -9,6 +9,7 @@ function card(overrides: Partial<Card> = {}): Card {
     typeLine: "Creature — Bear",
     oracleText: "",
     colors: [],
+    colorIdentity: [],
     producedMana: [],
     roles: ["other"],
     ...overrides,
@@ -59,9 +60,9 @@ describe("extractThemeProfile", () => {
     expect(profile.roleCounts.removal).toBe(0);
   });
 
-  it("derives color identity from the commanders only", () => {
-    const commander = card({ colors: ["R", "G"] });
-    const others = [card({ colors: ["U"] })];
+  it("derives color identity from the commanders' colorIdentity only, not colors", () => {
+    const commander = card({ colors: [], colorIdentity: ["R", "G"] });
+    const others = [card({ colors: [], colorIdentity: ["U"] })];
     const profile = extractThemeProfile([commander], others);
     expect(profile.colorIdentity).toEqual(["G", "R"]);
   });
