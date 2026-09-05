@@ -107,6 +107,11 @@ import {
   type CountersPrompt,
   type CounterTargetRef,
 } from "../sim/decisions/counters";
+import {
+  assignCombatDamageAction,
+  assignBlockerDamageAction,
+  type CombatDamagePrompt,
+} from "../sim/decisions/combatDamage";
 import { XpWindow } from "../components/XpWindow";
 import {
   declareAttackersAction,
@@ -1391,6 +1396,228 @@ function CountersPanel({
   return <PopulatePanel prompt={prompt} resolve={resolve} />;
 }
 
+interface CombatDamageTurn {
+  prompt: CombatDamagePrompt;
+  resolve: (choice: HumanChoice) => void;
+}
+
+/** The per-blocker (or per-attacker) minimum-lethal baseline, clamped to fit total_damage. */
+function combatDamageInitialPick(prompt: CombatDamagePrompt): number[] {
+  if (prompt.kind === "blocker") return prompt.attackers.map(() => 0);
+  let remaining = prompt.totalDamage;
+  return prompt.blockers.map((blocker) => {
+    const given = Math.min(blocker.lethalMinimum, remaining);
+    remaining -= given;
+    return given;
+  });
+}
+
+function AttackerDamagePanel({
+  prompt,
+  resolve,
+  pick,
+  onStep,
+}: {
+  prompt: Extract<CombatDamagePrompt, { kind: "attacker" }>;
+  resolve: (choice: HumanChoice) => void;
+  pick: number[];
+  onStep: (index: number, delta: number) => void;
+}) {
+  const { t } = useI18n();
+  const sum = pick.reduce((total, n) => total + n, 0);
+  const everyMinMet = prompt.blockers.every(
+    (blocker, i) => (pick[i] ?? 0) >= blocker.lethalMinimum,
+  );
+  const canConfirm = prompt.hasTrample
+    ? everyMinMet && sum <= prompt.totalDamage
+    : sum === prompt.totalDamage;
+  const spillover = Math.max(0, prompt.totalDamage - sum);
+  return (
+    <>
+      <div className="control-title">
+        <strong>
+          {t("combatDamage.attackerTitle", {
+            name: prompt.attackerName,
+            n: prompt.totalDamage,
+          })}
+        </strong>
+      </div>
+      {!prompt.hasTrample && (
+        <p className="hint">
+          {t("combatDamage.assigned", { sum, n: prompt.totalDamage })}
+        </p>
+      )}
+      <div className="search-list">
+        {prompt.blockers.map((blocker, i) => (
+          <div key={blocker.id} className="import__row">
+            <button
+              className="btn btn--ghost"
+              disabled={(pick[i] ?? 0) <= blocker.lethalMinimum}
+              onClick={() => onStep(i, -1)}
+            >
+              −
+            </button>
+            <span>
+              {blocker.name}{" "}
+              {t("combatDamage.needs", { n: blocker.lethalMinimum })}:{" "}
+              {pick[i] ?? 0}
+            </span>
+            <button
+              className="btn btn--ghost"
+              disabled={sum >= prompt.totalDamage}
+              onClick={() => onStep(i, 1)}
+            >
+              +
+            </button>
+          </div>
+        ))}
+      </div>
+      {prompt.hasTrample && (
+        <p className="hint">
+          {t("combatDamage.tramplesOver", { n: spillover })}
+        </p>
+      )}
+      <div className="import__row">
+        <button
+          className="btn"
+          disabled={!canConfirm}
+          onClick={() => {
+            const trampleDamage = prompt.tramplesToController ? 0 : spillover;
+            const controllerDamage = prompt.tramplesToController
+              ? spillover
+              : 0;
+            resolve({
+              action: assignCombatDamageAction(
+                prompt.blockers.map((blocker, i) => [
+                  blocker.id,
+                  pick[i] ?? 0,
+                ]),
+                trampleDamage,
+                controllerDamage,
+              ),
+            });
+          }}
+        >
+          {t("combatDamage.confirm")}
+        </button>
+        <button
+          className="btn btn--ghost"
+          onClick={() => resolve({ ai: true })}
+        >
+          {t("combatDamage.letAi")}
+        </button>
+      </div>
+    </>
+  );
+}
+
+function BlockerDamagePanel({
+  prompt,
+  resolve,
+  pick,
+  onStep,
+}: {
+  prompt: Extract<CombatDamagePrompt, { kind: "blocker" }>;
+  resolve: (choice: HumanChoice) => void;
+  pick: number[];
+  onStep: (index: number, delta: number) => void;
+}) {
+  const { t } = useI18n();
+  const sum = pick.reduce((total, n) => total + n, 0);
+  return (
+    <>
+      <div className="control-title">
+        <strong>
+          {t("combatDamage.blockerTitle", {
+            name: prompt.blockerName,
+            n: prompt.totalDamage,
+          })}
+        </strong>
+      </div>
+      <p className="hint">
+        {t("combatDamage.assigned", { sum, n: prompt.totalDamage })}
+      </p>
+      <div className="search-list">
+        {prompt.attackers.map((attacker, i) => (
+          <div key={attacker.id} className="import__row">
+            <button
+              className="btn btn--ghost"
+              disabled={(pick[i] ?? 0) <= 0}
+              onClick={() => onStep(i, -1)}
+            >
+              −
+            </button>
+            <span>
+              {attacker.name}: {pick[i] ?? 0}
+            </span>
+            <button
+              className="btn btn--ghost"
+              disabled={sum >= prompt.totalDamage}
+              onClick={() => onStep(i, 1)}
+            >
+              +
+            </button>
+          </div>
+        ))}
+      </div>
+      <div className="import__row">
+        <button
+          className="btn"
+          disabled={sum !== prompt.totalDamage}
+          onClick={() =>
+            resolve({
+              action: assignBlockerDamageAction(
+                prompt.attackers.map((attacker, i) => [
+                  attacker.id,
+                  pick[i] ?? 0,
+                ]),
+              ),
+            })
+          }
+        >
+          {t("combatDamage.confirm")}
+        </button>
+        <button
+          className="btn btn--ghost"
+          onClick={() => resolve({ ai: true })}
+        >
+          {t("combatDamage.letAi")}
+        </button>
+      </div>
+    </>
+  );
+}
+
+function CombatDamagePanel({
+  turn,
+  pick,
+  onStep,
+}: {
+  turn: CombatDamageTurn;
+  pick: number[];
+  onStep: (index: number, delta: number) => void;
+}) {
+  const { prompt, resolve } = turn;
+  if (prompt.kind === "attacker") {
+    return (
+      <AttackerDamagePanel
+        prompt={prompt}
+        resolve={resolve}
+        pick={pick}
+        onStep={onStep}
+      />
+    );
+  }
+  return (
+    <BlockerDamagePanel
+      prompt={prompt}
+      resolve={resolve}
+      pick={pick}
+      onStep={onStep}
+    />
+  );
+}
+
 function isTargetOptional(
   targeting: TargetTurn | null,
   chosen: TargetRef[],
@@ -1546,6 +1773,8 @@ interface RunnerCallbackDeps {
   setDistributePick: Dispatch<SetStateAction<number[]>>;
   setProliferatePick: Dispatch<SetStateAction<Set<number>>>;
   setCountersTurn: Dispatch<SetStateAction<CountersTurn | null>>;
+  setCombatDamagePick: Dispatch<SetStateAction<number[]>>;
+  setCombatDamageTurn: Dispatch<SetStateAction<CombatDamageTurn | null>>;
 }
 
 function buildRunnerCallbacks(deps: RunnerCallbackDeps): DriverCallbacks {
@@ -1601,6 +1830,8 @@ function buildRunnerCallbacks(deps: RunnerCallbackDeps): DriverCallbacks {
     setDistributePick,
     setProliferatePick,
     setCountersTurn,
+    setCombatDamagePick,
+    setCombatDamageTurn,
   } = deps;
   return {
     onFrame: (env) => {
@@ -2012,6 +2243,22 @@ function buildRunnerCallbacks(deps: RunnerCallbackDeps): DriverCallbacks {
           },
         });
       }),
+    requestHumanCombatDamage: (_env, prompt) =>
+      new Promise<HumanChoice>((resolve) => {
+        if (isCancelled()) {
+          resolve({ ai: true });
+          return;
+        }
+        setCombatDamagePick(combatDamageInitialPick(prompt));
+        setCombatDamageTurn({
+          prompt,
+          resolve: (choice) => {
+            setCombatDamageTurn(null);
+            setCombatDamagePick([]);
+            resolve(choice);
+          },
+        });
+      }),
   };
 }
 
@@ -2148,6 +2395,9 @@ export function RunView({
   const [proliferatePick, setProliferatePick] = useState<Set<number>>(
     new Set(),
   );
+  const [combatDamageTurn, setCombatDamageTurn] =
+    useState<CombatDamageTurn | null>(null);
+  const [combatDamagePick, setCombatDamagePick] = useState<number[]>([]);
   const [passingTurn, setPassingTurn] = useState(false);
   const [logEntries, setLogEntries] = useState<LoggedEntry[]>([]);
   // On mobile the log is a full-screen drawer, so it always starts closed and
@@ -2267,6 +2517,8 @@ export function RunView({
             setDistributePick,
             setProliferatePick,
             setCountersTurn,
+            setCombatDamagePick,
+            setCombatDamageTurn,
           }),
         );
         runnerRef.current = runner;
@@ -2407,7 +2659,8 @@ export function RunView({
         equipCrewTurn ||
         wardUnlessTurn ||
         copyChoiceTurn ||
-        countersTurn)
+        countersTurn ||
+        combatDamageTurn)
     ) {
       setPassingTurn(false);
     }
@@ -2433,6 +2686,7 @@ export function RunView({
     wardUnlessTurn,
     copyChoiceTurn,
     countersTurn,
+    combatDamageTurn,
   ]);
 
   // Map draggable hand cards to their play actions for the current window.
@@ -3577,6 +3831,26 @@ export function RunView({
                   else next.add(i);
                   return next;
                 })
+              }
+            />
+          )}
+
+          {combatDamageTurn && (
+            <CombatDamagePanel
+              turn={combatDamageTurn}
+              pick={combatDamagePick}
+              onStep={(i, delta) =>
+                setCombatDamagePick((prev) =>
+                  prev.map((v, idx) => {
+                    if (idx !== i) return v;
+                    const min =
+                      combatDamageTurn.prompt.kind === "attacker"
+                        ? (combatDamageTurn.prompt.blockers[i]?.lethalMinimum ??
+                          0)
+                        : 0;
+                    return Math.max(min, v + delta);
+                  }),
+                )
               }
             />
           )}

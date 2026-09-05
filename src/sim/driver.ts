@@ -77,6 +77,10 @@ import {
   parseCountersPrompt,
   type CountersPrompt,
 } from "./decisions/counters";
+import {
+  parseCombatDamagePrompt,
+  type CombatDamagePrompt,
+} from "./decisions/combatDamage";
 
 export interface MatchResult {
   matchIndex: number;
@@ -353,6 +357,11 @@ export interface DriverCallbacks {
   requestHumanCounters?: (
     env: GameStateEnvelope,
     prompt: CountersPrompt,
+  ) => Promise<HumanChoice>;
+  /** Called when the human assigns combat damage order/split among multiple blockers or attackers. */
+  requestHumanCombatDamage?: (
+    env: GameStateEnvelope,
+    prompt: CombatDamagePrompt,
   ) => Promise<HumanChoice>;
 }
 
@@ -725,6 +734,12 @@ export class MatchRunner {
           env,
           cb.requestHumanCounters,
           parseCountersPrompt(wf, state),
+        ),
+      () =>
+        humanRequest(
+          env,
+          cb.requestHumanCombatDamage,
+          parseCombatDamagePrompt(wf, state),
         ),
     ];
     for (const resolve of resolvers) {
