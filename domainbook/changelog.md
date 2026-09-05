@@ -12,6 +12,14 @@ depth live there. A purely-internal PR that touches no product or architecture m
 skip its version with a `Skip-Docs: <reason>` trailer instead. There are no
 per-domain changelogs; this file is the single timeline (`ADR-0007`).
 
+## [0.15.0] - 2026-09-05
+
+### Added
+
+- You now choose the target creature when **equipping, stationing, crewing,
+  or saddling**, instead of the AI deciding
+  (`domains/simulation/features/choose-equip-crew-saddle-station-target.md`).
+
 ## [0.14.0] - 2026-09-05
 
 ### Added

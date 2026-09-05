@@ -61,6 +61,10 @@ import {
   parseCoinFlipLifePrompt,
   type CoinFlipLifePrompt,
 } from "./decisions/coinFlipAndLife";
+import {
+  parseEquipCrewPrompt,
+  type EquipCrewPrompt,
+} from "./decisions/equipCrew";
 
 export interface MatchResult {
   matchIndex: number;
@@ -317,6 +321,11 @@ export interface DriverCallbacks {
   requestHumanCoinFlipLife?: (
     env: GameStateEnvelope,
     prompt: CoinFlipLifePrompt,
+  ) => Promise<HumanChoice>;
+  /** Called when the human equips, stations, crews, or saddles a creature. */
+  requestHumanEquipCrew?: (
+    env: GameStateEnvelope,
+    prompt: EquipCrewPrompt,
   ) => Promise<HumanChoice>;
 }
 
@@ -665,6 +674,12 @@ export class MatchRunner {
           env,
           cb.requestHumanCoinFlipLife,
           parseCoinFlipLifePrompt(wf),
+        ),
+      () =>
+        humanRequest(
+          env,
+          cb.requestHumanEquipCrew,
+          parseEquipCrewPrompt(wf, state.objects),
         ),
     ];
     for (const resolve of resolvers) {
