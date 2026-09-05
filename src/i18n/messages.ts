@@ -578,6 +578,26 @@ export const messages = {
   "counters.confirm": { pt: "Confirmar", en: "Confirm" },
   "counters.letAi": { pt: "IA decide", en: "Let the AI decide" },
 
+  "combatDamage.attackerTitle": {
+    pt: "Atribuir os {n} de dano de combate de {name}",
+    en: "Assign {name}'s {n} combat damage",
+  },
+  "combatDamage.blockerTitle": {
+    pt: "Atribuir os {n} de dano de {name} entre os atacantes",
+    en: "Assign {name}'s {n} damage among attackers",
+  },
+  "combatDamage.needs": { pt: "(precisa de {n})", en: "(needs {n})" },
+  "combatDamage.tramplesOver": {
+    pt: "Atropela: {n}",
+    en: "Tramples over: {n}",
+  },
+  "combatDamage.assigned": {
+    pt: "Atribuído: {sum} / {n}",
+    en: "Assigned {sum} / {n}",
+  },
+  "combatDamage.confirm": { pt: "Confirmar", en: "Confirm" },
+  "combatDamage.letAi": { pt: "IA decide", en: "Let the AI decide" },
+
   "modes.title": { pt: "Escolher modo", en: "Choose a mode" },
   "modes.source": {
     pt: "{name} pede uma escolha de modo.",

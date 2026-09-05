@@ -12,6 +12,15 @@ depth live there. A purely-internal PR that touches no product or architecture m
 skip its version with a `Skip-Docs: <reason>` trailer instead. There are no
 per-domain changelogs; this file is the single timeline (`ADR-0007`).
 
+## [0.19.0] - 2026-09-05
+
+### Added
+
+- You now choose how an attacker splits combat damage among multiple
+  blockers (with trample spillover), and how a blocker splits its damage
+  among multiple attackers, instead of the AI deciding
+  (`domains/simulation/features/assign-combat-damage.md`).
+
 ## [0.18.0] - 2026-09-05
 
 ### Added
