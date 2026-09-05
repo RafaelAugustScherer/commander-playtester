@@ -69,6 +69,13 @@ import {
   revealUntilAction,
   type ExploreRevealPrompt,
 } from "../sim/decisions/exploreReveal";
+import {
+  defaultPhyrexianChoices,
+  submitPhyrexianAction,
+  type ManaColor,
+  type PhyrexianPaymentPrompt,
+  type PhyrexianShardChoice,
+} from "../sim/decisions/phyrexianPayment";
 import { XpWindow } from "../components/XpWindow";
 import {
   declareAttackersAction,
@@ -537,6 +544,85 @@ function ExploreRevealPanel({ turn }: { turn: ExploreRevealTurn }) {
   );
 }
 
+interface PhyrexianTurn {
+  prompt: PhyrexianPaymentPrompt;
+  resolve: (choice: HumanChoice) => void;
+}
+
+const PHYREXIAN_COLOR_KEY: Record<ManaColor, MsgKey> = {
+  White: "phyrexian.colorWhite",
+  Blue: "phyrexian.colorBlue",
+  Black: "phyrexian.colorBlack",
+  Red: "phyrexian.colorRed",
+  Green: "phyrexian.colorGreen",
+};
+
+function PhyrexianPanel({
+  turn,
+  pick,
+  onTogglePick,
+  onConfirm,
+  onLetAi,
+}: {
+  turn: PhyrexianTurn;
+  pick: PhyrexianShardChoice[];
+  onTogglePick: (index: number) => void;
+  onConfirm: () => void;
+  onLetAi: () => void;
+}) {
+  const { t } = useI18n();
+  const { prompt } = turn;
+  const sourceName = prompt.sourceName || t("phyrexian.spellFallback");
+  const lifeTotal =
+    pick.filter((choice) => choice === "PayLife").length * 2;
+  return (
+    <>
+      <div className="control-title">
+        <strong>{t("phyrexian.title")}</strong>
+      </div>
+      <p className="hint">{t("phyrexian.prompt", { name: sourceName })}</p>
+      <div className="search-list">
+        {prompt.shards.map((shard, index) => {
+          const locked = shard.optionType !== "ManaOrLife";
+          const payingLife = pick[index] === "PayLife";
+          const colorLabel = t(PHYREXIAN_COLOR_KEY[shard.color]);
+          return (
+            <div className="import__row" key={index}>
+              <div className="seg">
+                <button
+                  className={`seg__btn ${!payingLife ? "seg__btn--active" : ""}`}
+                  disabled={locked}
+                  aria-pressed={!payingLife}
+                  onClick={() => onTogglePick(index)}
+                >
+                  {t("phyrexian.manaOption", { color: colorLabel })}
+                </button>
+                <button
+                  className={`seg__btn ${payingLife ? "seg__btn--active" : ""}`}
+                  disabled={locked}
+                  aria-pressed={payingLife}
+                  onClick={() => onTogglePick(index)}
+                >
+                  {t("phyrexian.lifeOption")}
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <p className="hint">{t("phyrexian.lifeTotal", { n: lifeTotal })}</p>
+      <div className="import__row">
+        <button className="btn" onClick={onConfirm}>
+          {t("phyrexian.confirm")}
+        </button>
+        <button className="btn btn--ghost" onClick={onLetAi}>
+          {t("phyrexian.letAi")}
+        </button>
+      </div>
+    </>
+  );
+}
+
 function isTargetOptional(
   targeting: TargetTurn | null,
   chosen: TargetRef[],
@@ -680,6 +766,8 @@ interface RunnerCallbackDeps {
   setDigPick: Dispatch<SetStateAction<Set<number>>>;
   setDigTurn: Dispatch<SetStateAction<DigTurn | null>>;
   setExploreRevealTurn: Dispatch<SetStateAction<ExploreRevealTurn | null>>;
+  setPhyrexianPick: Dispatch<SetStateAction<PhyrexianShardChoice[]>>;
+  setPhyrexianTurn: Dispatch<SetStateAction<PhyrexianTurn | null>>;
 }
 
 function buildRunnerCallbacks(deps: RunnerCallbackDeps): DriverCallbacks {
@@ -723,6 +811,8 @@ function buildRunnerCallbacks(deps: RunnerCallbackDeps): DriverCallbacks {
     setDigPick,
     setDigTurn,
     setExploreRevealTurn,
+    setPhyrexianPick,
+    setPhyrexianTurn,
   } = deps;
   return {
     onFrame: (env) => {
@@ -1035,6 +1125,22 @@ function buildRunnerCallbacks(deps: RunnerCallbackDeps): DriverCallbacks {
           },
         });
       }),
+    requestHumanPhyrexianPayment: (_env, prompt) =>
+      new Promise<HumanChoice>((resolve) => {
+        if (isCancelled()) {
+          resolve({ ai: true });
+          return;
+        }
+        setPhyrexianPick(defaultPhyrexianChoices(prompt.shards));
+        setPhyrexianTurn({
+          prompt,
+          resolve: (choice) => {
+            setPhyrexianTurn(null);
+            setPhyrexianPick(defaultPhyrexianChoices(prompt.shards));
+            resolve(choice);
+          },
+        });
+      }),
   };
 }
 
@@ -1142,6 +1248,12 @@ export function RunView({
   const [digPick, setDigPick] = useState<Set<number>>(new Set());
   const [exploreRevealTurn, setExploreRevealTurn] =
     useState<ExploreRevealTurn | null>(null);
+  const [phyrexianTurn, setPhyrexianTurn] = useState<PhyrexianTurn | null>(
+    null,
+  );
+  const [phyrexianPick, setPhyrexianPick] = useState<PhyrexianShardChoice[]>(
+    [],
+  );
   const [passingTurn, setPassingTurn] = useState(false);
   const [logEntries, setLogEntries] = useState<LoggedEntry[]>([]);
   // On mobile the log is a full-screen drawer, so it always starts closed and
@@ -1249,6 +1361,8 @@ export function RunView({
             setDigPick,
             setDigTurn,
             setExploreRevealTurn,
+            setPhyrexianPick,
+            setPhyrexianTurn,
           }),
         );
         runnerRef.current = runner;
@@ -1383,7 +1497,8 @@ export function RunView({
         orderTriggersTurn ||
         searchTurn ||
         digTurn ||
-        exploreRevealTurn)
+        exploreRevealTurn ||
+        phyrexianTurn)
     ) {
       setPassingTurn(false);
     }
@@ -1403,6 +1518,7 @@ export function RunView({
     searchTurn,
     digTurn,
     exploreRevealTurn,
+    phyrexianTurn,
   ]);
 
   // Map draggable hand cards to their play actions for the current window.
@@ -2430,6 +2546,27 @@ export function RunView({
           )}
 
           {exploreRevealTurn && <ExploreRevealPanel turn={exploreRevealTurn} />}
+
+          {phyrexianTurn && (
+            <PhyrexianPanel
+              turn={phyrexianTurn}
+              pick={phyrexianPick}
+              onTogglePick={(index) =>
+                setPhyrexianPick((prev) =>
+                  prev.map((choice, i) => {
+                    if (i !== index) return choice;
+                    return choice === "PayLife" ? "PayMana" : "PayLife";
+                  }),
+                )
+              }
+              onConfirm={() =>
+                phyrexianTurn.resolve({
+                  action: submitPhyrexianAction(phyrexianPick),
+                })
+              }
+              onLetAi={() => phyrexianTurn.resolve({ ai: true })}
+            />
+          )}
         </section>
       )}
 
