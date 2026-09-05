@@ -39,6 +39,7 @@ import {
   parseCommanderZonePrompt,
   type CommanderZonePrompt,
 } from "./decisions/commanderZone";
+import { parseXValuePrompt, type XValuePrompt } from "./decisions/xValue";
 
 export interface MatchResult {
   matchIndex: number;
@@ -260,6 +261,11 @@ export interface DriverCallbacks {
   requestHumanCommanderZone?: (
     env: GameStateEnvelope,
     prompt: CommanderZonePrompt,
+  ) => Promise<HumanChoice>;
+  /** Called when casting an X spell or activating an X ability asks the human to choose X. */
+  requestHumanXValue?: (
+    env: GameStateEnvelope,
+    prompt: XValuePrompt,
   ) => Promise<HumanChoice>;
 }
 
@@ -581,6 +587,8 @@ export class MatchRunner {
           cb.requestHumanCommanderZone,
           parseCommanderZonePrompt(wf, state.objects),
         ),
+      () =>
+        humanRequest(env, cb.requestHumanXValue, parseXValuePrompt(wf, state.objects)),
     ];
     for (const resolve of resolvers) {
       const req = resolve();

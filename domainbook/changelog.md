@@ -12,6 +12,15 @@ depth live there. A purely-internal PR that touches no product or architecture m
 skip its version with a `Skip-Docs: <reason>` trailer instead. There are no
 per-domain changelogs; this file is the single timeline (`ADR-0007`).
 
+## [0.8.0] - 2026-09-05
+
+### Added
+
+- You now choose your own **X value** on X spells and X abilities: casting a
+  spell or activating an ability that asks for X prompts your seat with a
+  numeric picker bounded to the engine's allowed range, instead of the AI
+  deciding (`domains/simulation/features/choose-x-on-an-x-spell.md`).
+
 ## [0.7.0] - 2026-09-05
 
 ### Added
