@@ -81,6 +81,13 @@ import {
   submitLifeRedistributionAction,
   type CoinFlipLifePrompt,
 } from "../sim/decisions/coinFlipAndLife";
+import {
+  equipAction,
+  activateStationAction,
+  crewVehicleAction,
+  saddleMountAction,
+  type EquipCrewPrompt,
+} from "../sim/decisions/equipCrew";
 import { XpWindow } from "../components/XpWindow";
 import {
   declareAttackersAction,
@@ -739,6 +746,125 @@ function CoinFlipLifePanel({
   );
 }
 
+interface EquipCrewTurn {
+  prompt: EquipCrewPrompt;
+  resolve: (choice: HumanChoice) => void;
+}
+
+function equipCrewCreatureLabel(
+  creature: { name: string; power?: number | null; toughness?: number | null },
+  t: (key: MsgKey, vars?: Vars) => string,
+): string {
+  if (creature.power != null && creature.toughness != null) {
+    return t("equipCrew.creaturePt", {
+      name: creature.name,
+      power: creature.power,
+      toughness: creature.toughness,
+    });
+  }
+  return creature.name;
+}
+
+function EquipCrewPanel({
+  turn,
+  pick,
+  onTogglePick,
+  onConfirm,
+  onLetAi,
+}: {
+  turn: EquipCrewTurn;
+  pick: Set<number>;
+  onTogglePick: (id: number) => void;
+  onConfirm: () => void;
+  onLetAi: () => void;
+}) {
+  const { t } = useI18n();
+  const { prompt, resolve } = turn;
+  const sourceName = prompt.sourceName || t("equipCrew.sourceFallback");
+
+  if (prompt.kind === "equip" || prompt.kind === "station") {
+    const titleKey =
+      prompt.kind === "equip"
+        ? "equipCrew.equipTitle"
+        : "equipCrew.stationTitle";
+    return (
+      <>
+        <div className="control-title">
+          <strong>{t(titleKey, { name: sourceName })}</strong>
+        </div>
+        <div className="search-list">
+          {prompt.creatures.map((creature) => (
+            <button
+              key={creature.id}
+              className="btn"
+              onClick={() =>
+                resolve({
+                  action:
+                    prompt.kind === "equip"
+                      ? equipAction(prompt.sourceId, creature.id)
+                      : activateStationAction(prompt.sourceId, creature.id),
+                })
+              }
+            >
+              {equipCrewCreatureLabel(creature, t)}
+            </button>
+          ))}
+        </div>
+        <div className="import__row">
+          <button className="btn btn--ghost" onClick={onLetAi}>
+            {t("equipCrew.letAi")}
+          </button>
+        </div>
+      </>
+    );
+  }
+
+  const titleKey =
+    prompt.kind === "crew" ? "equipCrew.crewTitle" : "equipCrew.saddleTitle";
+  const power = prompt.creatures
+    .filter((c) => pick.has(c.id))
+    .reduce((sum, c) => sum + c.power, 0);
+  const met = power >= prompt.threshold;
+  return (
+    <>
+      <div className="control-title">
+        <strong>{t(titleKey, { name: sourceName })}</strong>
+      </div>
+      <p className="hint">
+        {t("equipCrew.powerRequired", { n: prompt.threshold })}
+      </p>
+      <p className="hint">
+        {t("equipCrew.powerProgress", { sum: power, n: prompt.threshold })}
+      </p>
+      <div className="search-list">
+        {prompt.creatures.map((creature) => {
+          const picked = pick.has(creature.id);
+          return (
+            <button
+              key={creature.id}
+              className={picked ? "btn" : "btn--ghost"}
+              onClick={() => onTogglePick(creature.id)}
+            >
+              {t("equipCrew.creaturePower", {
+                name: creature.name,
+                power: creature.power,
+              })}
+            </button>
+          );
+        })}
+      </div>
+      <div className="import__row">
+        <button className="btn" disabled={!met} onClick={onConfirm}>
+          {t("equipCrew.confirm")}
+        </button>
+        <button className="btn btn--ghost" onClick={onLetAi}>
+          {t("equipCrew.letAi")}
+        </button>
+      </div>
+    </>
+  );
+}
+
 function isTargetOptional(
   targeting: TargetTurn | null,
   chosen: TargetRef[],
@@ -886,6 +1012,8 @@ interface RunnerCallbackDeps {
   setPhyrexianTurn: Dispatch<SetStateAction<PhyrexianTurn | null>>;
   setCoinFlipLifePick: Dispatch<SetStateAction<Set<number>>>;
   setCoinFlipLifeTurn: Dispatch<SetStateAction<CoinFlipLifeTurn | null>>;
+  setEquipCrewPick: Dispatch<SetStateAction<Set<number>>>;
+  setEquipCrewTurn: Dispatch<SetStateAction<EquipCrewTurn | null>>;
 }
 
 function buildRunnerCallbacks(deps: RunnerCallbackDeps): DriverCallbacks {
@@ -933,6 +1061,8 @@ function buildRunnerCallbacks(deps: RunnerCallbackDeps): DriverCallbacks {
     setPhyrexianTurn,
     setCoinFlipLifePick,
     setCoinFlipLifeTurn,
+    setEquipCrewPick,
+    setEquipCrewTurn,
   } = deps;
   return {
     onFrame: (env) => {
@@ -1277,6 +1407,22 @@ function buildRunnerCallbacks(deps: RunnerCallbackDeps): DriverCallbacks {
           },
         });
       }),
+    requestHumanEquipCrew: (_env, prompt) =>
+      new Promise<HumanChoice>((resolve) => {
+        if (isCancelled()) {
+          resolve({ ai: true });
+          return;
+        }
+        setEquipCrewPick(new Set());
+        setEquipCrewTurn({
+          prompt,
+          resolve: (choice) => {
+            setEquipCrewTurn(null);
+            setEquipCrewPick(new Set());
+            resolve(choice);
+          },
+        });
+      }),
   };
 }
 
@@ -1395,6 +1541,10 @@ export function RunView({
   const [coinFlipLifePick, setCoinFlipLifePick] = useState<Set<number>>(
     new Set(),
   );
+  const [equipCrewTurn, setEquipCrewTurn] = useState<EquipCrewTurn | null>(
+    null,
+  );
+  const [equipCrewPick, setEquipCrewPick] = useState<Set<number>>(new Set());
   const [passingTurn, setPassingTurn] = useState(false);
   const [logEntries, setLogEntries] = useState<LoggedEntry[]>([]);
   // On mobile the log is a full-screen drawer, so it always starts closed and
@@ -1506,6 +1656,8 @@ export function RunView({
             setPhyrexianTurn,
             setCoinFlipLifePick,
             setCoinFlipLifeTurn,
+            setEquipCrewPick,
+            setEquipCrewTurn,
           }),
         );
         runnerRef.current = runner;
@@ -1642,7 +1794,8 @@ export function RunView({
         digTurn ||
         exploreRevealTurn ||
         phyrexianTurn ||
-        coinFlipLifeTurn)
+        coinFlipLifeTurn ||
+        equipCrewTurn)
     ) {
       setPassingTurn(false);
     }
@@ -1664,6 +1817,7 @@ export function RunView({
     exploreRevealTurn,
     phyrexianTurn,
     coinFlipLifeTurn,
+    equipCrewTurn,
   ]);
 
   // Map draggable hand cards to their play actions for the current window.
@@ -2737,6 +2891,34 @@ export function RunView({
                 })
               }
               onLetAi={() => coinFlipLifeTurn.resolve({ ai: true })}
+            />
+          )}
+
+          {equipCrewTurn && (
+            <EquipCrewPanel
+              turn={equipCrewTurn}
+              pick={equipCrewPick}
+              onTogglePick={(id) =>
+                setEquipCrewPick((prev) => {
+                  const next = new Set(prev);
+                  if (next.has(id)) next.delete(id);
+                  else next.add(id);
+                  return next;
+                })
+              }
+              onConfirm={() =>
+                equipCrewTurn.resolve({
+                  action:
+                    equipCrewTurn.prompt.kind === "crew"
+                      ? crewVehicleAction(equipCrewTurn.prompt.sourceId, [
+                          ...equipCrewPick,
+                        ])
+                      : saddleMountAction(equipCrewTurn.prompt.sourceId, [
+                          ...equipCrewPick,
+                        ]),
+                })
+              }
+              onLetAi={() => equipCrewTurn.resolve({ ai: true })}
             />
           )}
         </section>

@@ -454,6 +454,30 @@ export const messages = {
   "coinFlipLife.seat": { pt: "Assento {n}", en: "Seat {n}" },
   "coinFlipLife.letAi": { pt: "IA decide", en: "Let the AI decide" },
 
+  "equipCrew.sourceFallback": { pt: "isto", en: "this" },
+  "equipCrew.equipTitle": { pt: "Equipar {name}", en: "Equip {name}" },
+  "equipCrew.stationTitle": { pt: "Guarnecer {name}", en: "Station {name}" },
+  "equipCrew.crewTitle": { pt: "Tripular {name}", en: "Crew {name}" },
+  "equipCrew.saddleTitle": { pt: "Selar {name}", en: "Saddle {name}" },
+  "equipCrew.creaturePt": {
+    pt: "{name} ({power}/{toughness})",
+    en: "{name} ({power}/{toughness})",
+  },
+  "equipCrew.powerRequired": {
+    pt: "Poder necessário: {n}",
+    en: "Power required: {n}",
+  },
+  "equipCrew.powerProgress": {
+    pt: "Poder selecionado: {sum} / {n}",
+    en: "Power selected: {sum} / {n}",
+  },
+  "equipCrew.creaturePower": {
+    pt: "{name} (poder {power})",
+    en: "{name} (power {power})",
+  },
+  "equipCrew.confirm": { pt: "Confirmar", en: "Confirm" },
+  "equipCrew.letAi": { pt: "IA decide", en: "Let the AI decide" },
+
   "modes.title": { pt: "Escolher modo", en: "Choose a mode" },
   "modes.source": {
     pt: "{name} pede uma escolha de modo.",
