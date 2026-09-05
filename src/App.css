@@ -392,6 +392,67 @@ body.xpscroll-dragging {
   border-color: var(--accent);
 }
 
+/* Enchanted glint — a Minecraft-style violet sheen that sweeps across the
+   button so a new feature draws the eye. Two offset sheens shift over one
+   another for the iridescent look; both sit behind the label (z-index below
+   the text) so it stays crisp. */
+.btn--enchanted {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  border-color: color-mix(in srgb, #a880ff 55%, var(--line));
+  box-shadow: 0 0 10px rgba(150, 90, 255, 0.35);
+}
+.btn--enchanted:hover:not(:disabled) {
+  border-color: color-mix(in srgb, #b89bff 70%, var(--accent));
+  box-shadow: 0 0 16px rgba(168, 120, 255, 0.6);
+}
+.btn--enchanted::before,
+.btn--enchanted::after {
+  content: "";
+  position: absolute;
+  inset: -80% -40%;
+  z-index: -1;
+  pointer-events: none;
+  mix-blend-mode: screen;
+}
+.btn--enchanted::before {
+  background: linear-gradient(
+    115deg,
+    transparent 42%,
+    rgba(150, 100, 255, 0.55) 49%,
+    rgba(214, 190, 255, 0.95) 50%,
+    rgba(150, 100, 255, 0.55) 51%,
+    transparent 58%
+  );
+  animation: enchant-sweep 2.9s linear infinite;
+}
+.btn--enchanted::after {
+  background: linear-gradient(
+    75deg,
+    transparent 40%,
+    rgba(120, 90, 255, 0.4) 50%,
+    rgba(180, 130, 255, 0.65) 52%,
+    transparent 62%
+  );
+  opacity: 0.85;
+  animation: enchant-sweep 4.7s linear infinite reverse;
+}
+@keyframes enchant-sweep {
+  0% {
+    transform: translateX(-60%);
+  }
+  100% {
+    transform: translateX(60%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .btn--enchanted::before,
+  .btn--enchanted::after {
+    animation: none;
+  }
+}
+
 .hint {
   color: var(--muted);
   font-size: 0.85rem;

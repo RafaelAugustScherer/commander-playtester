@@ -45,7 +45,7 @@ export function DeckLibrary({
           <button className="btn" onClick={onNew}>
             {t("library.new")}
           </button>
-          <button className="btn btn--ghost" onClick={onDraft}>
+          <button className="btn btn--ghost btn--enchanted" onClick={onDraft}>
             {t("library.draft")}
           </button>
         </div>
