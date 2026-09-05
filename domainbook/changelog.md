@@ -12,6 +12,14 @@ depth live there. A purely-internal PR that touches no product or architecture m
 skip its version with a `Skip-Docs: <reason>` trailer instead. There are no
 per-domain changelogs; this file is the single timeline (`ADR-0007`).
 
+## [0.12.0] - 2026-09-05
+
+### Added
+
+- You now choose which creature **explores**, and whether to **keep what a
+  reveal-until-you-find effect finds**, instead of the AI deciding
+  (`domains/simulation/features/choose-explore-and-reveal-outcomes.md`).
+
 ## [0.11.0] - 2026-09-05
 
 ### Added

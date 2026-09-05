@@ -64,6 +64,11 @@ import {
   type OutsideGameSelection,
 } from "../sim/decisions/search";
 import { keepDigCardsAction, type DigPrompt } from "../sim/decisions/dig";
+import {
+  exploreCreatureAction,
+  revealUntilAction,
+  type ExploreRevealPrompt,
+} from "../sim/decisions/exploreReveal";
 import { XpWindow } from "../components/XpWindow";
 import {
   declareAttackersAction,
@@ -449,6 +454,89 @@ function DigPanel({
   );
 }
 
+interface ExploreRevealTurn {
+  prompt: ExploreRevealPrompt;
+  resolve: (choice: HumanChoice) => void;
+}
+
+function ExploreRevealPanel({ turn }: { turn: ExploreRevealTurn }) {
+  const { t } = useI18n();
+  const { prompt, resolve } = turn;
+  const sourceName = prompt.sourceName || t("exploreReveal.sourceFallback");
+
+  if (prompt.kind === "explore") {
+    return (
+      <>
+        <div className="control-title">
+          <strong>{t("exploreReveal.exploreTitle")}</strong>
+        </div>
+        <p className="hint">
+          {t("exploreReveal.exploreHint", { name: sourceName })}
+        </p>
+        <div className="search-list">
+          {prompt.creatures.map((creature) => (
+            <button
+              key={creature.id}
+              className="btn"
+              onClick={() =>
+                resolve({ action: exploreCreatureAction(creature.id) })
+              }
+            >
+              {creature.name}
+            </button>
+          ))}
+        </div>
+        <div className="import__row">
+          <button
+            className="btn btn--ghost"
+            onClick={() => resolve({ ai: true })}
+          >
+            {t("exploreReveal.letAi")}
+          </button>
+        </div>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <div className="control-title">
+        <strong>{t("exploreReveal.revealTitle")}</strong>
+      </div>
+      <p className="hint">
+        {t("exploreReveal.revealHint", {
+          name: sourceName,
+          card: prompt.hitCardName,
+        })}
+      </p>
+      <div className="import__row">
+        <button
+          className="btn"
+          onClick={() => resolve({ action: revealUntilAction(true) })}
+        >
+          {t("exploreReveal.keep", {
+            zone: formatZoneLabel(prompt.acceptZone),
+          })}
+        </button>
+        <button
+          className="btn btn--ghost"
+          onClick={() => resolve({ action: revealUntilAction(false) })}
+        >
+          {t("exploreReveal.decline", {
+            zone: formatZoneLabel(prompt.declineZone),
+          })}
+        </button>
+        <button
+          className="btn btn--ghost"
+          onClick={() => resolve({ ai: true })}
+        >
+          {t("exploreReveal.letAi")}
+        </button>
+      </div>
+    </>
+  );
+}
+
 function isTargetOptional(
   targeting: TargetTurn | null,
   chosen: TargetRef[],
@@ -591,6 +679,7 @@ interface RunnerCallbackDeps {
   setSearchTurn: Dispatch<SetStateAction<SearchTurn | null>>;
   setDigPick: Dispatch<SetStateAction<Set<number>>>;
   setDigTurn: Dispatch<SetStateAction<DigTurn | null>>;
+  setExploreRevealTurn: Dispatch<SetStateAction<ExploreRevealTurn | null>>;
 }
 
 function buildRunnerCallbacks(deps: RunnerCallbackDeps): DriverCallbacks {
@@ -633,6 +722,7 @@ function buildRunnerCallbacks(deps: RunnerCallbackDeps): DriverCallbacks {
     setSearchTurn,
     setDigPick,
     setDigTurn,
+    setExploreRevealTurn,
   } = deps;
   return {
     onFrame: (env) => {
@@ -931,6 +1021,20 @@ function buildRunnerCallbacks(deps: RunnerCallbackDeps): DriverCallbacks {
           },
         });
       }),
+    requestHumanExploreReveal: (_env, prompt) =>
+      new Promise<HumanChoice>((resolve) => {
+        if (isCancelled()) {
+          resolve({ ai: true });
+          return;
+        }
+        setExploreRevealTurn({
+          prompt,
+          resolve: (choice) => {
+            setExploreRevealTurn(null);
+            resolve(choice);
+          },
+        });
+      }),
   };
 }
 
@@ -1036,6 +1140,8 @@ export function RunView({
   const [searchPick, setSearchPick] = useState<number[]>([]);
   const [digTurn, setDigTurn] = useState<DigTurn | null>(null);
   const [digPick, setDigPick] = useState<Set<number>>(new Set());
+  const [exploreRevealTurn, setExploreRevealTurn] =
+    useState<ExploreRevealTurn | null>(null);
   const [passingTurn, setPassingTurn] = useState(false);
   const [logEntries, setLogEntries] = useState<LoggedEntry[]>([]);
   // On mobile the log is a full-screen drawer, so it always starts closed and
@@ -1142,6 +1248,7 @@ export function RunView({
             setSearchTurn,
             setDigPick,
             setDigTurn,
+            setExploreRevealTurn,
           }),
         );
         runnerRef.current = runner;
@@ -1275,7 +1382,8 @@ export function RunView({
         xValueTurn ||
         orderTriggersTurn ||
         searchTurn ||
-        digTurn)
+        digTurn ||
+        exploreRevealTurn)
     ) {
       setPassingTurn(false);
     }
@@ -1294,6 +1402,7 @@ export function RunView({
     orderTriggersTurn,
     searchTurn,
     digTurn,
+    exploreRevealTurn,
   ]);
 
   // Map draggable hand cards to their play actions for the current window.
@@ -2319,6 +2428,8 @@ export function RunView({
               onLetAi={() => digTurn.resolve({ ai: true })}
             />
           )}
+
+          {exploreRevealTurn && <ExploreRevealPanel turn={exploreRevealTurn} />}
         </section>
       )}
 
