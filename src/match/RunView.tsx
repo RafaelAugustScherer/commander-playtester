@@ -88,6 +88,12 @@ import {
   saddleMountAction,
   type EquipCrewPrompt,
 } from "../sim/decisions/equipCrew";
+import {
+  selectWardUnlessCardsAction,
+  chooseUnlessCostBranchAction,
+  type WardUnlessPrompt,
+  type UnlessCostHint,
+} from "../sim/decisions/wardUnless";
 import { XpWindow } from "../components/XpWindow";
 import {
   declareAttackersAction,
@@ -865,6 +871,192 @@ function EquipCrewPanel({
   );
 }
 
+interface WardUnlessTurn {
+  prompt: WardUnlessPrompt;
+  resolve: (choice: HumanChoice) => void;
+}
+
+function unlessCostLabel(
+  hint: UnlessCostHint,
+  t: (key: MsgKey, vars?: Vars) => string,
+): string {
+  switch (hint.type) {
+    case "payLife":
+      return t("wardUnless.costPayLife", { amount: hint.amount });
+    case "discardCard":
+      return t("wardUnless.costDiscard");
+    case "sacrifice":
+      return t("wardUnless.costSacrifice", { count: hint.count });
+    case "returnToHand":
+      return t("wardUnless.costReturnToHand", { count: hint.count });
+    case "dynamicGeneric":
+      return t("wardUnless.costGeneric");
+    case "fixed":
+    default:
+      return t("wardUnless.costFixed");
+  }
+}
+
+function WardUnlessPanel({
+  turn,
+  pick,
+  onTogglePick,
+  onConfirm,
+  onLetAi,
+}: {
+  turn: WardUnlessTurn;
+  pick: Set<number>;
+  onTogglePick: (id: number) => void;
+  onConfirm: () => void;
+  onLetAi: () => void;
+}) {
+  const { t } = useI18n();
+  const { prompt, resolve } = turn;
+
+  if (prompt.kind === "wardDiscard") {
+    return (
+      <>
+        <div className="control-title">
+          <strong>{t("wardUnless.discardTitle")}</strong>
+        </div>
+        <div className="search-list">
+          {prompt.cards.map((card) => (
+            <button
+              key={card.id}
+              className="btn"
+              onClick={() =>
+                resolve({ action: selectWardUnlessCardsAction([card.id]) })
+              }
+            >
+              {card.name}
+            </button>
+          ))}
+        </div>
+        <div className="import__row">
+          <button className="btn btn--ghost" onClick={onLetAi}>
+            {t("wardUnless.letAi")}
+          </button>
+        </div>
+      </>
+    );
+  }
+
+  if (
+    prompt.kind === "unlessBounce" ||
+    (prompt.kind === "wardSacrifice" && prompt.minTotalPower == null)
+  ) {
+    const titleKey =
+      prompt.kind === "unlessBounce"
+        ? "wardUnless.bounceTitle"
+        : "wardUnless.sacrificeTitle";
+    return (
+      <>
+        <div className="control-title">
+          <strong>{t(titleKey)}</strong>
+        </div>
+        <div className="search-list">
+          {prompt.permanents.map((permanent) => (
+            <button
+              key={permanent.id}
+              className="btn"
+              onClick={() =>
+                resolve({
+                  action: selectWardUnlessCardsAction([permanent.id]),
+                })
+              }
+            >
+              {equipCrewCreatureLabel(permanent, t)}
+            </button>
+          ))}
+        </div>
+        <div className="import__row">
+          <button className="btn btn--ghost" onClick={onLetAi}>
+            {t("wardUnless.letAi")}
+          </button>
+        </div>
+      </>
+    );
+  }
+
+  if (prompt.kind === "wardSacrifice") {
+    const threshold = prompt.minTotalPower ?? 0;
+    const power = prompt.permanents
+      .filter((p) => pick.has(p.id))
+      .reduce((sum, p) => sum + (p.power ?? 0), 0);
+    const met = power >= threshold;
+    return (
+      <>
+        <div className="control-title">
+          <strong>{t("wardUnless.sacrificeTitle")}</strong>
+        </div>
+        <p className="hint">
+          {t("wardUnless.powerRequired", { n: threshold })}
+        </p>
+        <p className="hint">
+          {t("wardUnless.powerProgress", { sum: power, n: threshold })}
+        </p>
+        <div className="search-list">
+          {prompt.permanents.map((permanent) => {
+            const picked = pick.has(permanent.id);
+            return (
+              <button
+                key={permanent.id}
+                className={picked ? "btn" : "btn--ghost"}
+                onClick={() => onTogglePick(permanent.id)}
+              >
+                {equipCrewCreatureLabel(permanent, t)}
+              </button>
+            );
+          })}
+        </div>
+        <div className="import__row">
+          <button className="btn" disabled={!met} onClick={onConfirm}>
+            {t("wardUnless.confirm")}
+          </button>
+          <button className="btn btn--ghost" onClick={onLetAi}>
+            {t("wardUnless.letAi")}
+          </button>
+        </div>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <div className="control-title">
+        <strong>{t("wardUnless.costTitle")}</strong>
+      </div>
+      {prompt.description && <p className="hint">{prompt.description}</p>}
+      <div className="search-list">
+        {prompt.costs.map((cost) => (
+          <button
+            key={cost.index}
+            className="btn"
+            onClick={() =>
+              resolve({ action: chooseUnlessCostBranchAction(cost.index) })
+            }
+          >
+            {unlessCostLabel(cost.hint, t)}
+          </button>
+        ))}
+      </div>
+      <div className="import__row">
+        <button
+          className="btn btn--ghost"
+          onClick={() =>
+            resolve({ action: chooseUnlessCostBranchAction(null) })
+          }
+        >
+          {t("wardUnless.decline")}
+        </button>
+        <button className="btn btn--ghost" onClick={onLetAi}>
+          {t("wardUnless.letAi")}
+        </button>
+      </div>
+    </>
+  );
+}
+
 function isTargetOptional(
   targeting: TargetTurn | null,
   chosen: TargetRef[],
@@ -1014,6 +1206,8 @@ interface RunnerCallbackDeps {
   setCoinFlipLifeTurn: Dispatch<SetStateAction<CoinFlipLifeTurn | null>>;
   setEquipCrewPick: Dispatch<SetStateAction<Set<number>>>;
   setEquipCrewTurn: Dispatch<SetStateAction<EquipCrewTurn | null>>;
+  setWardUnlessPick: Dispatch<SetStateAction<Set<number>>>;
+  setWardUnlessTurn: Dispatch<SetStateAction<WardUnlessTurn | null>>;
 }
 
 function buildRunnerCallbacks(deps: RunnerCallbackDeps): DriverCallbacks {
@@ -1063,6 +1257,8 @@ function buildRunnerCallbacks(deps: RunnerCallbackDeps): DriverCallbacks {
     setCoinFlipLifeTurn,
     setEquipCrewPick,
     setEquipCrewTurn,
+    setWardUnlessPick,
+    setWardUnlessTurn,
   } = deps;
   return {
     onFrame: (env) => {
@@ -1423,6 +1619,22 @@ function buildRunnerCallbacks(deps: RunnerCallbackDeps): DriverCallbacks {
           },
         });
       }),
+    requestHumanWardUnless: (_env, prompt) =>
+      new Promise<HumanChoice>((resolve) => {
+        if (isCancelled()) {
+          resolve({ ai: true });
+          return;
+        }
+        setWardUnlessPick(new Set());
+        setWardUnlessTurn({
+          prompt,
+          resolve: (choice) => {
+            setWardUnlessTurn(null);
+            setWardUnlessPick(new Set());
+            resolve(choice);
+          },
+        });
+      }),
   };
 }
 
@@ -1545,6 +1757,12 @@ export function RunView({
     null,
   );
   const [equipCrewPick, setEquipCrewPick] = useState<Set<number>>(new Set());
+  const [wardUnlessTurn, setWardUnlessTurn] = useState<WardUnlessTurn | null>(
+    null,
+  );
+  const [wardUnlessPick, setWardUnlessPick] = useState<Set<number>>(
+    new Set(),
+  );
   const [passingTurn, setPassingTurn] = useState(false);
   const [logEntries, setLogEntries] = useState<LoggedEntry[]>([]);
   // On mobile the log is a full-screen drawer, so it always starts closed and
@@ -1658,6 +1876,8 @@ export function RunView({
             setCoinFlipLifeTurn,
             setEquipCrewPick,
             setEquipCrewTurn,
+            setWardUnlessPick,
+            setWardUnlessTurn,
           }),
         );
         runnerRef.current = runner;
@@ -1795,7 +2015,8 @@ export function RunView({
         exploreRevealTurn ||
         phyrexianTurn ||
         coinFlipLifeTurn ||
-        equipCrewTurn)
+        equipCrewTurn ||
+        wardUnlessTurn)
     ) {
       setPassingTurn(false);
     }
@@ -1818,6 +2039,7 @@ export function RunView({
     phyrexianTurn,
     coinFlipLifeTurn,
     equipCrewTurn,
+    wardUnlessTurn,
   ]);
 
   // Map draggable hand cards to their play actions for the current window.
@@ -2919,6 +3141,27 @@ export function RunView({
                 })
               }
               onLetAi={() => equipCrewTurn.resolve({ ai: true })}
+            />
+          )}
+
+          {wardUnlessTurn && (
+            <WardUnlessPanel
+              turn={wardUnlessTurn}
+              pick={wardUnlessPick}
+              onTogglePick={(id) =>
+                setWardUnlessPick((prev) => {
+                  const next = new Set(prev);
+                  if (next.has(id)) next.delete(id);
+                  else next.add(id);
+                  return next;
+                })
+              }
+              onConfirm={() =>
+                wardUnlessTurn.resolve({
+                  action: selectWardUnlessCardsAction([...wardUnlessPick]),
+                })
+              }
+              onLetAi={() => wardUnlessTurn.resolve({ ai: true })}
             />
           )}
         </section>

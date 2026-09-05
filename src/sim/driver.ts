@@ -65,6 +65,10 @@ import {
   parseEquipCrewPrompt,
   type EquipCrewPrompt,
 } from "./decisions/equipCrew";
+import {
+  parseWardUnlessPrompt,
+  type WardUnlessPrompt,
+} from "./decisions/wardUnless";
 
 export interface MatchResult {
   matchIndex: number;
@@ -326,6 +330,11 @@ export interface DriverCallbacks {
   requestHumanEquipCrew?: (
     env: GameStateEnvelope,
     prompt: EquipCrewPrompt,
+  ) => Promise<HumanChoice>;
+  /** Called when the human pays a Ward cost or chooses which "unless" cost to pay. */
+  requestHumanWardUnless?: (
+    env: GameStateEnvelope,
+    prompt: WardUnlessPrompt,
   ) => Promise<HumanChoice>;
 }
 
@@ -680,6 +689,12 @@ export class MatchRunner {
           env,
           cb.requestHumanEquipCrew,
           parseEquipCrewPrompt(wf, state.objects),
+        ),
+      () =>
+        humanRequest(
+          env,
+          cb.requestHumanWardUnless,
+          parseWardUnlessPrompt(wf, state),
         ),
     ];
     for (const resolve of resolvers) {
