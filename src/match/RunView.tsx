@@ -63,6 +63,7 @@ import {
   type SearchDecisionPrompt,
   type OutsideGameSelection,
 } from "../sim/decisions/search";
+import { keepDigCardsAction, type DigPrompt } from "../sim/decisions/dig";
 import { XpWindow } from "../components/XpWindow";
 import {
   declareAttackersAction,
@@ -376,6 +377,78 @@ function SearchPanel({
   );
 }
 
+interface DigTurn {
+  prompt: DigPrompt;
+  resolve: (choice: HumanChoice) => void;
+}
+
+function digHint(
+  prompt: DigPrompt,
+  t: (key: MsgKey, vars?: Vars) => string,
+): string {
+  return t(prompt.upTo ? "dig.hintUpTo" : "dig.hintExact", {
+    n: prompt.keepCount,
+    kept: formatZoneLabel(prompt.keptDestination),
+    rest: formatZoneLabel(prompt.restDestination),
+  });
+}
+
+function DigPanel({
+  turn,
+  pick,
+  onTogglePick,
+  onConfirm,
+  onLetAi,
+}: {
+  turn: DigTurn;
+  pick: Set<number>;
+  onTogglePick: (id: number) => void;
+  onConfirm: () => void;
+  onLetAi: () => void;
+}) {
+  const { t } = useI18n();
+  const { prompt } = turn;
+  const atCap = pick.size >= prompt.keepCount;
+  const valid = prompt.upTo
+    ? pick.size <= prompt.keepCount
+    : pick.size === prompt.keepCount;
+  return (
+    <>
+      <div className="control-title">
+        <strong>{t("dig.title")}</strong>
+      </div>
+      <p className="hint">{digHint(prompt, t)}</p>
+      <p className="hint">
+        {t("dig.kept", { picked: pick.size, n: prompt.keepCount })}
+      </p>
+      <div className="search-list">
+        {prompt.cards.map((card) => {
+          const selectable = prompt.selectableIds.includes(card.id);
+          const picked = pick.has(card.id);
+          return (
+            <button
+              key={card.id}
+              className={picked ? "btn" : "btn--ghost"}
+              disabled={!selectable || (!picked && atCap)}
+              onClick={() => onTogglePick(card.id)}
+            >
+              {card.name}
+            </button>
+          );
+        })}
+      </div>
+      <div className="import__row">
+        <button className="btn" disabled={!valid} onClick={onConfirm}>
+          {t("dig.confirm")}
+        </button>
+        <button className="btn btn--ghost" onClick={onLetAi}>
+          {t("dig.letAi")}
+        </button>
+      </div>
+    </>
+  );
+}
+
 function isTargetOptional(
   targeting: TargetTurn | null,
   chosen: TargetRef[],
@@ -516,6 +589,8 @@ interface RunnerCallbackDeps {
   setOrderTriggersTurn: Dispatch<SetStateAction<OrderTriggersTurn | null>>;
   setSearchPick: Dispatch<SetStateAction<number[]>>;
   setSearchTurn: Dispatch<SetStateAction<SearchTurn | null>>;
+  setDigPick: Dispatch<SetStateAction<Set<number>>>;
+  setDigTurn: Dispatch<SetStateAction<DigTurn | null>>;
 }
 
 function buildRunnerCallbacks(deps: RunnerCallbackDeps): DriverCallbacks {
@@ -556,6 +631,8 @@ function buildRunnerCallbacks(deps: RunnerCallbackDeps): DriverCallbacks {
     setOrderTriggersTurn,
     setSearchPick,
     setSearchTurn,
+    setDigPick,
+    setDigTurn,
   } = deps;
   return {
     onFrame: (env) => {
@@ -838,6 +915,22 @@ function buildRunnerCallbacks(deps: RunnerCallbackDeps): DriverCallbacks {
           },
         });
       }),
+    requestHumanDig: (_env, prompt) =>
+      new Promise<HumanChoice>((resolve) => {
+        if (isCancelled()) {
+          resolve({ ai: true });
+          return;
+        }
+        setDigPick(new Set());
+        setDigTurn({
+          prompt,
+          resolve: (choice) => {
+            setDigTurn(null);
+            setDigPick(new Set());
+            resolve(choice);
+          },
+        });
+      }),
   };
 }
 
@@ -941,6 +1034,8 @@ export function RunView({
   const [orderTriggersPick, setOrderTriggersPick] = useState<number[]>([]);
   const [searchTurn, setSearchTurn] = useState<SearchTurn | null>(null);
   const [searchPick, setSearchPick] = useState<number[]>([]);
+  const [digTurn, setDigTurn] = useState<DigTurn | null>(null);
+  const [digPick, setDigPick] = useState<Set<number>>(new Set());
   const [passingTurn, setPassingTurn] = useState(false);
   const [logEntries, setLogEntries] = useState<LoggedEntry[]>([]);
   // On mobile the log is a full-screen drawer, so it always starts closed and
@@ -1045,6 +1140,8 @@ export function RunView({
             setOrderTriggersTurn,
             setSearchPick,
             setSearchTurn,
+            setDigPick,
+            setDigTurn,
           }),
         );
         runnerRef.current = runner;
@@ -1177,7 +1274,8 @@ export function RunView({
         commanderZoneTurn ||
         xValueTurn ||
         orderTriggersTurn ||
-        searchTurn)
+        searchTurn ||
+        digTurn)
     ) {
       setPassingTurn(false);
     }
@@ -1195,6 +1293,7 @@ export function RunView({
     xValueTurn,
     orderTriggersTurn,
     searchTurn,
+    digTurn,
   ]);
 
   // Map draggable hand cards to their play actions for the current window.
@@ -2194,6 +2293,30 @@ export function RunView({
                 })
               }
               onLetAi={() => searchTurn.resolve({ ai: true })}
+            />
+          )}
+
+          {digTurn && (
+            <DigPanel
+              turn={digTurn}
+              pick={digPick}
+              onTogglePick={(id) =>
+                setDigPick((prev) => {
+                  const next = new Set(prev);
+                  if (next.has(id)) {
+                    next.delete(id);
+                  } else if (next.size < digTurn.prompt.keepCount) {
+                    next.add(id);
+                  }
+                  return next;
+                })
+              }
+              onConfirm={() =>
+                digTurn.resolve({
+                  action: keepDigCardsAction([...digPick]),
+                })
+              }
+              onLetAi={() => digTurn.resolve({ ai: true })}
             />
           )}
         </section>

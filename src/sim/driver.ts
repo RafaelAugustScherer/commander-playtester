@@ -48,6 +48,7 @@ import {
   parseSearchPrompt,
   type SearchDecisionPrompt,
 } from "./decisions/search";
+import { parseDigPrompt, type DigPrompt } from "./decisions/dig";
 
 export interface MatchResult {
   matchIndex: number;
@@ -284,6 +285,11 @@ export interface DriverCallbacks {
   requestHumanSearch?: (
     env: GameStateEnvelope,
     prompt: SearchDecisionPrompt,
+  ) => Promise<HumanChoice>;
+  /** Called when the human chooses which cards to keep on an impulse draw or dig effect. */
+  requestHumanDig?: (
+    env: GameStateEnvelope,
+    prompt: DigPrompt,
   ) => Promise<HumanChoice>;
 }
 
@@ -614,6 +620,7 @@ export class MatchRunner {
           parseOrderTriggersPrompt(wf),
         ),
       () => humanRequest(env, cb.requestHumanSearch, parseSearchPrompt(wf, state)),
+      () => humanRequest(env, cb.requestHumanDig, parseDigPrompt(wf, state)),
     ];
     for (const resolve of resolvers) {
       const req = resolve();

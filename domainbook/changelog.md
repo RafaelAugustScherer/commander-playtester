@@ -12,6 +12,15 @@ depth live there. A purely-internal PR that touches no product or architecture m
 skip its version with a `Skip-Docs: <reason>` trailer instead. There are no
 per-domain changelogs; this file is the single timeline (`ADR-0007`).
 
+## [0.11.0] - 2026-09-05
+
+### Added
+
+- You now choose which cards to **keep on an impulse draw or dig effect**:
+  the control panel lists the dug-up cards for your seat to pick from,
+  instead of the AI deciding
+  (`domains/simulation/features/keep-cards-on-an-impulse-dig.md`).
+
 ## [0.10.0] - 2026-09-05
 
 ### Added
