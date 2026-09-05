@@ -53,6 +53,10 @@ import {
   parseExploreRevealPrompt,
   type ExploreRevealPrompt,
 } from "./decisions/exploreReveal";
+import {
+  parsePhyrexianPaymentPrompt,
+  type PhyrexianPaymentPrompt,
+} from "./decisions/phyrexianPayment";
 
 export interface MatchResult {
   matchIndex: number;
@@ -299,6 +303,11 @@ export interface DriverCallbacks {
   requestHumanExploreReveal?: (
     env: GameStateEnvelope,
     prompt: ExploreRevealPrompt,
+  ) => Promise<HumanChoice>;
+  /** Called when a spell with Phyrexian mana symbols asks the human to pay each shard with mana or life. */
+  requestHumanPhyrexianPayment?: (
+    env: GameStateEnvelope,
+    prompt: PhyrexianPaymentPrompt,
   ) => Promise<HumanChoice>;
 }
 
@@ -635,6 +644,12 @@ export class MatchRunner {
           env,
           cb.requestHumanExploreReveal,
           parseExploreRevealPrompt(wf, state),
+        ),
+      () =>
+        humanRequest(
+          env,
+          cb.requestHumanPhyrexianPayment,
+          parsePhyrexianPaymentPrompt(wf, state.objects),
         ),
     ];
     for (const resolve of resolvers) {

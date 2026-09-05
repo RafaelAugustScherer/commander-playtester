@@ -410,6 +410,26 @@ export const messages = {
   },
   "exploreReveal.letAi": { pt: "IA decide", en: "Let the AI decide" },
 
+  "phyrexian.title": { pt: "Pagar mana phyrexiana", en: "Pay Phyrexian mana" },
+  "phyrexian.prompt": {
+    pt: "{name} tem símbolos de mana phyrexiana. Escolha como pagar cada um.",
+    en: "{name} has Phyrexian mana symbols. Choose how to pay each one.",
+  },
+  "phyrexian.spellFallback": { pt: "esta mágica", en: "this spell" },
+  "phyrexian.colorWhite": { pt: "Branco", en: "White" },
+  "phyrexian.colorBlue": { pt: "Azul", en: "Blue" },
+  "phyrexian.colorBlack": { pt: "Preto", en: "Black" },
+  "phyrexian.colorRed": { pt: "Vermelho", en: "Red" },
+  "phyrexian.colorGreen": { pt: "Verde", en: "Green" },
+  "phyrexian.manaOption": { pt: "Mana {color}", en: "{color} mana" },
+  "phyrexian.lifeOption": { pt: "2 de vida", en: "2 life" },
+  "phyrexian.lifeTotal": {
+    pt: "Vida total a pagar: {n}",
+    en: "Total life to pay: {n}",
+  },
+  "phyrexian.confirm": { pt: "Confirmar", en: "Confirm" },
+  "phyrexian.letAi": { pt: "IA decide", en: "Let the AI decide" },
+
   "modes.title": { pt: "Escolher modo", en: "Choose a mode" },
   "modes.source": {
     pt: "{name} pede uma escolha de modo.",

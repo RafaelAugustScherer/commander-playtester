@@ -12,6 +12,14 @@ depth live there. A purely-internal PR that touches no product or architecture m
 skip its version with a `Skip-Docs: <reason>` trailer instead. There are no
 per-domain changelogs; this file is the single timeline (`ADR-0007`).
 
+## [0.13.0] - 2026-09-05
+
+### Added
+
+- You now choose, shard by shard, whether to **pay a Phyrexian mana cost with
+  mana or with 2 life**, instead of the AI deciding
+  (`domains/simulation/features/pay-phyrexian-with-life.md`).
+
 ## [0.12.0] - 2026-09-05
 
 ### Added
