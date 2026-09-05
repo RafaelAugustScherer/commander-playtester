@@ -94,6 +94,12 @@ import {
   type WardUnlessPrompt,
   type UnlessCostHint,
 } from "../sim/decisions/wardUnless";
+import {
+  chooseCopyTargetAction,
+  keepAllCopyTargetsAction,
+  type CopyChoicePrompt,
+  type CopyRetargetOption,
+} from "../sim/decisions/copyChoice";
 import { XpWindow } from "../components/XpWindow";
 import {
   declareAttackersAction,
@@ -1057,6 +1063,110 @@ function WardUnlessPanel({
   );
 }
 
+interface CopyChoiceTurn {
+  prompt: CopyChoicePrompt;
+  resolve: (choice: HumanChoice) => void;
+}
+
+function copyChoiceOptionLabel(
+  option: CopyRetargetOption,
+  t: (key: MsgKey, vars?: Vars) => string,
+): string {
+  if ("Player" in option.ref) {
+    return option.ref.Player === 0
+      ? t("copyChoice.you")
+      : t("copyChoice.seat", { n: option.ref.Player });
+  }
+  return option.label;
+}
+
+function CopyChoicePanel({ turn }: { turn: CopyChoiceTurn }) {
+  const { t } = useI18n();
+  const { prompt, resolve } = turn;
+
+  if (prompt.kind === "copyTarget") {
+    const sourceName = prompt.sourceName || t("copyChoice.sourceFallback");
+    return (
+      <>
+        <div className="control-title">
+          <strong>{t("copyChoice.copyTargetTitle")}</strong>
+        </div>
+        <p className="hint">
+          {t("copyChoice.copyTargetHint", { name: sourceName })}
+        </p>
+        <div className="search-list">
+          {prompt.targets.map((target) => (
+            <button
+              key={target.id}
+              className="btn"
+              onClick={() =>
+                resolve({
+                  action: chooseCopyTargetAction({ Object: target.id }),
+                })
+              }
+            >
+              {target.name}
+            </button>
+          ))}
+        </div>
+        <div className="import__row">
+          <button
+            className="btn btn--ghost"
+            onClick={() => resolve({ ai: true })}
+          >
+            {t("copyChoice.letAi")}
+          </button>
+        </div>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <div className="control-title">
+        <strong>{t("copyChoice.retargetTitle")}</strong>
+      </div>
+      <p className="hint">
+        {t("copyChoice.retargetHint", {
+          index: prompt.slotIndex + 1,
+          count: prompt.slotCount,
+        })}
+      </p>
+      <div className="search-list">
+        {prompt.options.map((option, i) => (
+          <button
+            key={i}
+            className="btn"
+            onClick={() =>
+              resolve({ action: chooseCopyTargetAction(option.ref) })
+            }
+          >
+            {copyChoiceOptionLabel(option, t)}
+          </button>
+        ))}
+      </div>
+      <div className="import__row">
+        {prompt.canKeepAll && (
+          <button
+            className="btn"
+            onClick={() =>
+              resolve({ action: keepAllCopyTargetsAction() })
+            }
+          >
+            {t("copyChoice.keepAll")}
+          </button>
+        )}
+        <button
+          className="btn btn--ghost"
+          onClick={() => resolve({ ai: true })}
+        >
+          {t("copyChoice.letAi")}
+        </button>
+      </div>
+    </>
+  );
+}
+
 function isTargetOptional(
   targeting: TargetTurn | null,
   chosen: TargetRef[],
@@ -1208,6 +1318,7 @@ interface RunnerCallbackDeps {
   setEquipCrewTurn: Dispatch<SetStateAction<EquipCrewTurn | null>>;
   setWardUnlessPick: Dispatch<SetStateAction<Set<number>>>;
   setWardUnlessTurn: Dispatch<SetStateAction<WardUnlessTurn | null>>;
+  setCopyChoiceTurn: Dispatch<SetStateAction<CopyChoiceTurn | null>>;
 }
 
 function buildRunnerCallbacks(deps: RunnerCallbackDeps): DriverCallbacks {
@@ -1259,6 +1370,7 @@ function buildRunnerCallbacks(deps: RunnerCallbackDeps): DriverCallbacks {
     setEquipCrewTurn,
     setWardUnlessPick,
     setWardUnlessTurn,
+    setCopyChoiceTurn,
   } = deps;
   return {
     onFrame: (env) => {
@@ -1635,6 +1747,20 @@ function buildRunnerCallbacks(deps: RunnerCallbackDeps): DriverCallbacks {
           },
         });
       }),
+    requestHumanCopyChoice: (_env, prompt) =>
+      new Promise<HumanChoice>((resolve) => {
+        if (isCancelled()) {
+          resolve({ ai: true });
+          return;
+        }
+        setCopyChoiceTurn({
+          prompt,
+          resolve: (choice) => {
+            setCopyChoiceTurn(null);
+            resolve(choice);
+          },
+        });
+      }),
   };
 }
 
@@ -1763,6 +1889,9 @@ export function RunView({
   const [wardUnlessPick, setWardUnlessPick] = useState<Set<number>>(
     new Set(),
   );
+  const [copyChoiceTurn, setCopyChoiceTurn] = useState<CopyChoiceTurn | null>(
+    null,
+  );
   const [passingTurn, setPassingTurn] = useState(false);
   const [logEntries, setLogEntries] = useState<LoggedEntry[]>([]);
   // On mobile the log is a full-screen drawer, so it always starts closed and
@@ -1878,6 +2007,7 @@ export function RunView({
             setEquipCrewTurn,
             setWardUnlessPick,
             setWardUnlessTurn,
+            setCopyChoiceTurn,
           }),
         );
         runnerRef.current = runner;
@@ -2016,7 +2146,8 @@ export function RunView({
         phyrexianTurn ||
         coinFlipLifeTurn ||
         equipCrewTurn ||
-        wardUnlessTurn)
+        wardUnlessTurn ||
+        copyChoiceTurn)
     ) {
       setPassingTurn(false);
     }
@@ -2040,6 +2171,7 @@ export function RunView({
     coinFlipLifeTurn,
     equipCrewTurn,
     wardUnlessTurn,
+    copyChoiceTurn,
   ]);
 
   // Map draggable hand cards to their play actions for the current window.
@@ -3164,6 +3296,8 @@ export function RunView({
               onLetAi={() => wardUnlessTurn.resolve({ ai: true })}
             />
           )}
+
+          {copyChoiceTurn && <CopyChoicePanel turn={copyChoiceTurn} />}
         </section>
       )}
 

@@ -12,6 +12,15 @@ depth live there. A purely-internal PR that touches no product or architecture m
 skip its version with a `Skip-Docs: <reason>` trailer instead. There are no
 per-domain changelogs; this file is the single timeline (`ADR-0007`).
 
+## [0.17.0] - 2026-09-05
+
+### Added
+
+- You now choose what a **copy effect** copies, and how to retarget a copy —
+  filling one target slot at a time or keeping every proposed target —
+  instead of the AI deciding
+  (`domains/simulation/features/choose-copy-target-and-retarget.md`).
+
 ## [0.16.0] - 2026-09-05
 
 ### Added
