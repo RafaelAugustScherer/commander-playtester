@@ -40,6 +40,10 @@ import {
   type CommanderZonePrompt,
 } from "./decisions/commanderZone";
 import { parseXValuePrompt, type XValuePrompt } from "./decisions/xValue";
+import {
+  parseOrderTriggersPrompt,
+  type OrderTriggersPrompt,
+} from "./decisions/orderTriggers";
 
 export interface MatchResult {
   matchIndex: number;
@@ -266,6 +270,11 @@ export interface DriverCallbacks {
   requestHumanXValue?: (
     env: GameStateEnvelope,
     prompt: XValuePrompt,
+  ) => Promise<HumanChoice>;
+  /** Called when two or more of the human's triggers go on the stack at once and must be ordered. */
+  requestHumanOrderTriggers?: (
+    env: GameStateEnvelope,
+    prompt: OrderTriggersPrompt,
   ) => Promise<HumanChoice>;
 }
 
@@ -589,6 +598,12 @@ export class MatchRunner {
         ),
       () =>
         humanRequest(env, cb.requestHumanXValue, parseXValuePrompt(wf, state.objects)),
+      () =>
+        humanRequest(
+          env,
+          cb.requestHumanOrderTriggers,
+          parseOrderTriggersPrompt(wf),
+        ),
     ];
     for (const resolve of resolvers) {
       const req = resolve();

@@ -340,6 +340,23 @@ export const messages = {
   "xValue.confirm": { pt: "Confirmar", en: "Confirm" },
   "xValue.letAi": { pt: "IA decide", en: "Let the AI decide" },
 
+  "orderTriggers.title": {
+    pt: "Ordenar seus gatilhos",
+    en: "Order your triggers",
+  },
+  "orderTriggers.resolvesLast": {
+    pt: "O topo da lista é colocado na pilha primeiro, então resolve por último.",
+    en: "The top of the list is placed on the stack first, so it resolves last.",
+  },
+  "orderTriggers.triggerFallback": {
+    pt: "Gatilho {number}",
+    en: "Trigger {number}",
+  },
+  "orderTriggers.moveUp": { pt: "Mover para cima", en: "Move up" },
+  "orderTriggers.moveDown": { pt: "Mover para baixo", en: "Move down" },
+  "orderTriggers.confirm": { pt: "Confirmar", en: "Confirm" },
+  "orderTriggers.letAi": { pt: "IA decide", en: "Let the AI decide" },
+
   "modes.title": { pt: "Escolher modo", en: "Choose a mode" },
   "modes.source": {
     pt: "{name} pede uma escolha de modo.",
