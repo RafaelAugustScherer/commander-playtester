@@ -69,6 +69,10 @@ import {
   parseWardUnlessPrompt,
   type WardUnlessPrompt,
 } from "./decisions/wardUnless";
+import {
+  parseCopyChoicePrompt,
+  type CopyChoicePrompt,
+} from "./decisions/copyChoice";
 
 export interface MatchResult {
   matchIndex: number;
@@ -335,6 +339,11 @@ export interface DriverCallbacks {
   requestHumanWardUnless?: (
     env: GameStateEnvelope,
     prompt: WardUnlessPrompt,
+  ) => Promise<HumanChoice>;
+  /** Called when the human chooses what a copy effect copies, or how to retarget a copy. */
+  requestHumanCopyChoice?: (
+    env: GameStateEnvelope,
+    prompt: CopyChoicePrompt,
   ) => Promise<HumanChoice>;
 }
 
@@ -695,6 +704,12 @@ export class MatchRunner {
           env,
           cb.requestHumanWardUnless,
           parseWardUnlessPrompt(wf, state),
+        ),
+      () =>
+        humanRequest(
+          env,
+          cb.requestHumanCopyChoice,
+          parseCopyChoicePrompt(wf, state),
         ),
     ];
     for (const resolve of resolvers) {

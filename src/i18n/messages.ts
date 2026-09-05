@@ -527,6 +527,31 @@ export const messages = {
   "wardUnless.decline": { pt: "Não pagar", en: "Don't pay" },
   "wardUnless.letAi": { pt: "IA decide", en: "Let the AI decide" },
 
+  "copyChoice.sourceFallback": { pt: "A cópia", en: "The copy" },
+  "copyChoice.copyTargetTitle": {
+    pt: "Escolha o que copiar",
+    en: "Choose what to copy",
+  },
+  "copyChoice.copyTargetHint": {
+    pt: "{name} pode copiar um destes.",
+    en: "{name} may copy one of these.",
+  },
+  "copyChoice.retargetTitle": {
+    pt: "Redirecionar a cópia",
+    en: "Retarget the copy",
+  },
+  "copyChoice.retargetHint": {
+    pt: "Alvo {index} de {count}",
+    en: "Target {index} of {count}",
+  },
+  "copyChoice.keepAll": {
+    pt: "Manter os alvos propostos",
+    en: "Keep proposed targets",
+  },
+  "copyChoice.you": { pt: "Você", en: "You" },
+  "copyChoice.seat": { pt: "Assento {n}", en: "Seat {n}" },
+  "copyChoice.letAi": { pt: "IA decide", en: "Let the AI decide" },
+
   "modes.title": { pt: "Escolher modo", en: "Choose a mode" },
   "modes.source": {
     pt: "{name} pede uma escolha de modo.",
