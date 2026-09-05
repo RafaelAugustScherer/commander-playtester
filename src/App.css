@@ -926,6 +926,19 @@ th {
   margin: 0.4rem 0 0.15rem;
   font-size: 1rem;
 }
+.search-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  max-height: 260px;
+  overflow-y: auto;
+  margin: 0.5rem 0;
+}
+.search-list .btn,
+.search-list .btn--ghost {
+  width: 100%;
+  text-align: left;
+}
 
 /* ── Board ─────────────────────────────────────────────────────── */
 /* Opponents share a row on top; the player's seat sits centered below. */

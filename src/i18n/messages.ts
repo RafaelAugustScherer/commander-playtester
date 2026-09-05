@@ -357,6 +357,19 @@ export const messages = {
   "orderTriggers.confirm": { pt: "Confirmar", en: "Confirm" },
   "orderTriggers.letAi": { pt: "IA decide", en: "Let the AI decide" },
 
+  "search.title": { pt: "Buscar no grimório", en: "Search your library" },
+  "search.partitionTitle": {
+    pt: "Buscar e dividir entre {primary} e {rest}",
+    en: "Search and split between {primary} and {rest}",
+  },
+  "search.outsideTitle": {
+    pt: "Escolher fora do jogo",
+    en: "Choose from outside the game",
+  },
+  "search.selected": { pt: "Selecionadas: {n} / {max}", en: "Selected: {n} / {max}" },
+  "search.confirm": { pt: "Confirmar", en: "Confirm" },
+  "search.letAi": { pt: "IA decide", en: "Let the AI decide" },
+
   "modes.title": { pt: "Escolher modo", en: "Choose a mode" },
   "modes.source": {
     pt: "{name} pede uma escolha de modo.",

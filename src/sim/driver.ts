@@ -44,6 +44,10 @@ import {
   parseOrderTriggersPrompt,
   type OrderTriggersPrompt,
 } from "./decisions/orderTriggers";
+import {
+  parseSearchPrompt,
+  type SearchDecisionPrompt,
+} from "./decisions/search";
 
 export interface MatchResult {
   matchIndex: number;
@@ -275,6 +279,11 @@ export interface DriverCallbacks {
   requestHumanOrderTriggers?: (
     env: GameStateEnvelope,
     prompt: OrderTriggersPrompt,
+  ) => Promise<HumanChoice>;
+  /** Called when the human browses a tutor/search, a fetch-land partition, or an outside-game pool. */
+  requestHumanSearch?: (
+    env: GameStateEnvelope,
+    prompt: SearchDecisionPrompt,
   ) => Promise<HumanChoice>;
 }
 
@@ -604,6 +613,7 @@ export class MatchRunner {
           cb.requestHumanOrderTriggers,
           parseOrderTriggersPrompt(wf),
         ),
+      () => humanRequest(env, cb.requestHumanSearch, parseSearchPrompt(wf, state)),
     ];
     for (const resolve of resolvers) {
       const req = resolve();
