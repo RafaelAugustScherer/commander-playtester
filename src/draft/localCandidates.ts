@@ -29,6 +29,7 @@ export function rankLocalCandidates(
   candidates: DraftCandidateData[],
   profile: ThemeProfile,
   excluded: Set<string>,
+  popularityBonus: (name: string) => number = () => 0,
 ): LocallyRankedCandidate[] {
   return candidates
     .map(draftCandidateCard)
@@ -38,5 +39,10 @@ export function rankLocalCandidates(
         card.colorIdentity.every((color) => profile.colorIdentity.includes(color)),
     )
     .map((card) => ({ card, score: scoreCandidate(card, profile) }))
-    .sort((a, b) => b.score.total - a.score.total);
+    .sort(
+      (a, b) =>
+        b.score.total +
+        popularityBonus(b.card.name) -
+        (a.score.total + popularityBonus(a.card.name)),
+    );
 }

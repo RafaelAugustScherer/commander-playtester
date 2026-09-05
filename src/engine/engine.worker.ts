@@ -42,9 +42,38 @@ let commanderConfig: any = null;
 let cachedCommanderCandidates: DraftCandidateData[] | null = null;
 const cachedThemeCandidates = new Map<string, DraftCandidateData[]>();
 const THEME_COUNT = 8;
-const THEME_SEARCH_LIMIT = 250;
+// A theme token's matches are sorted by popularity, then the top slice kept.
+// The scan pulls every match first so the slice is the most-played matches,
+// not an alphabetical prefix (a common token like "graveyard" has thousands).
+const TOKEN_MATCH_SCAN = 100_000;
+const THEME_CANDIDATES_PER_TOKEN = 250;
 const BRACKET_SHORTLIST_SIZE = 12;
 const ROUND_SIZE = 3;
+// How hard reprint frequency (our only in-data popularity proxy) tilts the
+// ranking. Applied to log2(1 + printings), so it nudges ties toward staples
+// without overriding a clearly better theme fit. Calibrated (0.75) against
+// EDHREC staple lists for popular commanders (deck-draft/ADR-0002).
+const POPULARITY_WEIGHT = 0.75;
+
+// Lowercase card name -> number of printings, our proxy for how played a card
+// is (EDHREC-style play-rate data is not in the card database). Built once from
+// the same card-data JSON the engine loads — no network, no Scryfall.
+let printingCounts = new Map<string, number>();
+
+function buildPopularityIndex(cardDataJson: string): void {
+  const data = JSON.parse(cardDataJson) as Record<string, any>;
+  const counts = new Map<string, number>();
+  for (const key of Object.keys(data)) {
+    const ids = data[key]?.metadata?.source_printing_ids;
+    counts.set(key.toLowerCase(), Array.isArray(ids) ? ids.length : 0);
+  }
+  printingCounts = counts;
+}
+
+function popularityBonus(name: string): number {
+  const printings = printingCounts.get(name.trim().toLowerCase()) ?? 0;
+  return POPULARITY_WEIGHT * Math.log2(1 + printings);
+}
 
 async function ensureStarted(): Promise<void> {
   if (started) return;
@@ -75,6 +104,7 @@ async function ensureDb(): Promise<void> {
   if (dbLoaded) return;
   const text = await fetchCardData();
   load_card_database(text);
+  buildPopularityIndex(text);
   const reg = getFormatRegistry();
   const list = Array.isArray(reg) ? reg : [];
   commanderConfig = list.find((f: any) => f?.format === "Commander")?.default_config;
@@ -175,9 +205,11 @@ function themeCandidates(profile: ThemeProfile): DraftCandidateData[] {
     let tokenCandidates = cachedThemeCandidates.get(token);
     if (!tokenCandidates) {
       tokenCandidates = draftQueries
-        .search_cards_js({ text: token, limit: THEME_SEARCH_LIMIT })
-        .results.flatMap((card) => {
-          if (card.legalities?.commander !== "legal") return [];
+        .search_cards_js({ text: token, limit: TOKEN_MATCH_SCAN })
+        .results.filter((card) => card.legalities?.commander === "legal")
+        .sort((a, b) => popularityBonus(b.name) - popularityBonus(a.name))
+        .slice(0, THEME_CANDIDATES_PER_TOKEN)
+        .flatMap((card) => {
           const candidate = candidateData(card);
           return candidate ? [candidate] : [];
         });
@@ -210,6 +242,7 @@ function rankedCardNames(args: {
     themeCandidates(profile),
     profile,
     excluded,
+    popularityBonus,
   ).slice(0, BRACKET_SHORTLIST_SIZE);
   return shortlist
     .map(({ card, score }) => {
@@ -218,7 +251,8 @@ function rankedCardNames(args: {
         main_deck: [...args.mainboard, card.name].map(frontFace),
       });
       const tilt = bracketTilt(estimate, args.target);
-      return { name: card.name, bracketTilt: tilt, total: score.total + tilt };
+      const total = score.total + popularityBonus(card.name) + tilt;
+      return { name: card.name, bracketTilt: tilt, total };
     })
     .sort((a, b) => b.total - a.total)
     .slice(0, ROUND_SIZE)

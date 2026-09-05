@@ -97,6 +97,22 @@ Example: Commander themes outrank equal non-commander themes
   Then an Elf-tribal candidate ranks above a Goblin-tribal candidate of otherwise equal fit
 ```
 
+## Rule: Among comparable fits, more-played cards rank higher
+
+When two candidates fit the theme about equally, the one that is more played wins. The
+`synergy score` has no play-rate data to read, so a card's reprint count stands in for
+popularity: it both fills each theme's candidate pool with the most-printed matches and
+tilts the final ranking toward them (`deck-draft/ADR-0002`). It is a nudge over comparable
+fits, not an override — a clearly stronger theme match still leads.
+
+```gherkin
+Example: A staple outranks a vanilla card of equal theme fit
+  Given two mono-red Goblins whose only shared theme token is Goblin
+  And one is a long-reprinted staple and the other a fringe printing
+  When a round is suggested
+  Then the staple ranks above the fringe card
+```
+
 ## Rule: A round offers three cards, each refreshable, with no repeats in the round
 
 Each `suggestion round` shows exactly three cards whenever at least three legal candidates

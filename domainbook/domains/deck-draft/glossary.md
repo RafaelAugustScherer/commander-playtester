@@ -39,7 +39,8 @@ slot holds its flavour.
 
 The self-built ranking of a candidate card against the cards already in the deck — the
 sum of the `theme token`s it shares (with `commander weighting` applied), plus fit for
-the deck's role gaps and mana curve, plus the `bracket target` tilt. The engine supplies
+the deck's role gaps and mana curve, plus the `bracket target` tilt, plus a small tilt
+toward more-played cards by reprint count (`deck-draft/ADR-0002`). The engine supplies
 no such score; this context owns it (`deck-draft/ADR-0001`).
 
 - **Status:** draft

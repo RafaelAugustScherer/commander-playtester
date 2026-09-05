@@ -26,6 +26,10 @@ per-domain changelogs; this file is the single timeline (`ADR-0007`).
 
 ### Changed
 
+- Draft suggestions now tilt toward cards people actually play: each theme's
+  pool is filled by reprint count instead of an alphabetical cap, and the
+  ranking breaks ties toward more-printed cards, bringing the order closer to
+  EDHREC without any external data (`ADR-0010`, `deck-draft/ADR-0002`).
 - Decks that aren't exactly 100 cards can now be saved: they are flagged as
   partial in the library and deck detail and cannot be started in a match,
   and the editor's 100-card block is now a warning instead
