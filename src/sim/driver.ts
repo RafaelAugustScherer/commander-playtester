@@ -49,6 +49,10 @@ import {
   type SearchDecisionPrompt,
 } from "./decisions/search";
 import { parseDigPrompt, type DigPrompt } from "./decisions/dig";
+import {
+  parseExploreRevealPrompt,
+  type ExploreRevealPrompt,
+} from "./decisions/exploreReveal";
 
 export interface MatchResult {
   matchIndex: number;
@@ -290,6 +294,11 @@ export interface DriverCallbacks {
   requestHumanDig?: (
     env: GameStateEnvelope,
     prompt: DigPrompt,
+  ) => Promise<HumanChoice>;
+  /** Called when the human explores with a creature or decides whether to keep a reveal-until hit. */
+  requestHumanExploreReveal?: (
+    env: GameStateEnvelope,
+    prompt: ExploreRevealPrompt,
   ) => Promise<HumanChoice>;
 }
 
@@ -621,6 +630,12 @@ export class MatchRunner {
         ),
       () => humanRequest(env, cb.requestHumanSearch, parseSearchPrompt(wf, state)),
       () => humanRequest(env, cb.requestHumanDig, parseDigPrompt(wf, state)),
+      () =>
+        humanRequest(
+          env,
+          cb.requestHumanExploreReveal,
+          parseExploreRevealPrompt(wf, state),
+        ),
     ];
     for (const resolve of resolvers) {
       const req = resolve();

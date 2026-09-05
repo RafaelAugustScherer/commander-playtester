@@ -386,6 +386,30 @@ export const messages = {
   "dig.confirm": { pt: "Confirmar", en: "Confirm" },
   "dig.letAi": { pt: "IA decide", en: "Let the AI decide" },
 
+  "exploreReveal.exploreTitle": {
+    pt: "Escolher uma criatura para explorar",
+    en: "Choose a creature to explore",
+  },
+  "exploreReveal.exploreHint": {
+    pt: "{name} está explorando. Escolha qual criatura explora.",
+    en: "{name} is exploring. Choose which creature explores.",
+  },
+  "exploreReveal.revealTitle": {
+    pt: "Revelar até encontrar",
+    en: "Reveal until you find one",
+  },
+  "exploreReveal.revealHint": {
+    pt: "{name} revelou cartas até encontrar {card}. Manter {card}?",
+    en: "{name} revealed cards until it found {card}. Keep {card}?",
+  },
+  "exploreReveal.keep": { pt: "Manter ({zone})", en: "Keep ({zone})" },
+  "exploreReveal.decline": { pt: "Colocar em {zone}", en: "Put in {zone}" },
+  "exploreReveal.sourceFallback": {
+    pt: "sua criatura",
+    en: "your creature",
+  },
+  "exploreReveal.letAi": { pt: "IA decide", en: "Let the AI decide" },
+
   "modes.title": { pt: "Escolher modo", en: "Choose a mode" },
   "modes.source": {
     pt: "{name} pede uma escolha de modo.",
