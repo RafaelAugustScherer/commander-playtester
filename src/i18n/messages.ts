@@ -370,6 +370,22 @@ export const messages = {
   "search.confirm": { pt: "Confirmar", en: "Confirm" },
   "search.letAi": { pt: "IA decide", en: "Let the AI decide" },
 
+  "dig.title": {
+    pt: "Escolher quais cartas manter",
+    en: "Choose which card(s) to keep",
+  },
+  "dig.hintExact": {
+    pt: "Mantenha {n} carta(s): as mantidas vão para {kept}; o resto vai para {rest}.",
+    en: "Keep {n} card(s): kept cards go to {kept}; the rest go to {rest}.",
+  },
+  "dig.hintUpTo": {
+    pt: "Mantenha até {n} carta(s): as mantidas vão para {kept}; o resto vai para {rest}.",
+    en: "Keep up to {n} card(s): kept cards go to {kept}; the rest go to {rest}.",
+  },
+  "dig.kept": { pt: "Mantidas: {picked} / {n}", en: "Kept {picked} of {n}" },
+  "dig.confirm": { pt: "Confirmar", en: "Confirm" },
+  "dig.letAi": { pt: "IA decide", en: "Let the AI decide" },
+
   "modes.title": { pt: "Escolher modo", en: "Choose a mode" },
   "modes.source": {
     pt: "{name} pede uma escolha de modo.",
