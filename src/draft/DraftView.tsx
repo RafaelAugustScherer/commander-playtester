@@ -4,7 +4,11 @@ import { fetchCardsCached } from "../lib/scryfallCache";
 import { getEngine } from "../engine/EngineClient";
 import { frontFace } from "../lib/cardName";
 import { parseDecklist } from "../lib/decklist";
-import type { BracketEstimate, ClassifyDeckResult } from "../engine/draftQueries";
+import type {
+  BracketEstimate,
+  CardValidation,
+  ClassifyDeckResult,
+} from "../engine/draftQueries";
 import { DraftSession } from "./draftSession";
 import { engineDraftEngine, scryfallCardResolver } from "./candidates";
 import { BRACKET_TARGETS, DEFAULT_BRACKET_TARGET, type BracketTarget } from "./bracket";
@@ -17,6 +21,50 @@ import type { MsgKey } from "../i18n/messages";
 
 const MIN_BASE_CARDS = 3;
 const MAX_BASE_CARD_ROWS = 10;
+
+/** Card-name autocomplete backed by the local engine card database (no network). */
+const suggestCardNames = (query: string): Promise<string[]> =>
+  getEngine().searchCardNames(query);
+
+/**
+ * Live validation of the entered base-card names against the engine's card
+ * database (debounced, no network): existence, Commander legality, and
+ * commander eligibility. `checked` is false until every entered name has a
+ * result, so callers can hold the Start button while validation catches up.
+ */
+function indexValidations(results: CardValidation[]): Map<string, CardValidation> {
+  return new Map(results.map((r) => [r.name.trim().toLowerCase(), r]));
+}
+
+function useCardValidation(names: string[]): {
+  statuses: Map<string, CardValidation>;
+  checked: boolean;
+} {
+  const key = names.join("\n");
+  const [statuses, setStatuses] = useState<Map<string, CardValidation>>(new Map());
+  const seqRef = useRef(0);
+
+  useEffect(() => {
+    const list = key.split("\n").filter(Boolean);
+    if (list.length === 0) {
+      setStatuses(new Map());
+      return;
+    }
+    const seq = ++seqRef.current;
+    const timer = setTimeout(() => {
+      getEngine()
+        .validateCards(list)
+        .then((results) => {
+          if (seq === seqRef.current) setStatuses(indexValidations(results));
+        })
+        .catch(() => {});
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [key]);
+
+  const checked = names.every((n) => statuses.has(n.trim().toLowerCase()));
+  return { statuses, checked };
+}
 
 /** Seed cards for a draft launched from an existing deck (see `DeckEditor`). */
 export interface DraftSeed {
@@ -98,6 +146,8 @@ function shiftCommanderRow(row: number | null, removedIndex: number): number | n
 function DraftEntryRows({
   names,
   commanderRow,
+  isInvalid,
+  isCommanderEligible,
   onSetName,
   onAddRow,
   onRemoveRow,
@@ -105,6 +155,8 @@ function DraftEntryRows({
 }: {
   names: string[];
   commanderRow: number | null;
+  isInvalid: (name: string) => boolean;
+  isCommanderEligible: (name: string) => boolean;
   onSetName: (index: number, value: string) => void;
   onAddRow: () => void;
   onRemoveRow: (index: number) => void;
@@ -118,7 +170,9 @@ function DraftEntryRows({
           <CardNameInput
             value={name}
             onChange={(value) => onSetName(i, value)}
+            fetchSuggestions={suggestCardNames}
             placeholder={t("draft.entry.baseCardPlaceholder")}
+            invalid={isInvalid(name)}
           />
           <label className="draft-entry-row__commander">
             <input
@@ -126,7 +180,7 @@ function DraftEntryRows({
               name="draft-commander"
               checked={commanderRow === i}
               onChange={() => onSetCommanderRow(i)}
-              disabled={!name.trim()}
+              disabled={!name.trim() || !isCommanderEligible(name)}
             />
             {t("draft.entry.commanderFlag")}
           </label>
@@ -164,18 +218,19 @@ function DraftEntryRows({
 function DraftEntryPaste({
   text,
   commander,
+  commanderOptions,
   onSetText,
   onSetCommander,
 }: {
   text: string;
   commander: string;
+  /** The pasted names that may be a commander (eligible only). */
+  commanderOptions: string[];
   onSetText: (value: string) => void;
   onSetCommander: (value: string) => void;
 }) {
   const { t } = useI18n();
-  const noCommander = t("draft.entry.noCommander");
-  const pastedNames = useMemo(() => parsePastedNames(text), [text]);
-  const options = [noCommander, ...pastedNames];
+  const hasOptions = commanderOptions.length > 0;
   return (
     <>
       <textarea
@@ -185,14 +240,21 @@ function DraftEntryPaste({
         placeholder={"Sol Ring\nArcane Signet\n1 Cultivate\n..."}
         spellCheck={false}
       />
-      <label className="field" style={{ marginTop: "0.6rem" }}>
+      <label className="field draft-commander-field" style={{ marginTop: "0.6rem" }}>
         <span className="field__label">{t("draft.entry.commanderLabel")}</span>
         <SearchableSelect
-          options={options}
-          value={commander || noCommander}
-          onChange={(value) => onSetCommander(value === noCommander ? "" : value)}
-          placeholder={t("draft.entry.commanderSearchPlaceholder")}
+          options={commanderOptions}
+          value={commander}
+          onChange={onSetCommander}
+          placeholder={
+            hasOptions
+              ? t("draft.entry.commanderSearchPlaceholder")
+              : t("draft.entry.commanderNone")
+          }
           emptyLabel={t("draft.entry.commanderNoMatch")}
+          disabled={!hasOptions}
+          clearable
+          clearLabel={t("draft.entry.clearCommander")}
         />
       </label>
     </>
@@ -222,6 +284,48 @@ function DraftEntry({
   const [target, setTarget] = useState<BracketTarget>(DEFAULT_BRACKET_TARGET);
   const [status, setStatus] = useState<EntryStatus>({ kind: "idle" });
   const [unresolved, setUnresolved] = useState<string[]>([]);
+
+  // Warm the engine (WASM + card database) so name suggestions and the start
+  // step are ready by the time the author needs them.
+  useEffect(() => {
+    void getEngine().ready();
+  }, []);
+
+  const enteredNames = useMemo(() => {
+    const raw = mode === "paste" ? parsePastedNames(pasteText) : names;
+    return [...new Set(raw.map((n) => n.trim()).filter(Boolean))];
+  }, [mode, names, pasteText]);
+
+  const { statuses, checked } = useCardValidation(enteredNames);
+  const statusOf = (name: string) => statuses.get(name.trim().toLowerCase());
+  const isInvalidName = (name: string) => {
+    const s = statusOf(name);
+    return s !== undefined && (!s.exists || !s.commanderLegal);
+  };
+  const isCommanderEligible = (name: string) => statusOf(name)?.commanderEligible === true;
+
+  const notFoundNames = enteredNames.filter((n) => statusOf(n)?.exists === false);
+  const notLegalNames = enteredNames.filter((n) => {
+    const s = statusOf(n);
+    return s?.exists === true && !s.commanderLegal;
+  });
+  const legalCount = enteredNames.filter((n) => statusOf(n)?.commanderLegal).length;
+  const commanderOptions = enteredNames.filter(isCommanderEligible);
+
+  // Drop a chosen commander once validation shows it can't be one.
+  useEffect(() => {
+    if (!pasteCommander) return;
+    const s = statuses.get(pasteCommander.trim().toLowerCase());
+    if (s && !s.commanderEligible) setPasteCommander("");
+  }, [statuses, pasteCommander]);
+
+  useEffect(() => {
+    if (commanderRow === null) return;
+    const name = names[commanderRow]?.trim();
+    if (!name) return;
+    const s = statuses.get(name.toLowerCase());
+    if (s && !s.commanderEligible) setCommanderRow(null);
+  }, [statuses, commanderRow, names]);
 
   function setName(index: number, value: string) {
     setNames((prev) => prev.map((n, i) => (i === index ? value : n)));
@@ -319,6 +423,8 @@ function DraftEntry({
           <DraftEntryRows
             names={names}
             commanderRow={commanderRow}
+            isInvalid={isInvalidName}
+            isCommanderEligible={isCommanderEligible}
             onSetName={setName}
             onAddRow={addRow}
             onRemoveRow={removeRow}
@@ -328,17 +434,38 @@ function DraftEntry({
           <DraftEntryPaste
             text={pasteText}
             commander={pasteCommander}
+            commanderOptions={commanderOptions}
             onSetText={setPasteText}
             onSetCommander={setPasteCommander}
           />
         )}
       </div>
 
+      {checked &&
+        enteredNames.length > 0 &&
+        notFoundNames.length === 0 &&
+        notLegalNames.length === 0 &&
+        legalCount < MIN_BASE_CARDS && (
+          <p className="hint" style={{ color: "var(--bad)" }}>
+            {t("draft.entry.tooFew", { n: MIN_BASE_CARDS - legalCount })}
+          </p>
+        )}
+
       <div className="field">
         <span className="field__label">{t("draft.entry.bracketLabel")}</span>
         <BracketTargetPicker target={target} onChange={setTarget} />
       </div>
 
+      {notFoundNames.length > 0 && (
+        <p className="hint" style={{ color: "var(--bad)" }}>
+          {t("draft.entry.notFoundCards", { list: notFoundNames.join(", ") })}
+        </p>
+      )}
+      {notLegalNames.length > 0 && (
+        <p className="hint" style={{ color: "var(--bad)" }}>
+          {t("draft.entry.notLegalCards", { list: notLegalNames.join(", ") })}
+        </p>
+      )}
       {unresolved.length > 0 && (
         <p className="hint" style={{ color: "var(--warn)" }}>
           {t("draft.entry.unresolved", { list: unresolved.join(", ") })}
@@ -350,7 +477,17 @@ function DraftEntry({
       )}
 
       <div className="import__row">
-        <button className="btn" onClick={() => void handleStart()} disabled={busy}>
+        <button
+          className="btn"
+          onClick={() => void handleStart()}
+          disabled={
+            busy ||
+            !checked ||
+            legalCount < MIN_BASE_CARDS ||
+            notFoundNames.length > 0 ||
+            notLegalNames.length > 0
+          }
+        >
           {status.kind === "checking"
             ? t("draft.entry.checking")
             : t("draft.entry.start")}

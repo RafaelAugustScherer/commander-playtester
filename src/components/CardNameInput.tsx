@@ -1,29 +1,35 @@
 import { useEffect, useId, useRef, useState } from "react";
-import { fetchCardNameSuggestions } from "../lib/scryfall";
 import { XpScroll } from "./XpScroll";
 
 interface CardNameInputProps {
   value: string;
   onChange: (value: string) => void;
+  /** Resolve card-name suggestions for the typed text (e.g. the local engine DB). */
+  fetchSuggestions: (query: string) => Promise<string[]>;
   placeholder?: string;
   id?: string;
   disabled?: boolean;
+  /** Mark the field as holding an unusable value (unknown or illegal card). */
+  invalid?: boolean;
   className?: string;
 }
 
 const DEBOUNCE_MS = 200;
 
 /**
- * A free-text card-name input with live suggestions from Scryfall's
- * autocomplete: as you type, the cards whose name contains the text drop down
- * below. Picking one fills the field; the typed text is always kept otherwise.
+ * A free-text card-name input with live suggestions: as you type, the cards
+ * whose name contains the text drop down below. Picking one fills the field;
+ * the typed text is always kept otherwise. The suggestion source is injected so
+ * the field stays decoupled from where names come from.
  */
 export function CardNameInput({
   value,
   onChange,
+  fetchSuggestions,
   placeholder,
   id,
   disabled,
+  invalid,
   className,
 }: CardNameInputProps) {
   const listId = useId();
@@ -43,7 +49,7 @@ export function CardNameInput({
     }
     const seq = ++reqSeq.current;
     const timer = setTimeout(() => {
-      fetchCardNameSuggestions(query)
+      fetchSuggestions(query)
         .then((names) => {
           if (seq === reqSeq.current) {
             setItems(names);
@@ -55,7 +61,7 @@ export function CardNameInput({
         });
     }, DEBOUNCE_MS);
     return () => clearTimeout(timer);
-  }, [value, open]);
+  }, [value, open, fetchSuggestions]);
 
   useEffect(() => {
     if (!open) return;
@@ -108,6 +114,7 @@ export function CardNameInput({
         aria-expanded={open}
         aria-controls={listId}
         aria-autocomplete="list"
+        aria-invalid={invalid || undefined}
         autoComplete="off"
         spellCheck={false}
         disabled={disabled}

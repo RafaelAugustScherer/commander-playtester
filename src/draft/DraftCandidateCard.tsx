@@ -64,42 +64,39 @@ export function DraftCandidateCard({
           {card.name}
         </div>
       )}
-      <div className="draft-card__body">
-        <span className="draft-card__name">{card.name}</span>
-        {score.matchedTokens.length > 0 && (
-          <div className="chips">
-            {score.matchedTokens.map((token) => (
-              <span className="chip" key={token}>
-                {token}
-              </span>
-            ))}
-          </div>
-        )}
-        {bracketTilt < 0 && (
-          <p className="hint" style={{ color: "var(--warn)" }}>
-            {t("draft.round.tiltNote")}
-          </p>
-        )}
-        <div className="draft-card__actions">
-          <button
-            className="btn btn--sm btn--icon has-tooltip"
-            onClick={onPrimary}
-            disabled={busy}
-            aria-label={primaryLabel}
-            data-tooltip={primaryLabel}
-          >
-            <Plus size={16} aria-hidden="true" />
-          </button>
-          <button
-            className="btn btn--ghost btn--sm btn--icon has-tooltip"
-            onClick={onRefresh}
-            disabled={busy}
-            aria-label={t("draft.round.refresh")}
-            data-tooltip={t("draft.round.refresh")}
-          >
-            <RefreshCw size={15} aria-hidden="true" />
-          </button>
+      {score.matchedTokens.length > 0 && (
+        <div className="chips draft-card__tags">
+          {score.matchedTokens.map((token) => (
+            <span className="chip" key={token}>
+              {token}
+            </span>
+          ))}
         </div>
+      )}
+      {bracketTilt < 0 && (
+        <p className="hint" style={{ color: "var(--warn)" }}>
+          {t("draft.round.tiltNote")}
+        </p>
+      )}
+      <div className="draft-card__actions">
+        <button
+          className="btn btn--sm btn--icon has-tooltip"
+          onClick={onPrimary}
+          disabled={busy}
+          aria-label={primaryLabel}
+          data-tooltip={primaryLabel}
+        >
+          <Plus size={16} aria-hidden="true" />
+        </button>
+        <button
+          className="btn btn--ghost btn--sm btn--icon has-tooltip"
+          onClick={onRefresh}
+          disabled={busy}
+          aria-label={t("draft.round.refresh")}
+          data-tooltip={t("draft.round.refresh")}
+        >
+          <RefreshCw size={15} aria-hidden="true" />
+        </button>
       </div>
     </div>
   );

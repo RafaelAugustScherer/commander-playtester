@@ -36,6 +36,17 @@ export interface DraftCandidateData {
   colorIdentity: string[];
 }
 
+export interface CardValidation {
+  /** The requested name, echoed back so callers can key on it. */
+  name: string;
+  /** The name is in the engine's card database. */
+  exists: boolean;
+  /** The card is legal in the Commander format. */
+  commanderLegal: boolean;
+  /** The card may be a commander (legendary creature or engine-eligible). */
+  commanderEligible: boolean;
+}
+
 export interface EngineThemeProfile {
   tokenWeights: Array<[string, number]>;
   curve: number[];

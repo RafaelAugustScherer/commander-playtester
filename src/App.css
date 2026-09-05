@@ -527,6 +527,10 @@ th {
   padding: 0.5rem 0.6rem;
   font-size: 0.9rem;
 }
+.input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
 
 .btn--sm {
   padding: 0.35rem 0.7rem;
@@ -713,6 +717,9 @@ th {
   min-width: 0;
   max-width: none;
 }
+.input[aria-invalid="true"] {
+  border-color: var(--bad);
+}
 .draft-entry-row__commander {
   display: flex;
   align-items: center;
@@ -720,6 +727,29 @@ th {
   font-size: 0.82rem;
   color: var(--muted);
   white-space: nowrap;
+}
+.draft-commander-field .combobox {
+  max-width: none;
+}
+.input--has-clear {
+  padding-right: 2rem;
+}
+.combobox__clear {
+  position: absolute;
+  top: 50%;
+  right: 0.4rem;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.15rem;
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+}
+.combobox__clear:hover {
+  color: var(--text);
 }
 
 .draft-round {
@@ -734,15 +764,16 @@ th {
 
 .draft-card {
   display: flex;
-  align-items: flex-start;
-  gap: 0.6rem;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
   background: var(--panel-2);
   border: 1px solid var(--line);
   padding: 0.6rem;
 }
 
 .draft-card__img {
-  width: 84px;
+  width: 112px;
   aspect-ratio: 0.716;
   object-fit: cover;
   flex-shrink: 0;
@@ -762,22 +793,18 @@ th {
   padding: 0.3rem;
 }
 
-.draft-card__body {
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-  min-width: 0;
-  flex: 1;
-}
-
-.draft-card__name {
-  font-weight: 700;
+.draft-card__tags {
+  justify-content: center;
 }
 
 .draft-card__actions {
   display: flex;
   gap: 0.4rem;
+  width: 100%;
   margin-top: auto;
+}
+.draft-card__actions .btn {
+  flex: 1;
 }
 
 .field-row {

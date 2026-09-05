@@ -8,31 +8,7 @@ import { classifyRoles } from "./roles";
 import { frontFace } from "./cardName";
 
 const SCRYFALL_COLLECTION_URL = "https://api.scryfall.com/cards/collection";
-const SCRYFALL_AUTOCOMPLETE_URL = "https://api.scryfall.com/cards/autocomplete";
 const BATCH_SIZE = 75; // Scryfall's documented max identifiers per request.
-
-interface AutocompleteResponse {
-  data?: string[];
-}
-
-/**
- * Card-name suggestions for `query` from Scryfall's autocomplete endpoint —
- * up to 20 names matching the typed text. Scryfall requires at least two
- * characters; shorter queries return nothing without a request.
- */
-export async function fetchCardNameSuggestions(
-  query: string,
-  fetchImpl: FetchLike = fetch as unknown as FetchLike,
-): Promise<string[]> {
-  const q = query.trim();
-  if (q.length < 2) return [];
-  const res = await fetchImpl(
-    `${SCRYFALL_AUTOCOMPLETE_URL}?q=${encodeURIComponent(q)}`,
-  );
-  if (!res.ok) throw new Error(`Scryfall autocomplete failed (HTTP ${res.status})`);
-  const json = (await res.json()) as AutocompleteResponse;
-  return json.data ?? [];
-}
 
 /** Shape of the fields we read from a Scryfall card object. */
 interface ScryfallCard {

@@ -450,7 +450,10 @@ export const messages = {
     pt: "Comandante (opcional)",
     en: "Commander (optional)",
   },
-  "draft.entry.noCommander": { pt: "— Sem comandante —", en: "— No commander —" },
+  "draft.entry.commanderNone": {
+    pt: "Nenhum comandante elegível nesta lista",
+    en: "No eligible commander in this list",
+  },
   "draft.entry.commanderSearchPlaceholder": {
     pt: "Escolher comandante…",
     en: "Pick a commander…",
@@ -461,6 +464,7 @@ export const messages = {
   },
   "draft.entry.commanderFlag": { pt: "Comandante", en: "Commander" },
   "draft.entry.unflag": { pt: "Remover", en: "Unflag" },
+  "draft.entry.clearCommander": { pt: "Limpar comandante", en: "Clear commander" },
   "draft.entry.removeCard": { pt: "Remover carta", en: "Remove card" },
   "draft.entry.addCard": { pt: "+ Adicionar carta", en: "+ Add another card" },
   "draft.entry.bracketLabel": { pt: "Bracket alvo", en: "Bracket target" },
@@ -480,6 +484,14 @@ export const messages = {
     en: "At least three cards need to resolve on Scryfall to start.",
   },
   "draft.entry.unresolved": { pt: "Não encontradas: {list}", en: "Not found: {list}" },
+  "draft.entry.notFoundCards": {
+    pt: "Não existem no banco de cartas: {list}",
+    en: "Not in the card database: {list}",
+  },
+  "draft.entry.notLegalCards": {
+    pt: "Não permitidas em Commander: {list}",
+    en: "Not legal in Commander: {list}",
+  },
   "draft.entry.startFailed": {
     pt: "Não foi possível iniciar o draft.",
     en: "Couldn't start the draft.",

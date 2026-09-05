@@ -8,6 +8,7 @@ import type {
 import type {
   BracketDeckInput,
   BracketEstimate,
+  CardValidation,
   ClassifyDeckResult,
   DraftCandidateData,
   RankCardCandidatesInput,
@@ -125,6 +126,16 @@ export class EngineClient {
 
   commanderCandidates(): Promise<DraftCandidateData[]> {
     return this.req("commanderCandidates");
+  }
+
+  /** Local card-name suggestions from the engine's card database (no network). */
+  searchCardNames(text: string): Promise<string[]> {
+    return this.req("searchCardNames", { text });
+  }
+
+  /** Existence, Commander legality, and commander eligibility for each name. */
+  validateCards(names: string[]): Promise<CardValidation[]> {
+    return this.req("validateCards", { names });
   }
 
   rankCardCandidates(input: RankCardCandidatesInput): Promise<RankedCardName[]> {

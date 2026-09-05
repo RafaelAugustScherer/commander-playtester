@@ -18,6 +18,7 @@ import init, {
 } from "./vendor/engine_wasm.js";
 import { draftQueries } from "./draftQueries";
 import type {
+  CardValidation,
   DraftCandidateData,
   EngineThemeProfile,
   SearchCardRow,
@@ -25,6 +26,8 @@ import type {
 import { frontFace } from "../lib/cardName";
 import { bracketTilt, type BracketTarget } from "../draft/bracket";
 import { rankLocalCandidates } from "../draft/localCandidates";
+import { rankNameSuggestions } from "../draft/cardNameSuggest";
+import { isCommanderLegal, isCommanderEligible } from "../draft/cardLegality";
 import type { ThemeProfile } from "../draft/themes";
 
 // Absolute base URL for engine assets, supplied by the main thread on "ready".
@@ -94,6 +97,55 @@ function candidateData(card: SearchCardRow): DraftCandidateData | null {
     oracleText: face.oracle_text ?? "",
     colorIdentity: card.color_identity,
   };
+}
+
+// The engine's free-text search matches name *and* oracle text and returns many
+// alphabetical rows; `rankNameSuggestions` narrows that to a ranked name list.
+// Pull a generous slice so a name match isn't cut off before it can be ranked.
+const NAME_SUGGEST_SCAN = 2500;
+
+function searchCardNames(query: string): string[] {
+  if (query.trim().length < 2) return [];
+  const rows = draftQueries.search_cards_js({
+    text: query.trim(),
+    limit: NAME_SUGGEST_SCAN,
+  }).results;
+  return rankNameSuggestions(rows, query);
+}
+
+// Name -> search row, for O(1) existence and legality checks. Built from one
+// full scan and reused (the card database is static).
+let cachedCardIndex: Map<string, SearchCardRow> | null = null;
+function cardIndex(): Map<string, SearchCardRow> {
+  if (!cachedCardIndex) {
+    cachedCardIndex = new Map(
+      draftQueries
+        .search_cards_js({ limit: 100_000 })
+        .results.map((row) => [row.name.toLowerCase(), row]),
+    );
+  }
+  return cachedCardIndex;
+}
+
+function validateCards(names: string[]): CardValidation[] {
+  const index = cardIndex();
+  return names.map((name) => {
+    const row =
+      index.get(name.trim().toLowerCase()) ??
+      index.get(frontFace(name).toLowerCase());
+    const exists = row !== undefined;
+    const face =
+      draftQueries.get_card_face_data(name) ??
+      draftQueries.get_card_face_data(frontFace(name));
+    return {
+      name,
+      exists,
+      commanderLegal: isCommanderLegal(row),
+      commanderEligible:
+        exists &&
+        isCommanderEligible(draftQueries.is_card_commander_eligible(name), face),
+    };
+  });
 }
 
 function commanderCandidates(): DraftCandidateData[] {
@@ -249,6 +301,16 @@ async function handle(cmd: string, args: any): Promise<any> {
       await ensureStarted();
       await ensureDb();
       return commanderCandidates();
+    }
+    case "searchCardNames": {
+      await ensureStarted();
+      await ensureDb();
+      return searchCardNames(args?.text ?? "");
+    }
+    case "validateCards": {
+      await ensureStarted();
+      await ensureDb();
+      return validateCards(args?.names ?? []);
     }
     case "rankCardCandidates": {
       await ensureStarted();
