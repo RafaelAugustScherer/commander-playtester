@@ -2,6 +2,7 @@ import type { Card } from "../lib/types";
 import type {
   BracketDeckInput,
   BracketEstimate,
+  CommanderCandidateData,
   SearchCardRow,
   SearchCardsQuery,
   SearchCardsResult,
@@ -9,6 +10,7 @@ import type {
 import { getEngine } from "../engine/EngineClient";
 import { fetchCardsCached } from "../lib/scryfallCache";
 import { frontFace } from "../lib/cardName";
+import { classifyRoles } from "../lib/roles";
 import { extractThemeProfile, type ThemeProfile } from "./themes";
 import { scoreCandidate, type CandidateScore } from "./scoring";
 import { bracketTilt, type BracketTarget } from "./bracket";
@@ -17,8 +19,7 @@ import { bracketTilt, type BracketTarget } from "./bracket";
 export interface DraftEngine {
   searchCards(query: SearchCardsQuery): Promise<SearchCardsResult>;
   estimateBracket(deck: BracketDeckInput): Promise<BracketEstimate | null>;
-  isCommanderEligible(name: string): Promise<boolean>;
-  commanderCandidates(): Promise<SearchCardRow[]>;
+  commanderCandidates(): Promise<CommanderCandidateData[]>;
 }
 
 /** Card-name resolution the draft pipeline needs — narrow enough to fake in tests. */
@@ -30,7 +31,6 @@ export interface CardResolver {
 export const engineDraftEngine: DraftEngine = {
   searchCards: (query) => getEngine().searchCards(query),
   estimateBracket: (deck) => getEngine().estimateBracket(deck),
-  isCommanderEligible: (name) => getEngine().isCommanderEligible(name),
   commanderCandidates: () => getEngine().commanderCandidates(),
 };
 
@@ -57,6 +57,7 @@ const SEARCH_LIMIT_PER_TOKEN = 40;
 const PRE_RANK_LIMIT = 40;
 const BRACKET_SHORTLIST_SIZE = 12;
 const COMMANDER_ROUND_SIZE = 3;
+const EXTRA_COMMANDER_COLOR_PENALTY = 2;
 
 /** Per-session cache of `search_cards_js` rows by token — the card database is static. */
 export type TokenSearchCache = Map<string, SearchCardRow[]>;
@@ -235,7 +236,6 @@ export interface SuggestCommandersOptions {
   engine: DraftEngine;
   resolver: CardResolver;
   exclude?: Set<string>;
-  tokenCache?: TokenSearchCache;
 }
 
 /**
@@ -253,7 +253,6 @@ export async function suggestCommanders(
   opts: SuggestCommandersOptions,
 ): Promise<RankedCandidate[]> {
   const { engine, resolver } = opts;
-  const cache = opts.tokenCache ?? createTokenSearchCache();
   const excluded = new Set(
     [...baseCards.map((c) => c.name), ...(opts.exclude ?? [])].map((n) =>
       n.toLowerCase(),
@@ -261,21 +260,6 @@ export async function suggestCommanders(
   );
 
   const profile = profileFromBaseCards(baseCards);
-  const tokens = topTokens(profile.tokenWeights, TOP_TOKEN_COUNT);
-  const pool = await collectCandidateRows(
-    engine,
-    cache,
-    tokens,
-    profile.tokenWeights,
-    isCommanderLegal,
-  );
-  const slice = preRankSlice(pool, excluded, PRE_RANK_LIMIT);
-
-  const eligible: SearchCardRow[] = [];
-  for (const row of slice) {
-    if (await engine.isCommanderEligible(row.name)) eligible.push(row);
-  }
-
   const requiredIdentity = [...new Set(baseCards.flatMap((c) => c.colorIdentity))];
   const background = singleBackgroundAmong(baseCards);
   const coversBaseCards = (card: Card) => {
@@ -290,29 +274,51 @@ export async function suggestCommanders(
     );
   };
 
-  const scored = await enrichAndScore(resolver, eligible, profile);
-  const covering = scored.filter(({ card }) => coversBaseCards(card));
+  const ranked = (await engine.commanderCandidates())
+    .map(commanderCandidateCard)
+    .filter(
+      (card) => !excluded.has(card.name.toLowerCase()) && coversBaseCards(card),
+    )
+    .map((card) => {
+      const score = scoreCandidate(card, profile);
+      const identity =
+        background !== null && hasChooseABackground(card)
+          ? [...new Set([...card.colorIdentity, ...background.colorIdentity])]
+          : card.colorIdentity;
+      const extraColors = identity.filter(
+        (color) => !requiredIdentity.includes(color),
+      ).length;
+      return {
+        card,
+        score,
+        bracketTilt: 0,
+        total: score.total - extraColors * EXTRA_COMMANDER_COLOR_PENALTY,
+      };
+    })
+    .sort((a, b) => b.total - a.total)
+    .slice(0, COMMANDER_ROUND_SIZE);
 
-  if (covering.length < COMMANDER_ROUND_SIZE) {
-    const themedNames = new Set(covering.map(({ card }) => card.name.toLowerCase()));
-    const fallbackRows = (await engine.commanderCandidates()).filter(
-      (row) =>
-        !excluded.has(row.name.toLowerCase()) &&
-        !themedNames.has(row.name.toLowerCase()) &&
-        (isWithinColorIdentity(requiredIdentity, row.color_identity) ||
-          (background !== null &&
-            isWithinColorIdentity(requiredIdentity, [
-              ...row.color_identity,
-              ...background.colorIdentity,
-            ]))),
-    );
-    const fallback = await enrichAndScore(resolver, fallbackRows, profile);
-    covering.push(...fallback.filter(({ card }) => coversBaseCards(card)));
-  }
+  const resolved = await resolver.resolve(ranked.map(({ card }) => card.name));
+  return ranked.flatMap((candidate) => {
+    const card = resolved.get(candidate.card.name.toLowerCase());
+    return card ? [{ ...candidate, card }] : [];
+  });
+}
 
-  return covering
-    .map(({ card, score }) => ({ card, score, bracketTilt: 0, total: score.total }))
-    .sort((a, b) => b.total - a.total);
+function commanderCandidateCard(candidate: CommanderCandidateData): Card {
+  const input = {
+    typeLine: candidate.typeLine,
+    oracleText: candidate.oracleText,
+    manaValue: candidate.manaValue,
+    producedMana: [],
+  };
+  return {
+    name: candidate.name,
+    ...input,
+    colors: [],
+    colorIdentity: candidate.colorIdentity,
+    roles: classifyRoles(input),
+  };
 }
 
 function profileFromBaseCards(baseCards: Card[]): ThemeProfile {

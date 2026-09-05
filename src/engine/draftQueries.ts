@@ -27,6 +27,24 @@ export interface SearchCardsResult {
   total: number;
 }
 
+export interface CommanderCandidateData {
+  name: string;
+  manaValue: number;
+  typeLine: string;
+  oracleText: string;
+  colorIdentity: string[];
+}
+
+export interface CardFaceData {
+  name: string;
+  card_type?: {
+    supertypes?: string[];
+    core_types?: string[];
+    subtypes?: string[];
+  };
+  oracle_text?: string;
+}
+
 export interface BracketDeckInput {
   commander: string[];
   main_deck?: string[];
@@ -49,6 +67,7 @@ export interface ClassifyDeckResult {
 
 interface DraftQueryExports {
   search_cards_js(query: SearchCardsQuery): SearchCardsResult;
+  get_card_face_data(name: string): CardFaceData | null;
   estimate_bracket_for_deck(deck: BracketDeckInput): BracketEstimate | null;
   classify_deck_js(names: string[]): ClassifyDeckResult;
   /**

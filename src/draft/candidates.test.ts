@@ -6,6 +6,7 @@ import type { Card } from "../lib/types";
 import type {
   BracketDeckInput,
   BracketEstimate,
+  CommanderCandidateData,
   SearchCardRow,
   SearchCardsResult,
 } from "../engine/draftQueries";
@@ -32,6 +33,16 @@ function row(overrides: Partial<SearchCardRow> = {}): SearchCardRow {
     color_identity: ["G"],
     legalities: { commander: "legal" },
     ...overrides,
+  };
+}
+
+function commanderData(candidate: Card): CommanderCandidateData {
+  return {
+    name: candidate.name,
+    manaValue: candidate.manaValue,
+    typeLine: candidate.typeLine,
+    oracleText: candidate.oracleText,
+    colorIdentity: candidate.colorIdentity,
   };
 }
 
@@ -81,7 +92,6 @@ describe("suggestCandidates", () => {
           data_version: "test",
         };
       },
-      isCommanderEligible: async () => false,
       commanderCandidates: async () => [],
     };
   }
@@ -148,39 +158,27 @@ describe("suggestCommanders", () => {
     card({ name: "Base Elf Three" }),
   ];
 
-  const rows: SearchCardRow[] = [
-    row({ name: "Eligible Elf Lord" }),
-    row({ name: "Ineligible Elf" }),
-    row({ name: "Banned Legendary Elf", legalities: { commander: "banned" } }),
-    row({ name: "Base Elf One" }), // should never be offered — it's a base card
+  const commanderPool = [
+    card({ name: "Eligible Elf Lord", typeLine: "Legendary Creature — Elf" }),
+    card({ name: "Base Elf One", typeLine: "Legendary Creature — Elf" }),
   ];
 
   function makeEngine(): DraftEngine {
     return {
-      searchCards: async (): Promise<SearchCardsResult> => ({ results: rows, total: rows.length }),
+      searchCards: async (): Promise<SearchCardsResult> => ({ results: [], total: 0 }),
       estimateBracket: async (): Promise<BracketEstimate | null> => null,
-      isCommanderEligible: async (name: string) =>
-        name === "Eligible Elf Lord" || name === "Banned Legendary Elf",
-      commanderCandidates: async () => [],
+      commanderCandidates: async () => commanderPool.map(commanderData),
     };
   }
 
-  const resolver = makeResolver([
-    ...baseCards,
-    card({ name: "Eligible Elf Lord", typeLine: "Legendary Creature — Elf" }),
-    card({ name: "Ineligible Elf" }),
-    card({ name: "Banned Legendary Elf", typeLine: "Legendary Creature — Elf" }),
-  ]);
+  const resolver = makeResolver([...baseCards, ...commanderPool]);
 
-  it("offers only commander-eligible, Commander-legal candidates", async () => {
+  it("offers candidates from the engine's legal commander pool", async () => {
     const results = await suggestCommanders(baseCards, {
       engine: makeEngine(),
       resolver,
     });
-    const names = results.map((r) => r.card.name);
-    expect(names).toContain("Eligible Elf Lord");
-    expect(names).not.toContain("Ineligible Elf");
-    expect(names).not.toContain("Banned Legendary Elf");
+    expect(results.map((r) => r.card.name)).toContain("Eligible Elf Lord");
   });
 
   it("never offers one of the base cards as a commander candidate", async () => {
@@ -191,37 +189,59 @@ describe("suggestCommanders", () => {
     expect(results.map((r) => r.card.name)).not.toContain("Base Elf One");
   });
 
-  it("fills the commander round from the full eligible pool when themed search finds fewer than three", async () => {
-    const fallbackCards = [
-      card({ name: "Fallback Elf One", typeLine: "Legendary Creature — Elf" }),
-      card({ name: "Fallback Elf Two", typeLine: "Legendary Creature — Elf" }),
+  it("ranks the full local pool and resolves only the top three cards", async () => {
+    const candidates = [
+      card({ name: "Alpha Elf", typeLine: "Legendary Creature — Elf" }),
+      card({ name: "Beta Elf", typeLine: "Legendary Creature — Elf" }),
+      card({ name: "Gamma Elf", typeLine: "Legendary Creature — Elf" }),
+      card({ name: "Delta Elf", typeLine: "Legendary Creature — Elf" }),
     ];
-    const fallbackRows = fallbackCards.map((candidate) => row({ name: candidate.name }));
+    let resolvedNames: string[] = [];
+    const cardResolver = makeResolver([...baseCards, ...candidates]);
     const engine: DraftEngine = {
-      searchCards: async (): Promise<SearchCardsResult> => ({
-        results: [row({ name: "Eligible Elf Lord" })],
-        total: 1,
-      }),
+      searchCards: async (): Promise<SearchCardsResult> => ({ results: [], total: 0 }),
       estimateBracket: async (): Promise<BracketEstimate | null> => null,
-      isCommanderEligible: async () => true,
-      commanderCandidates: async () => [
-        row({ name: "Eligible Elf Lord" }),
-        ...fallbackRows,
-      ],
+      commanderCandidates: async () => candidates.map(commanderData),
     };
     const results = await suggestCommanders(baseCards, {
       engine,
-      resolver: makeResolver([
-        ...baseCards,
-        card({ name: "Eligible Elf Lord", typeLine: "Legendary Creature — Elf" }),
-        ...fallbackCards,
-      ]),
+      resolver: {
+        resolve: async (names) => {
+          resolvedNames = names;
+          return cardResolver.resolve(names);
+        },
+      },
     });
 
-    expect(results.map((candidate) => candidate.card.name)).toEqual([
-      "Eligible Elf Lord",
-      "Fallback Elf One",
-      "Fallback Elf Two",
+    expect(results).toHaveLength(3);
+    expect(resolvedNames).toHaveLength(3);
+    expect(resolvedNames).toEqual(results.map((candidate) => candidate.card.name));
+  });
+
+  it("prefers a tighter color identity when synergy scores are equal", async () => {
+    const exact = card({
+      name: "Exact Simic Elf",
+      typeLine: "Legendary Creature — Elf",
+      colorIdentity: ["G", "U"],
+    });
+    const broad = card({
+      name: "Five Color Elf",
+      typeLine: "Legendary Creature — Elf",
+      colorIdentity: ["W", "U", "B", "R", "G"],
+    });
+    const blueBase = card({ name: "Blue Base", colorIdentity: ["U"] });
+    const engine: DraftEngine = {
+      searchCards: async () => ({ results: [], total: 0 }),
+      estimateBracket: async () => null,
+      commanderCandidates: async () => [broad, exact].map(commanderData),
+    };
+    const results = await suggestCommanders([...baseCards, blueBase], {
+      engine,
+      resolver: makeResolver([broad, exact]),
+    });
+    expect(results.map(({ card }) => card.name)).toEqual([
+      "Exact Simic Elf",
+      "Five Color Elf",
     ]);
   });
 });
@@ -236,12 +256,11 @@ describe("suggestCommanders color identity coverage", () => {
     colorIdentity: ["U"],
   });
 
-  function makeEngine(rows: SearchCardRow[]): DraftEngine {
+  function makeEngine(cards: Card[]): DraftEngine {
     return {
-      searchCards: async (): Promise<SearchCardsResult> => ({ results: rows, total: rows.length }),
+      searchCards: async (): Promise<SearchCardsResult> => ({ results: [], total: 0 }),
       estimateBracket: async (): Promise<BracketEstimate | null> => null,
-      isCommanderEligible: async () => true,
-      commanderCandidates: async () => [],
+      commanderCandidates: async () => cards.map(commanderData),
     };
   }
 
@@ -257,11 +276,10 @@ describe("suggestCommanders color identity coverage", () => {
       typeLine: "Legendary Creature — Merfolk",
       colorIdentity: ["G", "U"],
     });
-    const rows = [row({ name: offColor.name }), row({ name: covering.name })];
     const resolver = makeResolver([...baseCards, offColor, covering]);
 
     const results = await suggestCommanders(baseCards, {
-      engine: makeEngine(rows),
+      engine: makeEngine([offColor, covering]),
       resolver,
     });
     const names = results.map((r) => r.card.name);
@@ -277,11 +295,10 @@ describe("suggestCommanders color identity coverage", () => {
       colorIdentity: ["G"],
       oracleText: "Choose a Background (You can have a Background as a second commander.)",
     });
-    const rows = [row({ name: partnerCommander.name })];
     const resolver = makeResolver([...baseCards, partnerCommander]);
 
     const results = await suggestCommanders(baseCards, {
-      engine: makeEngine(rows),
+      engine: makeEngine([partnerCommander]),
       resolver,
     });
     expect(results.map((r) => r.card.name)).toContain("Green Choose-a-Background Commander");
@@ -295,11 +312,10 @@ describe("suggestCommanders color identity coverage", () => {
       colorIdentity: ["B"],
       oracleText: "Choose a Background (You can have a Background as a second commander.)",
     });
-    const rows = [row({ name: offColorPartner.name })];
     const resolver = makeResolver([...baseCards, offColorPartner]);
 
     const results = await suggestCommanders(baseCards, {
-      engine: makeEngine(rows),
+      engine: makeEngine([offColorPartner]),
       resolver,
     });
     expect(results.map((r) => r.card.name)).not.toContain(
@@ -314,11 +330,10 @@ describe("suggestCommanders color identity coverage", () => {
       typeLine: "Legendary Creature — Elf",
       colorIdentity: ["G"],
     });
-    const rows = [row({ name: plainGreenCommander.name })];
     const resolver = makeResolver([...baseCards, plainGreenCommander]);
 
     const results = await suggestCommanders(baseCards, {
-      engine: makeEngine(rows),
+      engine: makeEngine([plainGreenCommander]),
       resolver,
     });
     expect(results.map((r) => r.card.name)).not.toContain("Plain Green Commander");

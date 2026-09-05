@@ -5,6 +5,7 @@ import type { Card } from "../lib/types";
 import { parseDecklist } from "../lib/decklist";
 import type {
   BracketEstimate,
+  CommanderCandidateData,
   SearchCardRow,
   SearchCardsResult,
 } from "../engine/draftQueries";
@@ -33,6 +34,16 @@ function row(name: string, colorIdentity: string[] = ["G"]): SearchCardRow {
   };
 }
 
+function commanderData(candidate: Card): CommanderCandidateData {
+  return {
+    name: candidate.name,
+    manaValue: candidate.manaValue,
+    typeLine: candidate.typeLine,
+    oracleText: candidate.oracleText,
+    colorIdentity: candidate.colorIdentity,
+  };
+}
+
 // A small deterministic elf-tribal card pool the fake engine/resolver share.
 const BASE_CARDS: Card[] = [
   card({ name: "Timberwatch Elf", typeLine: "Creature — Elf", manaValue: 2 }),
@@ -50,7 +61,6 @@ const POOL_CARDS: Card[] = [
 ];
 
 const POOL_ROWS: SearchCardRow[] = POOL_CARDS.map((c) => row(c.name));
-const ELIGIBLE_COMMANDERS = new Set(POOL_CARDS.map((c) => c.name));
 
 function makeEngine(): DraftEngine {
   return {
@@ -66,8 +76,7 @@ function makeEngine(): DraftEngine {
       violations: {},
       data_version: "test",
     }),
-    isCommanderEligible: async (name: string) => ELIGIBLE_COMMANDERS.has(name),
-    commanderCandidates: async () => POOL_ROWS,
+    commanderCandidates: async () => POOL_CARDS.map(commanderData),
   };
 }
 
@@ -242,7 +251,8 @@ describe("DraftSession Choose-a-Background pairing", () => {
   const otherGreenCard = card({ name: "Other Green Card", colorIdentity: ["G"] });
   const thirdGreenCard = card({ name: "Third Green Card", colorIdentity: ["G"] });
 
-  function makeBgEngine(rows: SearchCardRow[], eligible: Set<string>): DraftEngine {
+  function makeBgEngine(cards: Card[]): DraftEngine {
+    const rows = cards.map((candidate) => row(candidate.name, candidate.colorIdentity));
     return {
       searchCards: async (): Promise<SearchCardsResult> => ({ results: rows, total: rows.length }),
       estimateBracket: async (): Promise<BracketEstimate | null> => ({
@@ -253,8 +263,7 @@ describe("DraftSession Choose-a-Background pairing", () => {
         violations: {},
         data_version: "test",
       }),
-      isCommanderEligible: async (name: string) => eligible.has(name),
-      commanderCandidates: async () => rows,
+      commanderCandidates: async () => cards.map(commanderData),
     };
   }
 
@@ -275,7 +284,7 @@ describe("DraftSession Choose-a-Background pairing", () => {
   it("start() pairs a flagged Choose-a-Background commander with the base cards' Background", async () => {
     const baseCards = [partnerCommander, background, otherGreenCard];
     const session = new DraftSession({
-      engine: makeBgEngine([], new Set()),
+      engine: makeBgEngine([]),
       resolver: makeBgResolver(baseCards),
     });
 
@@ -298,12 +307,8 @@ describe("DraftSession Choose-a-Background pairing", () => {
   it("pickCommander() pairs a picked Choose-a-Background commander with the base cards' Background", async () => {
     const baseCards = [background, otherGreenCard, thirdGreenCard];
     const pool = [partnerCommander];
-    const rows = pool.map((c) => row(c.name, c.colorIdentity));
     const session = new DraftSession({
-      engine: makeBgEngine(
-        rows,
-        new Set(pool.map((c) => c.name)),
-      ),
+      engine: makeBgEngine(pool),
       resolver: makeBgResolver([...baseCards, ...pool]),
     });
 

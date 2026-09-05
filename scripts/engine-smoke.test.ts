@@ -228,6 +228,10 @@ describe.skipIf(!ENABLED)("phase-rs deck-draft query functions", () => {
         commanderCandidates.length,
         "the card database should contain more than three Commander candidates",
       ).toBeGreaterThan(3);
+      const commanderFace = draftQueries.get_card_face_data(commander);
+      expect(commanderFace?.name).toBe(commander);
+      expect(typeof commanderFace?.oracle_text).toBe("string");
+      expect(commanderFace?.card_type?.core_types).toContain("Creature");
 
       const panic = take_last_panic_message();
       expect(panic, `engine panicked: ${panic}`).toBeFalsy();

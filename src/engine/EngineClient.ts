@@ -9,7 +9,7 @@ import type {
   BracketDeckInput,
   BracketEstimate,
   ClassifyDeckResult,
-  SearchCardRow,
+  CommanderCandidateData,
   SearchCardsQuery,
   SearchCardsResult,
 } from "./draftQueries";
@@ -128,12 +128,7 @@ export class EngineClient {
     return this.req("classifyDeck", { names });
   }
 
-  /** Game-independent commander eligibility check for a single card name. */
-  isCommanderEligible(name: string): Promise<boolean> {
-    return this.req("isCommanderEligible", { name });
-  }
-
-  commanderCandidates(): Promise<SearchCardRow[]> {
+  commanderCandidates(): Promise<CommanderCandidateData[]> {
     return this.req("commanderCandidates");
   }
 

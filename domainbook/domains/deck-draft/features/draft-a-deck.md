@@ -93,10 +93,10 @@ Example: Commander themes outrank equal non-commander themes
 ## Rule: A round offers three cards, each refreshable, with no repeats in the round
 
 Each `suggestion round` shows exactly three cards whenever at least three legal candidates
-exist in the card database. Theme matches rank first; when they leave a round short, the
-engine fills the remaining slots from all legal candidates before any card is shown. Any one
-can be refreshed on its own, replaced by the closest remaining candidate that has not
-appeared in this round. Adding a card ends the round.
+exist in the card database. Commander candidates are narrowed, scored, and ranked locally
+before only the three selected cards are fetched for display. Any one can be refreshed on its
+own, replaced by the closest remaining candidate that has not appeared in this round. Adding
+a card ends the round.
 
 ```gherkin
 Example: Refresh swaps one slot for a close, unseen card
@@ -111,9 +111,8 @@ Example: Adding a card starts a fresh round
   Then a new round is offered
   And a card is free to appear again in this new round
 
-Example: A narrow theme search still produces a full commander round
-  Given the themed search finds one legal commander for the base cards
-  And at least three legal commanders exist in the card database
+Example: Commander ranking produces a full round
+  Given at least three legal commanders exist in the card database
   When the commander-selection round is suggested
   Then it shows exactly three legal commanders
 ```

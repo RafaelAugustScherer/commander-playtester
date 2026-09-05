@@ -96,7 +96,7 @@ export class DraftSession {
     this.mainboard.push({ quantity: 1, name: card.name });
   }
 
-  /** Fetch a fresh round: clears shown-this-round and offers up to three cards. */
+  /** Fetch a fresh round: clears shown-this-round and offers three cards. */
   private async openRound(): Promise<void> {
     this.shown = new Set();
     const deckNames = this.deckNames();
@@ -104,10 +104,9 @@ export class DraftSession {
     this.pool =
       this.phase === "commander-selection"
         ? await suggestCommanders(this.mainboardCards(), {
-            engine: this.deps.engine,
-            resolver: this.deps.resolver,
-            tokenCache: this.tokenCache,
-          })
+          engine: this.deps.engine,
+          resolver: this.deps.resolver,
+        })
         : await suggestCandidates(deckNames, this.profile, {
             engine: this.deps.engine,
             resolver: this.deps.resolver,
@@ -135,7 +134,6 @@ export class DraftSession {
             engine: this.deps.engine,
             resolver: this.deps.resolver,
             exclude,
-            tokenCache: this.tokenCache,
           })
         : await suggestCandidates(deckNames, this.profile, {
             engine: this.deps.engine,
