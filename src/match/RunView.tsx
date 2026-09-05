@@ -100,6 +100,13 @@ import {
   type CopyChoicePrompt,
   type CopyRetargetOption,
 } from "../sim/decisions/copyChoice";
+import {
+  distributeAmongAction,
+  proliferateAction,
+  populateAction,
+  type CountersPrompt,
+  type CounterTargetRef,
+} from "../sim/decisions/counters";
 import { XpWindow } from "../components/XpWindow";
 import {
   declareAttackersAction,
@@ -1167,6 +1174,223 @@ function CopyChoicePanel({ turn }: { turn: CopyChoiceTurn }) {
   );
 }
 
+interface CountersTurn {
+  prompt: CountersPrompt;
+  resolve: (choice: HumanChoice) => void;
+}
+
+function countersRefLabel(
+  ref: CounterTargetRef,
+  fallback: string,
+  t: (key: MsgKey, vars?: Vars) => string,
+): string {
+  if ("Player" in ref) {
+    return ref.Player === 0
+      ? t("counters.you")
+      : t("counters.seat", { n: ref.Player });
+  }
+  return fallback;
+}
+
+function distributeTitle(
+  prompt: Extract<CountersPrompt, { kind: "distribute" }>,
+  t: (key: MsgKey, vars?: Vars) => string,
+): string {
+  switch (prompt.unitKind) {
+    case "Life":
+      return t("counters.distributeLifeTitle", { n: prompt.total });
+    case "Counters":
+      return t("counters.distributeCountersTitle", {
+        n: prompt.total,
+        label: prompt.counterLabel ?? "",
+      });
+    case "Damage":
+    case "EvenSplitDamage":
+    default:
+      return t("counters.distributeDamageTitle", { n: prompt.total });
+  }
+}
+
+function DistributePanel({
+  prompt,
+  resolve,
+  pick,
+  onStep,
+}: {
+  prompt: Extract<CountersPrompt, { kind: "distribute" }>;
+  resolve: (choice: HumanChoice) => void;
+  pick: number[];
+  onStep: (index: number, delta: number) => void;
+}) {
+  const { t } = useI18n();
+  const sum = pick.reduce((total, n) => total + n, 0);
+  return (
+    <>
+      <div className="control-title">
+        <strong>{distributeTitle(prompt, t)}</strong>
+      </div>
+      <p className="hint">{t("counters.assigned", { sum, n: prompt.total })}</p>
+      <div className="search-list">
+        {prompt.targets.map((target, i) => (
+          <div key={i} className="import__row">
+            <button
+              className="btn btn--ghost"
+              disabled={(pick[i] ?? 1) <= 1}
+              onClick={() => onStep(i, -1)}
+            >
+              −
+            </button>
+            <span>
+              {countersRefLabel(target.ref, target.label, t)}: {pick[i] ?? 1}
+            </span>
+            <button
+              className="btn btn--ghost"
+              disabled={sum >= prompt.total}
+              onClick={() => onStep(i, 1)}
+            >
+              +
+            </button>
+          </div>
+        ))}
+      </div>
+      <div className="import__row">
+        <button
+          className="btn"
+          disabled={sum !== prompt.total}
+          onClick={() =>
+            resolve({
+              action: distributeAmongAction(
+                prompt.targets.map((target, i) => [target.ref, pick[i] ?? 1]),
+              ),
+            })
+          }
+        >
+          {t("counters.confirm")}
+        </button>
+        <button className="btn btn--ghost" onClick={() => resolve({ ai: true })}>
+          {t("counters.letAi")}
+        </button>
+      </div>
+    </>
+  );
+}
+
+function ProliferatePanel({
+  prompt,
+  resolve,
+  pick,
+  onTogglePick,
+}: {
+  prompt: Extract<CountersPrompt, { kind: "proliferate" }>;
+  resolve: (choice: HumanChoice) => void;
+  pick: Set<number>;
+  onTogglePick: (index: number) => void;
+}) {
+  const { t } = useI18n();
+  return (
+    <>
+      <div className="control-title">
+        <strong>{t("counters.proliferateTitle")}</strong>
+      </div>
+      <div className="search-list">
+        {prompt.options.map((option, i) => (
+          <button
+            key={i}
+            className={pick.has(i) ? "btn" : "btn--ghost"}
+            onClick={() => onTogglePick(i)}
+          >
+            {countersRefLabel(option.ref, option.label, t)}
+          </button>
+        ))}
+      </div>
+      <div className="import__row">
+        <button
+          className="btn"
+          onClick={() =>
+            resolve({
+              action: proliferateAction(
+                prompt.options
+                  .filter((_, i) => pick.has(i))
+                  .map((option) => option.ref),
+              ),
+            })
+          }
+        >
+          {t("counters.confirm")}
+        </button>
+        <button className="btn btn--ghost" onClick={() => resolve({ ai: true })}>
+          {t("counters.letAi")}
+        </button>
+      </div>
+    </>
+  );
+}
+
+function PopulatePanel({
+  prompt,
+  resolve,
+}: {
+  prompt: Extract<CountersPrompt, { kind: "populate" }>;
+  resolve: (choice: HumanChoice) => void;
+}) {
+  const { t } = useI18n();
+  return (
+    <>
+      <div className="control-title">
+        <strong>{t("counters.populateTitle")}</strong>
+      </div>
+      <div className="search-list">
+        {prompt.tokens.map((token) => (
+          <button
+            key={token.id}
+            className="btn"
+            onClick={() => resolve({ action: populateAction(token.id) })}
+          >
+            {token.name}
+          </button>
+        ))}
+      </div>
+      <div className="import__row">
+        <button className="btn btn--ghost" onClick={() => resolve({ ai: true })}>
+          {t("counters.letAi")}
+        </button>
+      </div>
+    </>
+  );
+}
+
+function CountersPanel({
+  turn,
+  distributePick,
+  onStepDistribute,
+  proliferatePick,
+  onToggleProliferate,
+}: {
+  turn: CountersTurn;
+  distributePick: number[];
+  onStepDistribute: (index: number, delta: number) => void;
+  proliferatePick: Set<number>;
+  onToggleProliferate: (index: number) => void;
+}) {
+  const { prompt, resolve } = turn;
+  if (prompt.kind === "distribute") {
+    return (
+      <DistributePanel prompt={prompt} resolve={resolve} pick={distributePick} onStep={onStepDistribute} />
+    );
+  }
+  if (prompt.kind === "proliferate") {
+    return (
+      <ProliferatePanel
+        prompt={prompt}
+        resolve={resolve}
+        pick={proliferatePick}
+        onTogglePick={onToggleProliferate}
+      />
+    );
+  }
+  return <PopulatePanel prompt={prompt} resolve={resolve} />;
+}
+
 function isTargetOptional(
   targeting: TargetTurn | null,
   chosen: TargetRef[],
@@ -1319,6 +1543,9 @@ interface RunnerCallbackDeps {
   setWardUnlessPick: Dispatch<SetStateAction<Set<number>>>;
   setWardUnlessTurn: Dispatch<SetStateAction<WardUnlessTurn | null>>;
   setCopyChoiceTurn: Dispatch<SetStateAction<CopyChoiceTurn | null>>;
+  setDistributePick: Dispatch<SetStateAction<number[]>>;
+  setProliferatePick: Dispatch<SetStateAction<Set<number>>>;
+  setCountersTurn: Dispatch<SetStateAction<CountersTurn | null>>;
 }
 
 function buildRunnerCallbacks(deps: RunnerCallbackDeps): DriverCallbacks {
@@ -1371,6 +1598,9 @@ function buildRunnerCallbacks(deps: RunnerCallbackDeps): DriverCallbacks {
     setWardUnlessPick,
     setWardUnlessTurn,
     setCopyChoiceTurn,
+    setDistributePick,
+    setProliferatePick,
+    setCountersTurn,
   } = deps;
   return {
     onFrame: (env) => {
@@ -1761,6 +1991,27 @@ function buildRunnerCallbacks(deps: RunnerCallbackDeps): DriverCallbacks {
           },
         });
       }),
+    requestHumanCounters: (_env, prompt) =>
+      new Promise<HumanChoice>((resolve) => {
+        if (isCancelled()) {
+          resolve({ ai: true });
+          return;
+        }
+        if (prompt.kind === "distribute") {
+          setDistributePick(prompt.targets.map(() => 1));
+        } else if (prompt.kind === "proliferate") {
+          setProliferatePick(new Set());
+        }
+        setCountersTurn({
+          prompt,
+          resolve: (choice) => {
+            setCountersTurn(null);
+            setDistributePick([]);
+            setProliferatePick(new Set());
+            resolve(choice);
+          },
+        });
+      }),
   };
 }
 
@@ -1892,6 +2143,11 @@ export function RunView({
   const [copyChoiceTurn, setCopyChoiceTurn] = useState<CopyChoiceTurn | null>(
     null,
   );
+  const [countersTurn, setCountersTurn] = useState<CountersTurn | null>(null);
+  const [distributePick, setDistributePick] = useState<number[]>([]);
+  const [proliferatePick, setProliferatePick] = useState<Set<number>>(
+    new Set(),
+  );
   const [passingTurn, setPassingTurn] = useState(false);
   const [logEntries, setLogEntries] = useState<LoggedEntry[]>([]);
   // On mobile the log is a full-screen drawer, so it always starts closed and
@@ -2008,6 +2264,9 @@ export function RunView({
             setWardUnlessPick,
             setWardUnlessTurn,
             setCopyChoiceTurn,
+            setDistributePick,
+            setProliferatePick,
+            setCountersTurn,
           }),
         );
         runnerRef.current = runner;
@@ -2147,7 +2406,8 @@ export function RunView({
         coinFlipLifeTurn ||
         equipCrewTurn ||
         wardUnlessTurn ||
-        copyChoiceTurn)
+        copyChoiceTurn ||
+        countersTurn)
     ) {
       setPassingTurn(false);
     }
@@ -2172,6 +2432,7 @@ export function RunView({
     equipCrewTurn,
     wardUnlessTurn,
     copyChoiceTurn,
+    countersTurn,
   ]);
 
   // Map draggable hand cards to their play actions for the current window.
@@ -3298,6 +3559,27 @@ export function RunView({
           )}
 
           {copyChoiceTurn && <CopyChoicePanel turn={copyChoiceTurn} />}
+
+          {countersTurn && (
+            <CountersPanel
+              turn={countersTurn}
+              distributePick={distributePick}
+              onStepDistribute={(i, delta) =>
+                setDistributePick((prev) =>
+                  prev.map((v, idx) => (idx === i ? Math.max(1, v + delta) : v)),
+                )
+              }
+              proliferatePick={proliferatePick}
+              onToggleProliferate={(i) =>
+                setProliferatePick((prev) => {
+                  const next = new Set(prev);
+                  if (next.has(i)) next.delete(i);
+                  else next.add(i);
+                  return next;
+                })
+              }
+            />
+          )}
         </section>
       )}
 

@@ -552,6 +552,32 @@ export const messages = {
   "copyChoice.seat": { pt: "Assento {n}", en: "Seat {n}" },
   "copyChoice.letAi": { pt: "IA decide", en: "Let the AI decide" },
 
+  "counters.distributeDamageTitle": {
+    pt: "Distribuir {n} de dano",
+    en: "Distribute {n} damage",
+  },
+  "counters.distributeLifeTitle": {
+    pt: "Distribuir {n} de vida",
+    en: "Distribute {n} life",
+  },
+  "counters.distributeCountersTitle": {
+    pt: "Distribuir {n} marcadores de {label}",
+    en: "Distribute {n} {label} counters",
+  },
+  "counters.assigned": {
+    pt: "Atribuído: {sum} / {n}",
+    en: "Assigned {sum} / {n}",
+  },
+  "counters.proliferateTitle": { pt: "Proliferar", en: "Proliferate" },
+  "counters.populateTitle": {
+    pt: "Povoar — escolha um marcador para copiar",
+    en: "Populate — choose a token to copy",
+  },
+  "counters.you": { pt: "Você", en: "You" },
+  "counters.seat": { pt: "Assento {n}", en: "Seat {n}" },
+  "counters.confirm": { pt: "Confirmar", en: "Confirm" },
+  "counters.letAi": { pt: "IA decide", en: "Let the AI decide" },
+
   "modes.title": { pt: "Escolher modo", en: "Choose a mode" },
   "modes.source": {
     pt: "{name} pede uma escolha de modo.",
