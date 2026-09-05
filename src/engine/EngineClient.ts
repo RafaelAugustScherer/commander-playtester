@@ -138,6 +138,11 @@ export class EngineClient {
     return this.req("validateCards", { names });
   }
 
+  /** Authoritative card data (color identity, type, oracle) from the engine DB. */
+  resolveCards(names: string[]): Promise<DraftCandidateData[]> {
+    return this.req("resolveCards", { names });
+  }
+
   rankCardCandidates(input: RankCardCandidatesInput): Promise<RankedCardName[]> {
     return this.req("rankCardCandidates", input);
   }

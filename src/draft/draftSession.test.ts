@@ -46,12 +46,20 @@ const POOL_CARDS: Card[] = [
 ];
 
 function makeEngine(): DraftEngine {
+  const byName = new Map(
+    [...BASE_CARDS, ...POOL_CARDS].map((c) => [c.name.toLowerCase(), c]),
+  );
   return {
     commanderCandidates: async () => POOL_CARDS.map(commanderData),
     rankCardCandidates: async ({ exclude }) =>
       POOL_CARDS.filter((candidate) => !exclude.includes(candidate.name.toLowerCase()))
         .slice(0, 3)
         .map(({ name }) => ({ name, bracketTilt: 0 })),
+    resolveCards: async (names) =>
+      names.flatMap((name) => {
+        const found = byName.get(name.trim().toLowerCase());
+        return found ? [commanderData(found)] : [];
+      }),
   };
 }
 
@@ -179,12 +187,20 @@ describe("DraftSession", () => {
   it("uses the updated deck and theme profile for the next round", async () => {
     const inputs: Array<Parameters<DraftEngine["rankCardCandidates"]>[0]> = [];
     const picks = ["Imperious Perfect", "Elvish Clancaller"];
+    const byName = new Map(
+      [...BASE_CARDS, ...POOL_CARDS].map((c) => [c.name.toLowerCase(), c]),
+    );
     const engine: DraftEngine = {
       commanderCandidates: async () => POOL_CARDS.map(commanderData),
       rankCardCandidates: async (input) => {
         inputs.push(input);
         return [{ name: picks[inputs.length - 1], bracketTilt: 0 }];
       },
+      resolveCards: async (names) =>
+        names.flatMap((name) => {
+          const found = byName.get(name.trim().toLowerCase());
+          return found ? [commanderData(found)] : [];
+        }),
     };
     const session = new DraftSession({ engine, resolver: makeResolver() });
     await session.start(
@@ -251,9 +267,20 @@ describe("DraftSession Choose-a-Background pairing", () => {
   const thirdGreenCard = card({ name: "Third Green Card", colorIdentity: ["G"] });
 
   function makeBgEngine(cards: Card[]): DraftEngine {
+    const byName = new Map(
+      [background, partnerCommander, otherGreenCard, thirdGreenCard, ...cards].map((c) => [
+        c.name.toLowerCase(),
+        c,
+      ]),
+    );
     return {
       commanderCandidates: async () => cards.map(commanderData),
       rankCardCandidates: async () => [],
+      resolveCards: async (names) =>
+        names.flatMap((name) => {
+          const found = byName.get(name.trim().toLowerCase());
+          return found ? [commanderData(found)] : [];
+        }),
     };
   }
 
@@ -321,5 +348,80 @@ describe("DraftSession Choose-a-Background pairing", () => {
       [otherGreenCard.name, thirdGreenCard.name].sort(),
     );
     expect(session.profile.colorIdentity).toEqual(["G", "U"]);
+  });
+});
+
+describe("DraftSession base card color identity", () => {
+  it("commander-selection uses the engine's color identity, not the resolver's", async () => {
+    const baseCardNames = ["Sylvan Base", "Aquatic Base", "Neutral Base"];
+    const engineIdentities: Record<string, string[]> = {
+      "sylvan base": ["G"],
+      "aquatic base": ["U"],
+      "neutral base": [],
+    };
+
+    const simicCommander = card({
+      name: "Simic Commander",
+      typeLine: "Legendary Creature — Merfolk",
+      colorIdentity: ["G", "U"],
+    });
+    const monoGreenCommander = card({
+      name: "Mono Green Commander",
+      typeLine: "Legendary Creature — Elf",
+      colorIdentity: ["G"],
+    });
+    const selesnyaCommander = card({
+      name: "Selesnya Commander",
+      typeLine: "Legendary Creature — Human",
+      colorIdentity: ["G", "W"],
+    });
+    const commanderPool = [simicCommander, monoGreenCommander, selesnyaCommander];
+
+    const engine: DraftEngine = {
+      commanderCandidates: async () => commanderPool.map(commanderData),
+      rankCardCandidates: async () => [],
+      resolveCards: async (names) =>
+        names.flatMap((name) => {
+          const identity = engineIdentities[name.trim().toLowerCase()];
+          return identity
+            ? [
+                {
+                  name,
+                  manaValue: 2,
+                  typeLine: "Creature — Bear",
+                  oracleText: "",
+                  colorIdentity: identity,
+                },
+              ]
+            : [];
+        }),
+    };
+
+    // Stands in for Scryfall resolving the base cards with empty color identity.
+    const commanderByName = new Map(commanderPool.map((c) => [c.name.toLowerCase(), c]));
+    const resolver: CardResolver = {
+      resolve: async (names) => {
+        const out = new Map<string, Card>();
+        for (const name of names) {
+          const key = name.trim().toLowerCase();
+          const commanderCard = commanderByName.get(key);
+          if (commanderCard) {
+            out.set(key, commanderCard);
+          } else if (key in engineIdentities) {
+            out.set(key, card({ name, colorIdentity: [] }));
+          }
+        }
+        return out;
+      },
+    };
+
+    const session = new DraftSession({ engine, resolver });
+    await session.start(baseCardNames, null);
+
+    expect(session.phase).toBe("commander-selection");
+    const names = session.round.map((c) => c.card.name);
+    expect(names).toContain("Simic Commander");
+    expect(names).not.toContain("Mono Green Commander");
+    expect(names).not.toContain("Selesnya Commander");
   });
 });

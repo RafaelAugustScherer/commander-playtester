@@ -67,6 +67,7 @@ describe("suggestCandidates", () => {
         rankedInputs.push(input);
         return selected.map(({ name }) => ({ name, bracketTilt: 0 }));
       },
+      resolveCards: async () => [],
     };
     const results = await suggestCandidates(deck, profile, {
       engine,
@@ -94,6 +95,7 @@ describe("suggestCandidates", () => {
         { name: "In Identity Elf", bracketTilt: 0 },
         { name: "Bracket Heavy Elf", bracketTilt: -4 },
       ],
+      resolveCards: async () => [],
     };
     const results = await suggestCandidates(deck, profile, {
       engine,
@@ -124,6 +126,7 @@ describe("suggestCommanders", () => {
     return {
       commanderCandidates: async () => commanderPool.map(commanderData),
       rankCardCandidates: async () => [],
+      resolveCards: async () => [],
     };
   }
 
@@ -157,6 +160,7 @@ describe("suggestCommanders", () => {
     const engine: DraftEngine = {
       commanderCandidates: async () => candidates.map(commanderData),
       rankCardCandidates: async () => [],
+      resolveCards: async () => [],
     };
     const results = await suggestCommanders(baseCards, {
       engine,
@@ -188,6 +192,7 @@ describe("suggestCommanders", () => {
     const engine: DraftEngine = {
       commanderCandidates: async () => [broad, exact].map(commanderData),
       rankCardCandidates: async () => [],
+      resolveCards: async () => [],
     };
     const results = await suggestCommanders([...baseCards, blueBase], {
       engine,
@@ -214,6 +219,7 @@ describe("suggestCommanders color identity coverage", () => {
     return {
       commanderCandidates: async () => cards.map(commanderData),
       rankCardCandidates: async () => [],
+      resolveCards: async () => [],
     };
   }
 

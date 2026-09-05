@@ -71,6 +71,10 @@ identities to cover the base cards. This only applies when exactly one Backgroun
 the base cards — with more than one, pairing is ambiguous and every candidate falls back to
 the solo-coverage rule.
 
+Each base card's color identity is read from the local engine, the source of truth for
+card data (`ADR-0010`), not from Scryfall — so the coverage rule holds regardless of
+network or Scryfall state.
+
 ```gherkin
 Example: An off-color candidate is never offered
   Given base cards whose color identities union to green and blue only

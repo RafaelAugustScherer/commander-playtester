@@ -35,6 +35,12 @@ per-domain changelogs; this file is the single timeline (`ADR-0007`).
   and the editor's 100-card block is now a warning instead
   (`deck-library/ADR-0002`).
 
+### Fixed
+
+- Base-card color identity for the draft now comes from the local engine, so
+  the commander-selection color-identity coverage holds even when Scryfall
+  resolves a base card incompletely (`ADR-0010`).
+
 ## [0.4.14] - 2026-09-02
 
 ### Changed

@@ -178,6 +178,18 @@ function validateCards(names: string[]): CardValidation[] {
   });
 }
 
+function resolveCards(names: string[]): DraftCandidateData[] {
+  const index = cardIndex();
+  return names.flatMap((name) => {
+    const row =
+      index.get(name.trim().toLowerCase()) ??
+      index.get(frontFace(name).toLowerCase());
+    if (!row) return [];
+    const candidate = candidateData(row);
+    return candidate ? [candidate] : [];
+  });
+}
+
 function commanderCandidates(): DraftCandidateData[] {
   if (cachedCommanderCandidates) return cachedCommanderCandidates;
   cachedCommanderCandidates = draftQueries
@@ -345,6 +357,11 @@ async function handle(cmd: string, args: any): Promise<any> {
       await ensureStarted();
       await ensureDb();
       return validateCards(args?.names ?? []);
+    }
+    case "resolveCards": {
+      await ensureStarted();
+      await ensureDb();
+      return resolveCards(args?.names ?? []);
     }
     case "rankCardCandidates": {
       await ensureStarted();

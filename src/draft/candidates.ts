@@ -15,6 +15,7 @@ import { draftCandidateCard } from "./localCandidates";
 export interface DraftEngine {
   commanderCandidates(): Promise<DraftCandidateData[]>;
   rankCardCandidates(input: RankCardCandidatesInput): Promise<RankedCardName[]>;
+  resolveCards(names: string[]): Promise<DraftCandidateData[]>;
 }
 
 /** Card-name resolution the draft pipeline needs — narrow enough to fake in tests. */
@@ -26,6 +27,7 @@ export interface CardResolver {
 export const engineDraftEngine: DraftEngine = {
   commanderCandidates: () => getEngine().commanderCandidates(),
   rankCardCandidates: (input) => getEngine().rankCardCandidates(input),
+  resolveCards: (names) => getEngine().resolveCards(names),
 };
 
 /** Real `CardResolver`, wrapping the Scryfall localStorage cache. */

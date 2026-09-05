@@ -13,6 +13,7 @@ import {
   type RankedCandidate,
 } from "./candidates";
 import { DEFAULT_BRACKET_TARGET, type BracketTarget } from "./bracket";
+import { draftCandidateCard } from "./localCandidates";
 
 export type DraftPhase = "commander-selection" | "drafting";
 
@@ -164,12 +165,9 @@ export class DraftSession {
     }
 
     this.target = target;
-    const resolvedMap = await this.deps.resolver.resolve(uniqueNames);
-    this.rememberResolved(resolvedMap.values());
-
-    const baseCards = uniqueNames
-      .map((name) => resolvedMap.get(name.toLowerCase()))
-      .filter((c): c is Card => c !== undefined);
+    const resolved = await this.deps.engine.resolveCards(uniqueNames);
+    const baseCards = resolved.map(draftCandidateCard);
+    this.rememberResolved(baseCards);
 
     if (commanderName) {
       const key = commanderName.trim().toLowerCase();
