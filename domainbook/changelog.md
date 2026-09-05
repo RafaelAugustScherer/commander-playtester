@@ -12,6 +12,16 @@ depth live there. A purely-internal PR that touches no product or architecture m
 skip its version with a `Skip-Docs: <reason>` trailer instead. There are no
 per-domain changelogs; this file is the single timeline (`ADR-0007`).
 
+## [0.6.0] - 2026-09-05
+
+### Added
+
+- You now decide your own spells' **optional costs** (kicker, buyback, entwine,
+  escalate…): casting a spell that offers a "you may pay an additional cost"
+  choice prompts your seat to pay or not, instead of the AI deciding — with the
+  running kick count shown for repeatable costs, and a let-the-AI-decide escape
+  (`domains/simulation/features/decide-an-optional-cost.md`).
+
 ## [0.5.0] - 2026-09-03
 
 ### Added

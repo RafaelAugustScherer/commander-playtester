@@ -31,6 +31,10 @@ import {
   parseResolutionOptionalPaymentPrompt,
   type ResolutionOptionalPaymentPrompt,
 } from "./decisions/resolutionOptionalPayment";
+import {
+  parseOptionalCostPrompt,
+  type OptionalCostPrompt,
+} from "./decisions/optionalCost";
 
 export interface MatchResult {
   matchIndex: number;
@@ -242,6 +246,11 @@ export interface DriverCallbacks {
   requestHumanResolutionOptionalPayment?: (
     env: GameStateEnvelope,
     prompt: ResolutionOptionalPaymentPrompt,
+  ) => Promise<HumanChoice>;
+  /** Called when casting a spell offers the human an optional cost (kicker, buyback…). */
+  requestHumanOptionalCost?: (
+    env: GameStateEnvelope,
+    prompt: OptionalCostPrompt,
   ) => Promise<HumanChoice>;
 }
 
@@ -550,6 +559,12 @@ export class MatchRunner {
           env,
           cb.requestHumanResolutionOptionalPayment,
           parseResolutionOptionalPaymentPrompt(wf, state.objects),
+        ),
+      () =>
+        humanRequest(
+          env,
+          cb.requestHumanOptionalCost,
+          parseOptionalCostPrompt(wf, state.objects),
         ),
     ];
     for (const resolve of resolvers) {
