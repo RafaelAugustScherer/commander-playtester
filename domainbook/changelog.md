@@ -12,6 +12,14 @@ depth live there. A purely-internal PR that touches no product or architecture m
 skip its version with a `Skip-Docs: <reason>` trailer instead. There are no
 per-domain changelogs; this file is the single timeline (`ADR-0007`).
 
+## [0.14.0] - 2026-09-05
+
+### Added
+
+- You now choose which **coin-flip results to keep** and which
+  **life-redistribution option to apply**, instead of the AI deciding
+  (`domains/simulation/features/choose-coin-flips-and-life-redistribution.md`).
+
 ## [0.13.0] - 2026-09-05
 
 ### Added

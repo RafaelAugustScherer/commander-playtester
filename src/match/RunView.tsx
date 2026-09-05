@@ -76,6 +76,11 @@ import {
   type PhyrexianPaymentPrompt,
   type PhyrexianShardChoice,
 } from "../sim/decisions/phyrexianPayment";
+import {
+  selectCoinFlipsAction,
+  submitLifeRedistributionAction,
+  type CoinFlipLifePrompt,
+} from "../sim/decisions/coinFlipAndLife";
 import { XpWindow } from "../components/XpWindow";
 import {
   declareAttackersAction,
@@ -623,6 +628,117 @@ function PhyrexianPanel({
   );
 }
 
+interface CoinFlipLifeTurn {
+  prompt: CoinFlipLifePrompt;
+  resolve: (choice: HumanChoice) => void;
+}
+
+function coinFlipLifeSeatLabel(
+  seat: number,
+  t: (key: MsgKey, vars?: Vars) => string,
+): string {
+  return seat === 0
+    ? t("coinFlipLife.you")
+    : t("coinFlipLife.seat", { n: seat });
+}
+
+function CoinFlipLifePanel({
+  turn,
+  pick,
+  onTogglePick,
+  onConfirm,
+  onLetAi,
+}: {
+  turn: CoinFlipLifeTurn;
+  pick: Set<number>;
+  onTogglePick: (index: number) => void;
+  onConfirm: () => void;
+  onLetAi: () => void;
+}) {
+  const { t } = useI18n();
+  const { prompt, resolve } = turn;
+
+  if (prompt.kind === "coinFlip") {
+    const atCap = pick.size >= prompt.keepCount;
+    return (
+      <>
+        <div className="control-title">
+          <strong>{t("coinFlipLife.coinFlipTitle")}</strong>
+        </div>
+        <p className="hint">
+          {t("coinFlipLife.coinFlipHint", { n: prompt.keepCount })}
+        </p>
+        <p className="hint">
+          {t("coinFlipLife.kept", {
+            picked: pick.size,
+            n: prompt.keepCount,
+          })}
+        </p>
+        <div className="search-list">
+          {prompt.results.map((heads, index) => {
+            const picked = pick.has(index);
+            return (
+              <button
+                key={index}
+                className={picked ? "btn" : "btn--ghost"}
+                disabled={!picked && atCap}
+                onClick={() => onTogglePick(index)}
+              >
+                {heads ? t("coinFlipLife.heads") : t("coinFlipLife.tails")}
+              </button>
+            );
+          })}
+        </div>
+        <div className="import__row">
+          <button
+            className="btn"
+            disabled={pick.size !== prompt.keepCount}
+            onClick={onConfirm}
+          >
+            {t("coinFlipLife.confirm")}
+          </button>
+          <button className="btn btn--ghost" onClick={onLetAi}>
+            {t("coinFlipLife.letAi")}
+          </button>
+        </div>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <div className="control-title">
+        <strong>{t("coinFlipLife.lifeTitle")}</strong>
+      </div>
+      <div className="search-list">
+        {prompt.options.map((option, index) => (
+          <button
+            key={index}
+            className="btn"
+            onClick={() =>
+              resolve({ action: submitLifeRedistributionAction(index) })
+            }
+          >
+            {option
+              .map((a) =>
+                t("coinFlipLife.lifeEntry", {
+                  seat: coinFlipLifeSeatLabel(a.seat, t),
+                  life: a.life,
+                }),
+              )
+              .join(" / ")}
+          </button>
+        ))}
+      </div>
+      <div className="import__row">
+        <button className="btn btn--ghost" onClick={onLetAi}>
+          {t("coinFlipLife.letAi")}
+        </button>
+      </div>
+    </>
+  );
+}
+
 function isTargetOptional(
   targeting: TargetTurn | null,
   chosen: TargetRef[],
@@ -768,6 +884,8 @@ interface RunnerCallbackDeps {
   setExploreRevealTurn: Dispatch<SetStateAction<ExploreRevealTurn | null>>;
   setPhyrexianPick: Dispatch<SetStateAction<PhyrexianShardChoice[]>>;
   setPhyrexianTurn: Dispatch<SetStateAction<PhyrexianTurn | null>>;
+  setCoinFlipLifePick: Dispatch<SetStateAction<Set<number>>>;
+  setCoinFlipLifeTurn: Dispatch<SetStateAction<CoinFlipLifeTurn | null>>;
 }
 
 function buildRunnerCallbacks(deps: RunnerCallbackDeps): DriverCallbacks {
@@ -813,6 +931,8 @@ function buildRunnerCallbacks(deps: RunnerCallbackDeps): DriverCallbacks {
     setExploreRevealTurn,
     setPhyrexianPick,
     setPhyrexianTurn,
+    setCoinFlipLifePick,
+    setCoinFlipLifeTurn,
   } = deps;
   return {
     onFrame: (env) => {
@@ -1141,6 +1261,22 @@ function buildRunnerCallbacks(deps: RunnerCallbackDeps): DriverCallbacks {
           },
         });
       }),
+    requestHumanCoinFlipLife: (_env, prompt) =>
+      new Promise<HumanChoice>((resolve) => {
+        if (isCancelled()) {
+          resolve({ ai: true });
+          return;
+        }
+        setCoinFlipLifePick(new Set());
+        setCoinFlipLifeTurn({
+          prompt,
+          resolve: (choice) => {
+            setCoinFlipLifeTurn(null);
+            setCoinFlipLifePick(new Set());
+            resolve(choice);
+          },
+        });
+      }),
   };
 }
 
@@ -1254,6 +1390,11 @@ export function RunView({
   const [phyrexianPick, setPhyrexianPick] = useState<PhyrexianShardChoice[]>(
     [],
   );
+  const [coinFlipLifeTurn, setCoinFlipLifeTurn] =
+    useState<CoinFlipLifeTurn | null>(null);
+  const [coinFlipLifePick, setCoinFlipLifePick] = useState<Set<number>>(
+    new Set(),
+  );
   const [passingTurn, setPassingTurn] = useState(false);
   const [logEntries, setLogEntries] = useState<LoggedEntry[]>([]);
   // On mobile the log is a full-screen drawer, so it always starts closed and
@@ -1363,6 +1504,8 @@ export function RunView({
             setExploreRevealTurn,
             setPhyrexianPick,
             setPhyrexianTurn,
+            setCoinFlipLifePick,
+            setCoinFlipLifeTurn,
           }),
         );
         runnerRef.current = runner;
@@ -1498,7 +1641,8 @@ export function RunView({
         searchTurn ||
         digTurn ||
         exploreRevealTurn ||
-        phyrexianTurn)
+        phyrexianTurn ||
+        coinFlipLifeTurn)
     ) {
       setPassingTurn(false);
     }
@@ -1519,6 +1663,7 @@ export function RunView({
     digTurn,
     exploreRevealTurn,
     phyrexianTurn,
+    coinFlipLifeTurn,
   ]);
 
   // Map draggable hand cards to their play actions for the current window.
@@ -2565,6 +2710,33 @@ export function RunView({
                 })
               }
               onLetAi={() => phyrexianTurn.resolve({ ai: true })}
+            />
+          )}
+
+          {coinFlipLifeTurn && (
+            <CoinFlipLifePanel
+              turn={coinFlipLifeTurn}
+              pick={coinFlipLifePick}
+              onTogglePick={(index) =>
+                setCoinFlipLifePick((prev) => {
+                  const next = new Set(prev);
+                  if (next.has(index)) {
+                    next.delete(index);
+                  } else if (
+                    coinFlipLifeTurn.prompt.kind === "coinFlip" &&
+                    next.size < coinFlipLifeTurn.prompt.keepCount
+                  ) {
+                    next.add(index);
+                  }
+                  return next;
+                })
+              }
+              onConfirm={() =>
+                coinFlipLifeTurn.resolve({
+                  action: selectCoinFlipsAction([...coinFlipLifePick]),
+                })
+              }
+              onLetAi={() => coinFlipLifeTurn.resolve({ ai: true })}
             />
           )}
         </section>

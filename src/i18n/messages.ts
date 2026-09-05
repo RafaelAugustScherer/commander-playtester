@@ -430,6 +430,30 @@ export const messages = {
   "phyrexian.confirm": { pt: "Confirmar", en: "Confirm" },
   "phyrexian.letAi": { pt: "IA decide", en: "Let the AI decide" },
 
+  "coinFlipLife.coinFlipTitle": {
+    pt: "Manter resultados de moeda",
+    en: "Keep coin-flip results",
+  },
+  "coinFlipLife.coinFlipHint": {
+    pt: "Mantenha {n} resultado(s).",
+    en: "Keep {n} result(s).",
+  },
+  "coinFlipLife.kept": {
+    pt: "Mantidos: {picked} / {n}",
+    en: "Kept {picked} of {n}",
+  },
+  "coinFlipLife.heads": { pt: "Cara", en: "Heads" },
+  "coinFlipLife.tails": { pt: "Coroa", en: "Tails" },
+  "coinFlipLife.confirm": { pt: "Confirmar", en: "Confirm" },
+  "coinFlipLife.lifeTitle": {
+    pt: "Redistribuir totais de vida",
+    en: "Redistribute life totals",
+  },
+  "coinFlipLife.lifeEntry": { pt: "{seat}: {life}", en: "{seat}: {life}" },
+  "coinFlipLife.you": { pt: "Você", en: "You" },
+  "coinFlipLife.seat": { pt: "Assento {n}", en: "Seat {n}" },
+  "coinFlipLife.letAi": { pt: "IA decide", en: "Let the AI decide" },
+
   "modes.title": { pt: "Escolher modo", en: "Choose a mode" },
   "modes.source": {
     pt: "{name} pede uma escolha de modo.",
