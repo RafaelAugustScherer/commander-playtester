@@ -311,6 +311,22 @@ export const messages = {
   "optionalCost.decline": { pt: "Não pagar", en: "Don't pay" },
   "optionalCost.letAi": { pt: "IA decide", en: "Let the AI decide" },
 
+  "commanderZone.title": { pt: "Zona do comandante", en: "Commander zone" },
+  "commanderZone.prompt": {
+    pt: "Enviar {name} para a zona de comando em vez do {zone}?",
+    en: "Send {name} to the command zone instead of the {zone}?",
+  },
+  "commanderZone.commanderFallback": {
+    pt: "seu comandante",
+    en: "your commander",
+  },
+  "commanderZone.commandZone": { pt: "Zona de comando", en: "Command zone" },
+  "commanderZone.leave": {
+    pt: "Deixar no {zone}",
+    en: "Leave in {zone}",
+  },
+  "commanderZone.letAi": { pt: "IA decide", en: "Let the AI decide" },
+
   "modes.title": { pt: "Escolher modo", en: "Choose a mode" },
   "modes.source": {
     pt: "{name} pede uma escolha de modo.",
