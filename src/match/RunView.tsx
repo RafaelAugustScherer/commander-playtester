@@ -44,6 +44,10 @@ import {
   payResolutionOptionalPaymentAction,
   type ResolutionOptionalPaymentPrompt,
 } from "../sim/decisions/resolutionOptionalPayment";
+import {
+  decideOptionalCostAction,
+  type OptionalCostPrompt,
+} from "../sim/decisions/optionalCost";
 import { XpWindow } from "../components/XpWindow";
 import {
   declareAttackersAction,
@@ -237,6 +241,11 @@ interface ResolutionOptionalPaymentTurn {
   resolve: (choice: HumanChoice) => void;
 }
 
+interface OptionalCostTurn {
+  prompt: OptionalCostPrompt;
+  resolve: (choice: HumanChoice) => void;
+}
+
 function isTargetOptional(
   targeting: TargetTurn | null,
   chosen: TargetRef[],
@@ -369,6 +378,7 @@ interface RunnerCallbackDeps {
   setResolutionOptionalPaymentTurn: Dispatch<
     SetStateAction<ResolutionOptionalPaymentTurn | null>
   >;
+  setOptionalCostTurn: Dispatch<SetStateAction<OptionalCostTurn | null>>;
 }
 
 function buildRunnerCallbacks(deps: RunnerCallbackDeps): DriverCallbacks {
@@ -401,6 +411,7 @@ function buildRunnerCallbacks(deps: RunnerCallbackDeps): DriverCallbacks {
     setDiscardTurn,
     setScryTurn,
     setResolutionOptionalPaymentTurn,
+    setOptionalCostTurn,
   } = deps;
   return {
     onFrame: (env) => {
@@ -606,6 +617,20 @@ function buildRunnerCallbacks(deps: RunnerCallbackDeps): DriverCallbacks {
           },
         });
       }),
+    requestHumanOptionalCost: (_env, prompt) =>
+      new Promise<HumanChoice>((resolve) => {
+        if (isCancelled()) {
+          resolve({ ai: true });
+          return;
+        }
+        setOptionalCostTurn({
+          prompt,
+          resolve: (choice) => {
+            setOptionalCostTurn(null);
+            resolve(choice);
+          },
+        });
+      }),
   };
 }
 
@@ -698,6 +723,8 @@ export function RunView({
   const [scryTurn, setScryTurn] = useState<ScryTurn | null>(null);
   const [resolutionOptionalPaymentTurn, setResolutionOptionalPaymentTurn] =
     useState<ResolutionOptionalPaymentTurn | null>(null);
+  const [optionalCostTurn, setOptionalCostTurn] =
+    useState<OptionalCostTurn | null>(null);
   const [passingTurn, setPassingTurn] = useState(false);
   const [logEntries, setLogEntries] = useState<LoggedEntry[]>([]);
   // On mobile the log is a full-screen drawer, so it always starts closed and
@@ -794,6 +821,7 @@ export function RunView({
             setDiscardTurn,
             setScryTurn,
             setResolutionOptionalPaymentTurn,
+            setOptionalCostTurn,
           }),
         );
         runnerRef.current = runner;
@@ -921,7 +949,8 @@ export function RunView({
         creatureTypeTurn ||
         modesTurn ||
         scryTurn ||
-        resolutionOptionalPaymentTurn)
+        resolutionOptionalPaymentTurn ||
+        optionalCostTurn)
     ) {
       setPassingTurn(false);
     }
@@ -934,6 +963,7 @@ export function RunView({
     modesTurn,
     scryTurn,
     resolutionOptionalPaymentTurn,
+    optionalCostTurn,
   ]);
 
   // Map draggable hand cards to their play actions for the current window.
@@ -1679,6 +1709,57 @@ export function RunView({
                   onClick={() => resolutionOptionalPaymentTurn.resolve({ ai: true })}
                 >
                   {t("resolutionOptionalPayment.letAi")}
+                </button>
+              </div>
+            </>
+          )}
+
+          {optionalCostTurn && (
+            <>
+              <div className="control-title">
+                <strong>{t("optionalCost.title")}</strong>
+              </div>
+              <p className="hint">
+                {t("optionalCost.prompt", {
+                  name:
+                    optionalCostTurn.prompt.sourceName ||
+                    t("optionalCost.spellFallback"),
+                })}
+              </p>
+              {optionalCostTurn.prompt.repeatable &&
+                optionalCostTurn.prompt.timesKicked > 0 && (
+                  <p className="hint">
+                    {t("optionalCost.timesPaid", {
+                      count: optionalCostTurn.prompt.timesKicked,
+                    })}
+                  </p>
+                )}
+              <div className="import__row">
+                <button
+                  className="btn"
+                  onClick={() =>
+                    optionalCostTurn.resolve({
+                      action: decideOptionalCostAction(true),
+                    })
+                  }
+                >
+                  {t("optionalCost.pay")}
+                </button>
+                <button
+                  className="btn btn--ghost"
+                  onClick={() =>
+                    optionalCostTurn.resolve({
+                      action: decideOptionalCostAction(false),
+                    })
+                  }
+                >
+                  {t("optionalCost.decline")}
+                </button>
+                <button
+                  className="btn btn--ghost"
+                  onClick={() => optionalCostTurn.resolve({ ai: true })}
+                >
+                  {t("optionalCost.letAi")}
                 </button>
               </div>
             </>

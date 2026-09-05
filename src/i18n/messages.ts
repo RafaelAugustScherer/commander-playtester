@@ -297,6 +297,20 @@ export const messages = {
   "resolutionOptionalPayment.decline": { pt: "Recusar", en: "Decline" },
   "resolutionOptionalPayment.letAi": { pt: "IA decide", en: "Let the AI decide" },
 
+  "optionalCost.title": { pt: "Custo adicional", en: "Optional cost" },
+  "optionalCost.prompt": {
+    pt: "Pagar um custo adicional de {name}?",
+    en: "Pay an additional cost for {name}?",
+  },
+  "optionalCost.spellFallback": { pt: "esta mágica", en: "this spell" },
+  "optionalCost.timesPaid": {
+    pt: "Já pago {count}x nesta conjuração.",
+    en: "Already paid {count}× on this cast.",
+  },
+  "optionalCost.pay": { pt: "Pagar", en: "Pay" },
+  "optionalCost.decline": { pt: "Não pagar", en: "Don't pay" },
+  "optionalCost.letAi": { pt: "IA decide", en: "Let the AI decide" },
+
   "modes.title": { pt: "Escolher modo", en: "Choose a mode" },
   "modes.source": {
     pt: "{name} pede uma escolha de modo.",
