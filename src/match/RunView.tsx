@@ -53,6 +53,10 @@ import {
   type CommanderZonePrompt,
 } from "../sim/decisions/commanderZone";
 import { chooseXAction, type XValuePrompt } from "../sim/decisions/xValue";
+import {
+  orderTriggersAction,
+  type OrderTriggersPrompt,
+} from "../sim/decisions/orderTriggers";
 import { XpWindow } from "../components/XpWindow";
 import {
   declareAttackersAction,
@@ -261,6 +265,11 @@ interface XValueTurn {
   resolve: (choice: HumanChoice) => void;
 }
 
+interface OrderTriggersTurn {
+  prompt: OrderTriggersPrompt;
+  resolve: (choice: HumanChoice) => void;
+}
+
 function formatZoneLabel(zone: string): string {
   if (!zone) return zone;
   return zone.charAt(0).toUpperCase() + zone.slice(1).toLowerCase();
@@ -402,6 +411,8 @@ interface RunnerCallbackDeps {
   setCommanderZoneTurn: Dispatch<SetStateAction<CommanderZoneTurn | null>>;
   setXValuePick: Dispatch<SetStateAction<number>>;
   setXValueTurn: Dispatch<SetStateAction<XValueTurn | null>>;
+  setOrderTriggersPick: Dispatch<SetStateAction<number[]>>;
+  setOrderTriggersTurn: Dispatch<SetStateAction<OrderTriggersTurn | null>>;
 }
 
 function buildRunnerCallbacks(deps: RunnerCallbackDeps): DriverCallbacks {
@@ -438,6 +449,8 @@ function buildRunnerCallbacks(deps: RunnerCallbackDeps): DriverCallbacks {
     setCommanderZoneTurn,
     setXValuePick,
     setXValueTurn,
+    setOrderTriggersPick,
+    setOrderTriggersTurn,
   } = deps;
   return {
     onFrame: (env) => {
@@ -687,6 +700,23 @@ function buildRunnerCallbacks(deps: RunnerCallbackDeps): DriverCallbacks {
           },
         });
       }),
+    requestHumanOrderTriggers: (_env, prompt) =>
+      new Promise<HumanChoice>((resolve) => {
+        if (isCancelled()) {
+          resolve({ ai: true });
+          return;
+        }
+        const identity = prompt.triggers.map((_, i) => i);
+        setOrderTriggersPick(identity);
+        setOrderTriggersTurn({
+          prompt,
+          resolve: (choice) => {
+            setOrderTriggersTurn(null);
+            setOrderTriggersPick(identity);
+            resolve(choice);
+          },
+        });
+      }),
   };
 }
 
@@ -785,6 +815,9 @@ export function RunView({
     useState<CommanderZoneTurn | null>(null);
   const [xValueTurn, setXValueTurn] = useState<XValueTurn | null>(null);
   const [xValuePick, setXValuePick] = useState(0);
+  const [orderTriggersTurn, setOrderTriggersTurn] =
+    useState<OrderTriggersTurn | null>(null);
+  const [orderTriggersPick, setOrderTriggersPick] = useState<number[]>([]);
   const [passingTurn, setPassingTurn] = useState(false);
   const [logEntries, setLogEntries] = useState<LoggedEntry[]>([]);
   // On mobile the log is a full-screen drawer, so it always starts closed and
@@ -885,6 +918,8 @@ export function RunView({
             setCommanderZoneTurn,
             setXValuePick,
             setXValueTurn,
+            setOrderTriggersPick,
+            setOrderTriggersTurn,
           }),
         );
         runnerRef.current = runner;
@@ -1015,7 +1050,8 @@ export function RunView({
         resolutionOptionalPaymentTurn ||
         optionalCostTurn ||
         commanderZoneTurn ||
-        xValueTurn)
+        xValueTurn ||
+        orderTriggersTurn)
     ) {
       setPassingTurn(false);
     }
@@ -1031,6 +1067,7 @@ export function RunView({
     optionalCostTurn,
     commanderZoneTurn,
     xValueTurn,
+    orderTriggersTurn,
   ]);
 
   // Map draggable hand cards to their play actions for the current window.
@@ -1929,6 +1966,85 @@ export function RunView({
                   onClick={() => xValueTurn.resolve({ ai: true })}
                 >
                   {t("xValue.letAi")}
+                </button>
+              </div>
+            </>
+          )}
+
+          {orderTriggersTurn && (
+            <>
+              <div className="control-title">
+                <strong>{t("orderTriggers.title")}</strong>
+              </div>
+              <p className="hint">{t("orderTriggers.resolvesLast")}</p>
+              {orderTriggersPick.map((triggerIndex, position) => {
+                const trigger = orderTriggersTurn.prompt.triggers[triggerIndex];
+                return (
+                  <div className="import__row" key={triggerIndex}>
+                    <div>
+                      <strong>
+                        {trigger.sourceName ||
+                          t("orderTriggers.triggerFallback", {
+                            number: triggerIndex + 1,
+                          })}
+                      </strong>
+                      {trigger.description && (
+                        <p className="hint">{trigger.description}</p>
+                      )}
+                    </div>
+                    <button
+                      className="btn btn--ghost"
+                      aria-label={t("orderTriggers.moveUp")}
+                      disabled={position === 0}
+                      onClick={() =>
+                        setOrderTriggersPick((prev) => {
+                          const next = [...prev];
+                          [next[position - 1], next[position]] = [
+                            next[position],
+                            next[position - 1],
+                          ];
+                          return next;
+                        })
+                      }
+                    >
+                      ▲
+                    </button>
+                    <button
+                      className="btn btn--ghost"
+                      aria-label={t("orderTriggers.moveDown")}
+                      disabled={position === orderTriggersPick.length - 1}
+                      onClick={() =>
+                        setOrderTriggersPick((prev) => {
+                          const next = [...prev];
+                          [next[position], next[position + 1]] = [
+                            next[position + 1],
+                            next[position],
+                          ];
+                          return next;
+                        })
+                      }
+                    >
+                      ▼
+                    </button>
+                  </div>
+                );
+              })}
+              <div className="import__row">
+                <button
+                  className="btn"
+                  onClick={() =>
+                    orderTriggersTurn.resolve({
+                      action: orderTriggersAction(orderTriggersPick),
+                    })
+                  }
+                >
+                  {t("orderTriggers.confirm")}
+                </button>
+                <button
+                  className="btn btn--ghost"
+                  onClick={() => orderTriggersTurn.resolve({ ai: true })}
+                >
+                  {t("orderTriggers.letAi")}
                 </button>
               </div>
             </>

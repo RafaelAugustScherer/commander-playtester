@@ -12,6 +12,15 @@ depth live there. A purely-internal PR that touches no product or architecture m
 skip its version with a `Skip-Docs: <reason>` trailer instead. There are no
 per-domain changelogs; this file is the single timeline (`ADR-0007`).
 
+## [0.9.0] - 2026-09-05
+
+### Added
+
+- You now order your own **simultaneous triggers**: when two or more of your
+  triggered abilities go on the stack at once, the control panel lets you
+  arrange them with ▲/▼ instead of the AI deciding
+  (`domains/simulation/features/order-your-own-triggers.md`).
+
 ## [0.8.0] - 2026-09-05
 
 ### Added
