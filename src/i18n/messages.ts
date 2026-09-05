@@ -478,6 +478,55 @@ export const messages = {
   "equipCrew.confirm": { pt: "Confirmar", en: "Confirm" },
   "equipCrew.letAi": { pt: "IA decide", en: "Let the AI decide" },
 
+  "wardUnless.discardTitle": {
+    pt: "Escolha uma carta para descartar",
+    en: "Choose a card to discard",
+  },
+  "wardUnless.bounceTitle": {
+    pt: "Escolha um permanente para devolver à mão",
+    en: "Choose a permanent to return to hand",
+  },
+  "wardUnless.sacrificeTitle": {
+    pt: "Escolha um permanente para sacrificar",
+    en: "Choose a permanent to sacrifice",
+  },
+  "wardUnless.powerRequired": {
+    pt: "Poder necessário: {n}",
+    en: "Power required: {n}",
+  },
+  "wardUnless.powerProgress": {
+    pt: "Poder selecionado: {sum} / {n}",
+    en: "Power selected: {sum} / {n}",
+  },
+  "wardUnless.confirm": { pt: "Confirmar", en: "Confirm" },
+  "wardUnless.costTitle": {
+    pt: "Escolha como pagar",
+    en: "Choose how to pay",
+  },
+  "wardUnless.costFixed": { pt: "Pagar custo de mana", en: "Pay mana cost" },
+  "wardUnless.costGeneric": {
+    pt: "Pagar mana genérica",
+    en: "Pay generic mana",
+  },
+  "wardUnless.costPayLife": {
+    pt: "Pagar {amount} de vida",
+    en: "Pay {amount} life",
+  },
+  "wardUnless.costDiscard": {
+    pt: "Descartar uma carta",
+    en: "Discard a card",
+  },
+  "wardUnless.costSacrifice": {
+    pt: "Sacrificar {count}",
+    en: "Sacrifice {count}",
+  },
+  "wardUnless.costReturnToHand": {
+    pt: "Devolver {count} à mão",
+    en: "Return {count} to hand",
+  },
+  "wardUnless.decline": { pt: "Não pagar", en: "Don't pay" },
+  "wardUnless.letAi": { pt: "IA decide", en: "Let the AI decide" },
+
   "modes.title": { pt: "Escolher modo", en: "Choose a mode" },
   "modes.source": {
     pt: "{name} pede uma escolha de modo.",

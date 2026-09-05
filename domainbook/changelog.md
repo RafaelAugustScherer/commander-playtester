@@ -12,6 +12,15 @@ depth live there. A purely-internal PR that touches no product or architecture m
 skip its version with a `Skip-Docs: <reason>` trailer instead. There are no
 per-domain changelogs; this file is the single timeline (`ADR-0007`).
 
+## [0.16.0] - 2026-09-05
+
+### Added
+
+- You now choose how to pay **Ward and "unless" costs** — which card to
+  discard, which permanent to sacrifice or return to hand, and which of
+  several alternative costs to pay — instead of the AI deciding
+  (`domains/simulation/features/pay-ward-and-unless-costs.md`).
+
 ## [0.15.0] - 2026-09-05
 
 ### Added
