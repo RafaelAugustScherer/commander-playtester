@@ -27,6 +27,23 @@ describe("toCard", () => {
     expect(card.oracleText).toContain("Draw two cards");
     expect(card.oracleText).toContain("Add {G}");
   });
+
+  it("carries color_identity as colorIdentity, distinct from colors", () => {
+    const card = toCard({
+      name: "Dryad Arbor",
+      cmc: 0,
+      type_line: "Land Creature — Dryad",
+      colors: [],
+      color_identity: ["G"],
+    });
+    expect(card.colors).toEqual([]);
+    expect(card.colorIdentity).toEqual(["G"]);
+  });
+
+  it("defaults colorIdentity to an empty array when Scryfall omits it", () => {
+    const card = toCard({ name: "No Identity Field", cmc: 0 });
+    expect(card.colorIdentity).toEqual([]);
+  });
 });
 
 /** A fake fetch that returns a canned collection response. */
@@ -78,6 +95,9 @@ describe("resolveDeck", () => {
     expect(deck.unresolved).toEqual(["Nonexistent Card"]);
   });
 
+});
+
+describe("resolveDeck (two-sided)", () => {
   it("resolves a stored two-sided name by querying its front face", async () => {
     const parsed = parseDecklist("Deck\n1 Commit // Memory");
     // Scryfall knows the card only under the front face "Commit"; it echoes the

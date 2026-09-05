@@ -48,6 +48,7 @@ export const messages = {
 
   "deck.noCommander": { pt: "sem comandante", en: "no commander" },
   "deck.cards": { pt: "{n} cartas", en: "{n} cards" },
+  "deck.partial": { pt: "Incompleto", en: "Partial" },
 
   "editor.editTitle": { pt: "Editar deck", en: "Edit deck" },
   "editor.newTitle": { pt: "Novo deck", en: "New deck" },
@@ -60,14 +61,18 @@ export const messages = {
   },
   "editor.linesUnread": { pt: "{n} linhas não lidas", en: "{n} lines not read" },
   "editor.unread": { pt: "Não lidas: {list}", en: "Not read: {list}" },
-  "editor.needHundred": {
-    pt: "Um deck de Commander precisa de exatamente 100 cartas (comandante + 99). Este tem {n}.",
-    en: "A Commander deck needs exactly 100 cards (commander + 99). This one has {n}.",
+  "editor.needHundredWarning": {
+    pt: "Um deck de Commander precisa de exatamente 100 cartas (comandante + 99). Este tem {n} — pode salvar como rascunho, mas não poderá ser jogado até completar.",
+    en: "A Commander deck needs exactly 100 cards (commander + 99). This one has {n} — you can save it as a draft, but it can't be played until it's complete.",
   },
   "editor.untitled": { pt: "Deck sem nome", en: "Untitled deck" },
   "editor.save": { pt: "Salvar deck", en: "Save deck" },
   "editor.cancel": { pt: "Cancelar", en: "Cancel" },
   "editor.loadSample": { pt: "Carregar exemplo", en: "Load example" },
+  "editor.draftFromDeck": {
+    pt: "Draft a partir deste deck",
+    en: "Draft from this deck",
+  },
 
   "import.label": { pt: "Importar de uma URL", en: "Import from a URL" },
   "import.placeholder": {
@@ -116,6 +121,10 @@ export const messages = {
   "detail.back": { pt: "← Voltar", en: "← Back" },
   "detail.play": { pt: "Testar em partida →", en: "Test in a match →" },
   "detail.notFound": { pt: "{n} não encontradas", en: "{n} not found" },
+  "detail.partialReason": {
+    pt: "Este deck está incompleto e não pode ser jogado até ter exatamente 100 cartas.",
+    en: "This deck is partial and can't be played until it has exactly 100 cards.",
+  },
 
   "setup.title": { pt: "Configurar partida", en: "Match setup" },
   "setup.yourDeck": { pt: "Seu deck", en: "Your deck" },
@@ -124,6 +133,11 @@ export const messages = {
   "setup.opponents": { pt: "Oponentes (IA)", en: "Opponents (AI)" },
   "setup.opponentN": { pt: "Oponente {n}", en: "Opponent {n}" },
   "setup.needOpponent": { pt: "Crie outro deck para usar como oponente.", en: "Create another deck to use as an opponent." },
+  "setup.partialSuffix": { pt: " (incompleto)", en: " (partial)" },
+  "setup.partialChosen": {
+    pt: "Um dos decks escolhidos está incompleto e não pode ser jogado. Complete-o ou escolha outro.",
+    en: "One of the chosen decks is partial and can't be played. Complete it or choose another.",
+  },
   "setup.mode": { pt: "Modo", en: "Mode" },
   "setup.modePlay": { pt: "Jogar (você pilota)", en: "Play (you pilot)" },
   "setup.modeWatch": { pt: "Assistir (IA joga)", en: "Watch (AI plays)" },
@@ -418,6 +432,129 @@ export const messages = {
   "goldfish.compRemoval": { pt: "Interação/removal", en: "Interaction/removal" },
   "goldfish.compAvgMv": { pt: "MV médio (não-terreno)", en: "Average MV (nonland)" },
   "goldfish.curve": { pt: "Curva de mana", en: "Mana curve" },
+
+  "library.draft": { pt: "+ Draft de deck", en: "+ Draft a deck" },
+
+  "draft.windowTitle": { pt: "Draft de deck", en: "Deck draft" },
+
+  "draft.entry.title": { pt: "Draft de deck", en: "Draft a deck" },
+  "draft.entry.subtitle": {
+    pt: "Informe três ou mais cartas para dar o tema do deck. Você pode marcar uma delas como comandante.",
+    en: "Enter three or more cards to seed the deck's theme. You can flag one of them as the commander.",
+  },
+  "draft.entry.baseCardsLabel": { pt: "Cartas base", en: "Base cards" },
+  "draft.entry.baseCardPlaceholder": { pt: "Nome da carta", en: "Card name" },
+  "draft.entry.modeRows": { pt: "Uma a uma", en: "One by one" },
+  "draft.entry.modePaste": { pt: "Colar lista", en: "Paste a list" },
+  "draft.entry.commanderLabel": {
+    pt: "Comandante (opcional)",
+    en: "Commander (optional)",
+  },
+  "draft.entry.commanderNone": {
+    pt: "Nenhum comandante elegível nesta lista",
+    en: "No eligible commander in this list",
+  },
+  "draft.entry.commanderSearchPlaceholder": {
+    pt: "Escolher comandante…",
+    en: "Pick a commander…",
+  },
+  "draft.entry.commanderNoMatch": {
+    pt: "Nenhuma carta corresponde",
+    en: "No matching card",
+  },
+  "draft.entry.commanderFlag": { pt: "Comandante", en: "Commander" },
+  "draft.entry.unflag": { pt: "Remover", en: "Unflag" },
+  "draft.entry.clearCommander": { pt: "Limpar comandante", en: "Clear commander" },
+  "draft.entry.removeCard": { pt: "Remover carta", en: "Remove card" },
+  "draft.entry.addCard": { pt: "+ Adicionar carta", en: "+ Add another card" },
+  "draft.entry.bracketLabel": { pt: "Bracket alvo", en: "Bracket target" },
+  "draft.entry.start": { pt: "Iniciar draft", en: "Start draft" },
+  "draft.entry.checking": { pt: "Verificando cartas…", en: "Checking cards…" },
+  "draft.entry.starting": {
+    pt: "Iniciando — carregando o motor e o banco de cartas (pode demorar na primeira vez)…",
+    en: "Starting — loading the engine and card database (may take a while the first time)…",
+  },
+  "draft.entry.cancel": { pt: "Cancelar", en: "Cancel" },
+  "draft.entry.tooFew": {
+    pt: "Informe pelo menos três cartas (faltam {n}).",
+    en: "Enter at least three cards ({n} more needed).",
+  },
+  "draft.entry.tooFewResolved": {
+    pt: "Pelo menos três cartas precisam ser encontradas no Scryfall para iniciar.",
+    en: "At least three cards need to resolve on Scryfall to start.",
+  },
+  "draft.entry.unresolved": { pt: "Não encontradas: {list}", en: "Not found: {list}" },
+  "draft.entry.notFoundCards": {
+    pt: "Não existem no banco de cartas: {list}",
+    en: "Not in the card database: {list}",
+  },
+  "draft.entry.notLegalCards": {
+    pt: "Não permitidas em Commander: {list}",
+    en: "Not legal in Commander: {list}",
+  },
+  "draft.entry.startFailed": {
+    pt: "Não foi possível iniciar o draft.",
+    en: "Couldn't start the draft.",
+  },
+
+  "draft.commander.title": { pt: "Escolha o comandante", en: "Choose your commander" },
+  "draft.commander.hint": {
+    pt: "Nenhuma carta base foi marcada como comandante — escolha uma abaixo para fixar a identidade de cor do deck.",
+    en: "No base card was flagged as commander — pick one below to fix the deck's color identity.",
+  },
+  "draft.commander.choose": { pt: "Escolher", en: "Choose" },
+  "draft.commander.empty": {
+    pt: "Nenhum candidato a comandante encontrado para essas cartas.",
+    en: "No commander candidates found for these cards.",
+  },
+
+  "draft.summary.cards": { pt: "{n}/100 cartas", en: "{n}/100 cards" },
+  "draft.summary.commander": { pt: "Comandante: {name}", en: "Commander: {name}" },
+  "draft.summary.colorIdentity": { pt: "Identidade: {list}", en: "Identity: {list}" },
+  "draft.summary.archetype": { pt: "Arquétipo: {name}", en: "Archetype: {name}" },
+  "draft.summary.bracket": { pt: "Bracket: {tier}", en: "Bracket: {tier}" },
+  "draft.summary.bracketTarget": { pt: "Bracket alvo", en: "Bracket target" },
+  "draft.summary.targetHint": {
+    pt: "Vale a partir da próxima rodada de sugestões.",
+    en: "Applies starting with the next round of suggestions.",
+  },
+
+  "draft.round.title": { pt: "Sugestões", en: "Suggestions" },
+  "draft.round.loadingNext": {
+    pt: "Buscando a próxima rodada…",
+    en: "Fetching the next round…",
+  },
+  "draft.round.empty": {
+    pt: "Nenhuma sugestão disponível agora. Tente atualizar ou mudar o bracket alvo.",
+    en: "No suggestions available right now. Try refreshing or changing the bracket target.",
+  },
+  "draft.round.add": { pt: "Adicionar", en: "Add" },
+  "draft.round.refresh": { pt: "Atualizar", en: "Refresh" },
+  "draft.round.tiltNote": {
+    pt: "Passaria do bracket alvo — por isso rankeada mais abaixo.",
+    en: "Would push past the bracket target — ranked lower for it.",
+  },
+  "draft.round.actionFailed": {
+    pt: "Não foi possível completar a ação. Tente novamente.",
+    en: "Couldn't complete that action. Try again.",
+  },
+
+  "draft.leave.title": { pt: "Sair do draft", en: "Leave the draft" },
+  "draft.leave.copy": { pt: "Copiar lista", en: "Copy list" },
+  "draft.leave.copied": { pt: "Copiado!", en: "Copied!" },
+  "draft.leave.nameLabel": { pt: "Nome do deck", en: "Deck name" },
+  "draft.leave.save": { pt: "Salvar na biblioteca", en: "Save to library" },
+  "draft.leave.back": { pt: "← Voltar para a biblioteca", en: "← Back to library" },
+  "draft.leave.partialHint": {
+    pt: "Ainda não tem 100 cartas — será salvo como incompleto e marcado até ser completado.",
+    en: "Not yet 100 cards — this will save as partial and stay flagged until it's complete.",
+  },
+
+  "draft.bracket.exhibition": { pt: "Exibição", en: "Exhibition" },
+  "draft.bracket.core": { pt: "Essencial", en: "Core" },
+  "draft.bracket.focused": { pt: "Focado", en: "Focused" },
+  "draft.bracket.optimized": { pt: "Otimizado", en: "Optimized" },
+  "draft.bracket.cedh": { pt: "cEDH", en: "cEDH" },
 } satisfies Record<string, Entry>;
 
 export type MsgKey = keyof typeof messages;

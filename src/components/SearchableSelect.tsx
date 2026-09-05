@@ -1,4 +1,5 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { X } from "lucide-react";
 import { XpScroll } from "./XpScroll";
 
 interface SearchableSelectProps {
@@ -7,6 +8,10 @@ interface SearchableSelectProps {
   onChange: (value: string) => void;
   placeholder?: string;
   emptyLabel?: string;
+  disabled?: boolean;
+  /** Show an X inside the field to clear the selection back to empty. */
+  clearable?: boolean;
+  clearLabel?: string;
   id?: string;
 }
 
@@ -17,6 +22,9 @@ export function SearchableSelect({
   onChange,
   placeholder,
   emptyLabel,
+  disabled,
+  clearable,
+  clearLabel,
   id,
 }: SearchableSelectProps) {
   const listId = useId();
@@ -50,6 +58,7 @@ export function SearchableSelect({
   }, [active, open]);
 
   function openList() {
+    if (disabled) return;
     setOpen(true);
     setQuery("");
     setActive(Math.max(0, options.indexOf(value)));
@@ -82,16 +91,19 @@ export function SearchableSelect({
     }
   }
 
+  const showClear = clearable && !!value && !open && !disabled;
+
   return (
     <div className="combobox" ref={rootRef}>
       <input
         id={id}
-        className="input"
+        className={`input ${showClear ? "input--has-clear" : ""}`}
         type="text"
         role="combobox"
         aria-expanded={open}
         aria-controls={listId}
         autoComplete="off"
+        disabled={disabled}
         placeholder={placeholder}
         value={open ? query : value}
         onChange={(e) => {
@@ -102,6 +114,19 @@ export function SearchableSelect({
         onFocus={openList}
         onKeyDown={onKeyDown}
       />
+      {showClear && (
+        <button
+          type="button"
+          className="combobox__clear"
+          aria-label={clearLabel}
+          onMouseDown={(e) => {
+            e.preventDefault();
+            onChange("");
+          }}
+        >
+          <X size={16} aria-hidden="true" />
+        </button>
+      )}
       {open && (
         <XpScroll wrapperClassName="combobox__list">
           <ul

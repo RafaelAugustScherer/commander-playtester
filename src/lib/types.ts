@@ -11,6 +11,8 @@ export interface Card {
   typeLine: string;
   oracleText: string;
   colors: string[];
+  /** True MTG color identity (mana cost + rules text), from Scryfall's `color_identity`. */
+  colorIdentity: string[];
   /** Colors of mana this permanent can produce (from Scryfall produced_mana). */
   producedMana: string[];
   /** Scryfall image URL (normal), when available. */

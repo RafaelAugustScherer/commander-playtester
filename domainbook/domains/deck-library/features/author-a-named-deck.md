@@ -32,11 +32,16 @@ Example: A duplicate nonland is rejected
 ```
 
 ```gherkin
-Example: A deck that isn't exactly 100 cards can't be saved
+Example: A deck that isn't exactly 100 cards can still be saved, but flagged
   Given a decklist with 99 cards (or any count other than 100)
-  When the author looks at the editor
-  Then saving is refused and the count is flagged with the 100-card rule
+  When the author saves it
+  Then the deck is saved and appears in the library flagged as partial
+  And it cannot be chosen to start a match until it reaches 100 cards
 ```
+
+Whether a saved deck is playable is derived from its card count, not stored
+(`deck-library/ADR-0002`) — so a partial deck completed later becomes playable
+with nothing to reconcile.
 
 ## Rule: A deck left unnamed takes its commander's name
 
@@ -57,6 +62,22 @@ Example: The name field previews the commander
   Then its placeholder shows the commander's name
 ```
 
+## Rule: The editor can hand its list to a deck draft
+
+While editing, the author can start an assisted draft seeded from the cards currently in
+the editor with **Draft from this deck**. The cards in the list become the draft's `base
+cards` and the list's commander is pre-picked, so an existing or half-typed deck can be
+grown through the `draft-a-deck` flow. The action is offered only once the list holds at
+least three distinct cards — the draft's own floor.
+
+```gherkin
+Example: Drafting from the deck being edited
+  Given the editor holds a commander and a handful of cards
+  When the author chooses "Draft from this deck"
+  Then a draft opens seeded with those cards
+  And the list's commander is already picked
+```
+
 ## Rule: A saved deck round-trips
 
 ```gherkin
@@ -69,4 +90,5 @@ Example: Reload yields the same list
 ## Open Questions
 
 - Whether to also block on singleton and color-identity at save, or keep the
-  engine as the arbiter for those (only the exact-100 count is enforced here).
+  engine as the arbiter for those (only the card count is checked here, and
+  since `deck-library/ADR-0002` that check flags rather than blocks).

@@ -4,6 +4,7 @@ import { goldfish, DEFAULT_CONFIG, type GoldfishResult } from "../lib/goldfish";
 import type { ResolvedDeck } from "../lib/types";
 import { GoldfishReport } from "../components/GoldfishReport";
 import type { SavedDeck } from "./model";
+import { isHundredCards } from "./model";
 import { useI18n } from "../i18n/I18nContext";
 
 type State =
@@ -26,6 +27,7 @@ export function DeckDetail({
     kind: "loading",
     message: t("detail.resolving"),
   });
+  const playable = isHundredCards(deck);
 
   useEffect(() => {
     let cancelled = false;
@@ -68,13 +70,28 @@ export function DeckDetail({
             <button className="btn btn--ghost btn--sm" onClick={onBack}>
               {t("detail.back")}
             </button>
-            <h2 style={{ marginTop: "0.5rem" }}>{deck.name}</h2>
+            <h2 style={{ marginTop: "0.5rem" }}>
+              {deck.name}
+              {!playable && (
+                <span
+                  className="chip"
+                  style={{ color: "var(--warn)", marginLeft: "0.5rem" }}
+                >
+                  {t("deck.partial")}
+                </span>
+              )}
+            </h2>
           </div>
-          <button className="btn" onClick={() => onPlay(deck)}>
+          <button
+            className="btn"
+            onClick={() => onPlay(deck)}
+            disabled={!playable}
+          >
             {t("detail.play")}
           </button>
         </div>
 
+        {!playable && <p className="hint">{t("detail.partialReason")}</p>}
         {state.kind === "loading" && (
           <p className="hint">{state.message}</p>
         )}

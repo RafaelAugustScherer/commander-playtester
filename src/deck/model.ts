@@ -29,9 +29,9 @@ export function uniqueCardNames(deck: SavedDeck): string[] {
 }
 
 /**
- * Commander legality is exactly 100 cards (1-2 commanders + the rest). The
- * editor blocks saving anything else, matching what the engine enforces at
- * game start.
+ * Commander legality is exactly 100 cards (1-2 commanders + the rest),
+ * matching what the engine enforces at game start. The single source of
+ * truth for whether a saved deck is playable (`deck-library/ADR-0002`).
  */
 export function isHundredCards(deck: SavedDeck): boolean {
   return totalCards(deck) === 100;

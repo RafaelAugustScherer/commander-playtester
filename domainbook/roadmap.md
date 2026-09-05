@@ -8,6 +8,7 @@ milestones:
   - { id: simulation, name: Simulation — play and auto-play, status: done }
   - { id: board, name: Board, status: done }
   - { id: head-to-head-analysis, name: Head-to-head analysis, status: done }
+  - { id: deck-draft, name: Deck draft, status: planned }
   - { id: polish-and-deploy, name: Polish and deploy, status: in-progress }
 ---
 
@@ -50,9 +51,10 @@ needs no backend. The consequence chain is recorded as decisions:
 - `ADR-0001` — phase-rs is the rules and AI engine (over Forge, XMage, a custom engine).
 - `ADR-0002` — we embed the engine and drive our own minimal front-end, rather than fork the phase-rs client.
 - `ADR-0003` — the app runs fully client-side; no backend, static hosting.
-- `ADR-0004` — decks are entered by hand and saved as named, reusable decks; there is no bundled or scraped field of decks.
+- `ADR-0004` — decks are entered by hand and saved as named, reusable decks; there is no bundled or scraped field of decks. *(Superseded by `ADR-0009`, which carries the no-scraped-field core forward.)*
 - `ADR-0005` — a pre-game toggle picks play or watch; a run is 1–50 games, sequential, in real time on the board.
 - `ADR-0006` — we vendor a pinned prebuilt WASM snapshot (rather than build from source) and run the engine in a Web Worker; confirmed by the integration spike.
+- `ADR-0009` — an assisted **deck draft** suggests cards for the deck under construction: the engine narrows its own card database and measures power, a self-built heuristic ranks by synergy. Supersedes `ADR-0004`'s "the app never curates or suggests" while keeping its no-scraped-field stance.
 
 The two standing risks of leaning on an alpha engine are recorded as debt:
 `TDR-0001` (single-maintainer alpha with a churning ABI) and `TDR-0002` (rules
@@ -130,6 +132,18 @@ Turn a finished run into an answer: win rate (with a confidence interval), per
 matchup, plus telemetry (turn the game ended, who won, mulligans taken). This is
 `docs/ROADMAP.md`'s old "Phase 4 — head-to-head" delivered client-side, without the
 Forge backend that phase assumed.
+
+### Deck draft — planned
+
+Build a deck from scratch with help. The user seeds at least three cards (optionally one
+flagged as the commander) and the app offers rounds of up to three synergistic cards to
+add, each refreshable, all within the commander's color identity. Candidates come from the
+engine's own card database (`search_cards_js`); a self-built heuristic ranks them by
+synergy with the commander weighted higher; a selectable bracket target (default Focused)
+steers the ranking through the engine's bracket estimate (`ADR-0009`,
+`deck-draft/ADR-0001`). The draft can be left at any point and copied out or saved — a
+partial deck is flagged and blocked from play (`deck-library/ADR-0002`). This is the
+project's first step from *measuring* a deck to *helping build* one.
 
 ### Polish and deploy — planned
 

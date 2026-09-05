@@ -9,6 +9,7 @@ function land(): Card {
     typeLine: "Basic Land — Forest",
     oracleText: "{T}: Add {G}.",
     colors: [],
+    colorIdentity: ["G"],
     producedMana: ["G"],
     roles: ["land"],
   };
@@ -21,6 +22,7 @@ function spell(mv: number, ramp = false): Card {
     typeLine: ramp ? "Artifact" : "Creature — Bear",
     oracleText: ramp ? "{T}: Add {C}." : "Vanilla.",
     colors: [],
+    colorIdentity: [],
     producedMana: ramp ? ["C"] : [],
     roles: ramp ? ["ramp"] : ["other"],
   };

@@ -28,10 +28,12 @@ export function DeckEditor({
   initial,
   onSave,
   onCancel,
+  onDraft,
 }: {
   initial?: SavedDeck;
   onSave: (deck: SavedDeck) => void;
   onCancel: () => void;
+  onDraft: (names: string[], commander: string | null) => void;
 }) {
   const { t } = useI18n();
   const [name, setName] = useState(initial?.name ?? "");
@@ -64,6 +66,16 @@ export function DeckEditor({
   const mainboardCount = parsed.mainboard.reduce((n, e) => n + e.quantity, 0);
   const total = commanderCount + mainboardCount;
   const isHundred = total === 100;
+
+  const draftNames = [
+    ...parsed.commanders.map((e) => e.name),
+    ...parsed.mainboard.map((e) => e.name),
+  ];
+  const canDraft = new Set(draftNames.map((n) => n.toLowerCase())).size >= 3;
+
+  function handleDraft() {
+    onDraft(draftNames, parsed.commanders[0]?.name ?? null);
+  }
 
   function handleSave() {
     const now = Date.now();
@@ -148,7 +160,7 @@ export function DeckEditor({
         </span>
         <span
           className="chip"
-          style={total > 0 && !isHundred ? { color: "var(--bad)" } : undefined}
+          style={total > 0 && !isHundred ? { color: "var(--warn)" } : undefined}
         >
           {t("deck.cards", { n: total })}
         </span>
@@ -168,16 +180,23 @@ export function DeckEditor({
         </p>
       )}
       {total > 0 && !isHundred && (
-        <p className="error">{t("editor.needHundred", { n: total })}</p>
+        <p className="hint" style={{ color: "var(--warn)" }}>
+          {t("editor.needHundredWarning", { n: total })}
+        </p>
       )}
 
       <div className="import__row">
-        <button className="btn" onClick={handleSave} disabled={!isHundred}>
+        <button className="btn" onClick={handleSave}>
           {t("editor.save")}
         </button>
         <button className="btn btn--ghost" onClick={onCancel}>
           {t("editor.cancel")}
         </button>
+        {canDraft && (
+          <button className="btn btn--ghost" onClick={handleDraft}>
+            {t("editor.draftFromDeck")}
+          </button>
+        )}
         {!initial && (
           <button
             className="btn btn--ghost"

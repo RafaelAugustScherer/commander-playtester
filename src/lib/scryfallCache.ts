@@ -1,7 +1,7 @@
 import type { Card, ParsedDecklist, ResolvedDeck, DecklistEntry } from "./types";
 import { fetchCards, lookup, type FetchLike } from "./scryfall";
 
-const CACHE_KEY = "commander-playtester/scryfall-cache/v1";
+const CACHE_KEY = "commander-playtester/scryfall-cache/v2";
 
 /** Card metadata cache keyed by the *requested* name, lowercased. */
 type Cache = Record<string, Card>;

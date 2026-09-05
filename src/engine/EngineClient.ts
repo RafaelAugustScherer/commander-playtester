@@ -5,6 +5,15 @@ import type {
   GameStateEnvelope,
   LogEntry,
 } from "./types";
+import type {
+  BracketDeckInput,
+  BracketEstimate,
+  CardValidation,
+  ClassifyDeckResult,
+  DraftCandidateData,
+  RankCardCandidatesInput,
+  RankedCardName,
+} from "./draftQueries";
 
 interface Pending {
   resolve: (v: any) => void;
@@ -103,6 +112,39 @@ export class EngineClient {
     player: number,
   ): Promise<{ action: any }> {
     return this.req("aiProposal", { difficulty, player });
+  }
+
+  /** Game-independent WotC bracket estimate for a (possibly partial) deck. */
+  estimateBracket(deck: BracketDeckInput): Promise<BracketEstimate | null> {
+    return this.req("estimateBracket", deck);
+  }
+
+  /** Game-independent archetype classification for a flat list of card names. */
+  classifyDeck(names: string[]): Promise<ClassifyDeckResult> {
+    return this.req("classifyDeck", { names });
+  }
+
+  commanderCandidates(): Promise<DraftCandidateData[]> {
+    return this.req("commanderCandidates");
+  }
+
+  /** Local card-name suggestions from the engine's card database (no network). */
+  searchCardNames(text: string): Promise<string[]> {
+    return this.req("searchCardNames", { text });
+  }
+
+  /** Existence, Commander legality, and commander eligibility for each name. */
+  validateCards(names: string[]): Promise<CardValidation[]> {
+    return this.req("validateCards", { names });
+  }
+
+  /** Authoritative card data (color identity, type, oracle) from the engine DB. */
+  resolveCards(names: string[]): Promise<DraftCandidateData[]> {
+    return this.req("resolveCards", { names });
+  }
+
+  rankCardCandidates(input: RankCardCandidatesInput): Promise<RankedCardName[]> {
+    return this.req("rankCardCandidates", input);
   }
 
   terminate(): void {

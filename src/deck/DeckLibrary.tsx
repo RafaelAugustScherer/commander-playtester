@@ -1,5 +1,5 @@
 import type { SavedDeck } from "./model";
-import { totalCards } from "./model";
+import { isHundredCards, totalCards } from "./model";
 import { STARTER_DECKS } from "./starterDecks";
 import { useI18n } from "../i18n/I18nContext";
 
@@ -11,6 +11,7 @@ export function DeckLibrary({
   onSelect,
   onNew,
   onEdit,
+  onDraft,
 }: {
   decks: SavedDeck[];
   save: (deck: SavedDeck) => void;
@@ -18,6 +19,7 @@ export function DeckLibrary({
   onSelect: (deck: SavedDeck) => void;
   onNew: () => void;
   onEdit: (deck: SavedDeck) => void;
+  onDraft: () => void;
 }) {
   const { t } = useI18n();
 
@@ -39,9 +41,14 @@ export function DeckLibrary({
     <section className="panel">
       <div className="panel__head">
         <h2>{t("library.title")}</h2>
-        <button className="btn" onClick={onNew}>
-          {t("library.new")}
-        </button>
+        <div className="import__row" style={{ margin: 0 }}>
+          <button className="btn" onClick={onNew}>
+            {t("library.new")}
+          </button>
+          <button className="btn btn--ghost btn--enchanted" onClick={onDraft}>
+            {t("library.draft")}
+          </button>
+        </div>
       </div>
 
       {decks.length === 0 ? (
@@ -59,7 +66,17 @@ export function DeckLibrary({
                 className="deck-list__info"
                 onClick={() => onSelect(deck)}
               >
-                <span className="deck-list__name">{deck.name}</span>
+                <span className="deck-list__name">
+                  {deck.name}
+                  {!isHundredCards(deck) && (
+                    <span
+                      className="chip"
+                      style={{ color: "var(--warn)", marginLeft: "0.5rem" }}
+                    >
+                      {t("deck.partial")}
+                    </span>
+                  )}
+                </span>
                 <span className="deck-list__meta">
                   {deck.commanders.map((c) => c.name).join(", ") ||
                     t("deck.noCommander")}{" "}

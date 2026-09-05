@@ -33,6 +33,7 @@ actually play, so `match setup` always has legal, playable decks to choose from.
 | --------------- | ------------ | ------- |
 | `AuthorDeck`    | deck author  | Command |
 | `SaveNamedDeck` | deck author  | Command |
+| `SaveNamedDeck` | deck draft   | Command |
 | `CheckCoverage` | deck author  | Query   |
 | `ListDecks`     | match-setup  | Query   |
 
@@ -60,6 +61,9 @@ actually play, so `match setup` always has legal, playable decks to choose from.
   the front face alone.
 - The existing `src/lib/decklist.ts` parser and `src/lib/scryfall.ts` resolver are
   reused rather than rewritten.
+- A deck may be saved before it is complete: a partial deck (not exactly 100 cards) is
+  stored and flagged, but blocked from play, so the assisted `deck draft` can be left and
+  resumed without ever letting an incomplete deck reach a game (`deck-library/ADR-0002`).
 - A deck may also be brought in by its Moxfield or Archidekt URL, which is fetched
   and turned into the same pasted-decklist text the author would otherwise type.
   This does not walk back `ADR-0004`: the user still supplies one deck they chose,
@@ -74,7 +78,10 @@ actually play, so `match setup` always has legal, playable decks to choose from.
   known exception.
 - The engine exposes a queryable list of implemented cards (phase-rs
   `classify_deck`), so coverage is checked before a game, not discovered during one.
-- The user maintains their own decks; the library does not curate or suggest.
+- The user maintains their own decks and the library scrapes or browses no field of
+  decks. Card *suggestions* for a deck under construction now come from the `deck draft`
+  context, which hands finished or partial decks here to store; the library itself still
+  does not curate a field (`ADR-0009`, superseding `ADR-0004`).
 
 ## Verification Metrics
 
