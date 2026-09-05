@@ -48,6 +48,10 @@ import {
   decideOptionalCostAction,
   type OptionalCostPrompt,
 } from "../sim/decisions/optionalCost";
+import {
+  commanderZoneAction,
+  type CommanderZonePrompt,
+} from "../sim/decisions/commanderZone";
 import { XpWindow } from "../components/XpWindow";
 import {
   declareAttackersAction,
@@ -246,6 +250,16 @@ interface OptionalCostTurn {
   resolve: (choice: HumanChoice) => void;
 }
 
+interface CommanderZoneTurn {
+  prompt: CommanderZonePrompt;
+  resolve: (choice: HumanChoice) => void;
+}
+
+function formatZoneLabel(zone: string): string {
+  if (!zone) return zone;
+  return zone.charAt(0).toUpperCase() + zone.slice(1).toLowerCase();
+}
+
 function isTargetOptional(
   targeting: TargetTurn | null,
   chosen: TargetRef[],
@@ -379,6 +393,7 @@ interface RunnerCallbackDeps {
     SetStateAction<ResolutionOptionalPaymentTurn | null>
   >;
   setOptionalCostTurn: Dispatch<SetStateAction<OptionalCostTurn | null>>;
+  setCommanderZoneTurn: Dispatch<SetStateAction<CommanderZoneTurn | null>>;
 }
 
 function buildRunnerCallbacks(deps: RunnerCallbackDeps): DriverCallbacks {
@@ -412,6 +427,7 @@ function buildRunnerCallbacks(deps: RunnerCallbackDeps): DriverCallbacks {
     setScryTurn,
     setResolutionOptionalPaymentTurn,
     setOptionalCostTurn,
+    setCommanderZoneTurn,
   } = deps;
   return {
     onFrame: (env) => {
@@ -631,6 +647,20 @@ function buildRunnerCallbacks(deps: RunnerCallbackDeps): DriverCallbacks {
           },
         });
       }),
+    requestHumanCommanderZone: (_env, prompt) =>
+      new Promise<HumanChoice>((resolve) => {
+        if (isCancelled()) {
+          resolve({ ai: true });
+          return;
+        }
+        setCommanderZoneTurn({
+          prompt,
+          resolve: (choice) => {
+            setCommanderZoneTurn(null);
+            resolve(choice);
+          },
+        });
+      }),
   };
 }
 
@@ -725,6 +755,8 @@ export function RunView({
     useState<ResolutionOptionalPaymentTurn | null>(null);
   const [optionalCostTurn, setOptionalCostTurn] =
     useState<OptionalCostTurn | null>(null);
+  const [commanderZoneTurn, setCommanderZoneTurn] =
+    useState<CommanderZoneTurn | null>(null);
   const [passingTurn, setPassingTurn] = useState(false);
   const [logEntries, setLogEntries] = useState<LoggedEntry[]>([]);
   // On mobile the log is a full-screen drawer, so it always starts closed and
@@ -822,6 +854,7 @@ export function RunView({
             setScryTurn,
             setResolutionOptionalPaymentTurn,
             setOptionalCostTurn,
+            setCommanderZoneTurn,
           }),
         );
         runnerRef.current = runner;
@@ -950,7 +983,8 @@ export function RunView({
         modesTurn ||
         scryTurn ||
         resolutionOptionalPaymentTurn ||
-        optionalCostTurn)
+        optionalCostTurn ||
+        commanderZoneTurn)
     ) {
       setPassingTurn(false);
     }
@@ -964,6 +998,7 @@ export function RunView({
     scryTurn,
     resolutionOptionalPaymentTurn,
     optionalCostTurn,
+    commanderZoneTurn,
   ]);
 
   // Map draggable hand cards to their play actions for the current window.
@@ -1760,6 +1795,52 @@ export function RunView({
                   onClick={() => optionalCostTurn.resolve({ ai: true })}
                 >
                   {t("optionalCost.letAi")}
+                </button>
+              </div>
+            </>
+          )}
+
+          {commanderZoneTurn && (
+            <>
+              <div className="control-title">
+                <strong>{t("commanderZone.title")}</strong>
+              </div>
+              <p className="hint">
+                {t("commanderZone.prompt", {
+                  name:
+                    commanderZoneTurn.prompt.commanderName ||
+                    t("commanderZone.commanderFallback"),
+                  zone: formatZoneLabel(commanderZoneTurn.prompt.currentZone),
+                })}
+              </p>
+              <div className="import__row">
+                <button
+                  className="btn"
+                  onClick={() =>
+                    commanderZoneTurn.resolve({
+                      action: commanderZoneAction(true),
+                    })
+                  }
+                >
+                  {t("commanderZone.commandZone")}
+                </button>
+                <button
+                  className="btn btn--ghost"
+                  onClick={() =>
+                    commanderZoneTurn.resolve({
+                      action: commanderZoneAction(false),
+                    })
+                  }
+                >
+                  {t("commanderZone.leave", {
+                    zone: formatZoneLabel(commanderZoneTurn.prompt.currentZone),
+                  })}
+                </button>
+                <button
+                  className="btn btn--ghost"
+                  onClick={() => commanderZoneTurn.resolve({ ai: true })}
+                >
+                  {t("commanderZone.letAi")}
                 </button>
               </div>
             </>

@@ -35,6 +35,10 @@ import {
   parseOptionalCostPrompt,
   type OptionalCostPrompt,
 } from "./decisions/optionalCost";
+import {
+  parseCommanderZonePrompt,
+  type CommanderZonePrompt,
+} from "./decisions/commanderZone";
 
 export interface MatchResult {
   matchIndex: number;
@@ -251,6 +255,11 @@ export interface DriverCallbacks {
   requestHumanOptionalCost?: (
     env: GameStateEnvelope,
     prompt: OptionalCostPrompt,
+  ) => Promise<HumanChoice>;
+  /** Called when the human's commander may go to the command zone instead of its current zone. */
+  requestHumanCommanderZone?: (
+    env: GameStateEnvelope,
+    prompt: CommanderZonePrompt,
   ) => Promise<HumanChoice>;
 }
 
@@ -565,6 +574,12 @@ export class MatchRunner {
           env,
           cb.requestHumanOptionalCost,
           parseOptionalCostPrompt(wf, state.objects),
+        ),
+      () =>
+        humanRequest(
+          env,
+          cb.requestHumanCommanderZone,
+          parseCommanderZonePrompt(wf, state.objects),
         ),
     ];
     for (const resolve of resolvers) {

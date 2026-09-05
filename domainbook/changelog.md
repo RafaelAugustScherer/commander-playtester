@@ -12,6 +12,16 @@ depth live there. A purely-internal PR that touches no product or architecture m
 skip its version with a `Skip-Docs: <reason>` trailer instead. There are no
 per-domain changelogs; this file is the single timeline (`ADR-0007`).
 
+## [0.7.0] - 2026-09-05
+
+### Added
+
+- You now decide your own **commander's zone choice**: when your commander
+  would move to the graveyard, exile, hand, or another zone, the control panel
+  lets you send it to the command zone instead or leave it in place, rather
+  than the AI deciding
+  (`domains/simulation/features/decide-the-commander-zone.md`).
+
 ## [0.6.0] - 2026-09-05
 
 ### Added
