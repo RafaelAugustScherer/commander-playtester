@@ -217,6 +217,18 @@ describe.skipIf(!ENABLED)("phase-rs deck-draft query functions", () => {
         "a non-legendary artifact should not be commander-eligible",
       ).toBe(false);
 
+      const commanderCandidates = draftQueries
+        .search_cards_js({ limit: 100_000 })
+        .results.filter(
+          (candidate) =>
+            candidate.legalities?.commander === "legal" &&
+            draftQueries.is_card_commander_eligible(candidate.name),
+        );
+      expect(
+        commanderCandidates.length,
+        "the card database should contain more than three Commander candidates",
+      ).toBeGreaterThan(3);
+
       const panic = take_last_panic_message();
       expect(panic, `engine panicked: ${panic}`).toBeFalsy();
     },

@@ -17,7 +17,7 @@ import init, {
   submit_action,
 } from "./vendor/engine_wasm.js";
 import { draftQueries } from "./draftQueries";
-import type { SearchCardsQuery } from "./draftQueries";
+import type { SearchCardRow, SearchCardsQuery } from "./draftQueries";
 
 // Absolute base URL for engine assets, supplied by the main thread on "ready".
 // It must be resolved against the *page* location, not the worker's: a relative
@@ -28,6 +28,7 @@ let assetBase = import.meta.env.BASE_URL;
 let started = false;
 let dbLoaded = false;
 let commanderConfig: any = null;
+let cachedCommanderCandidates: SearchCardRow[] | null = null;
 
 async function ensureStarted(): Promise<void> {
   if (started) return;
@@ -62,6 +63,17 @@ async function ensureDb(): Promise<void> {
   const list = Array.isArray(reg) ? reg : [];
   commanderConfig = list.find((f: any) => f?.format === "Commander")?.default_config;
   dbLoaded = true;
+}
+
+function commanderCandidates(): SearchCardRow[] {
+  if (cachedCommanderCandidates) return cachedCommanderCandidates;
+  const allCards = draftQueries.search_cards_js({ limit: 100_000 }).results;
+  cachedCommanderCandidates = allCards.filter(
+    (card) =>
+      card.legalities?.commander === "legal" &&
+      draftQueries.is_card_commander_eligible(card.name),
+  );
+  return cachedCommanderCandidates;
 }
 
 async function handle(cmd: string, args: any): Promise<any> {
@@ -151,6 +163,11 @@ async function handle(cmd: string, args: any): Promise<any> {
       await ensureDb();
       const { name } = args ?? {};
       return draftQueries.is_card_commander_eligible(name);
+    }
+    case "commanderCandidates": {
+      await ensureStarted();
+      await ensureDb();
+      return commanderCandidates();
     }
     default:
       throw new Error(`unknown engine command: ${cmd}`);

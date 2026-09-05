@@ -82,6 +82,7 @@ describe("suggestCandidates", () => {
         };
       },
       isCommanderEligible: async () => false,
+      commanderCandidates: async () => [],
     };
   }
 
@@ -160,6 +161,7 @@ describe("suggestCommanders", () => {
       estimateBracket: async (): Promise<BracketEstimate | null> => null,
       isCommanderEligible: async (name: string) =>
         name === "Eligible Elf Lord" || name === "Banned Legendary Elf",
+      commanderCandidates: async () => [],
     };
   }
 
@@ -188,6 +190,40 @@ describe("suggestCommanders", () => {
     });
     expect(results.map((r) => r.card.name)).not.toContain("Base Elf One");
   });
+
+  it("fills the commander round from the full eligible pool when themed search finds fewer than three", async () => {
+    const fallbackCards = [
+      card({ name: "Fallback Elf One", typeLine: "Legendary Creature — Elf" }),
+      card({ name: "Fallback Elf Two", typeLine: "Legendary Creature — Elf" }),
+    ];
+    const fallbackRows = fallbackCards.map((candidate) => row({ name: candidate.name }));
+    const engine: DraftEngine = {
+      searchCards: async (): Promise<SearchCardsResult> => ({
+        results: [row({ name: "Eligible Elf Lord" })],
+        total: 1,
+      }),
+      estimateBracket: async (): Promise<BracketEstimate | null> => null,
+      isCommanderEligible: async () => true,
+      commanderCandidates: async () => [
+        row({ name: "Eligible Elf Lord" }),
+        ...fallbackRows,
+      ],
+    };
+    const results = await suggestCommanders(baseCards, {
+      engine,
+      resolver: makeResolver([
+        ...baseCards,
+        card({ name: "Eligible Elf Lord", typeLine: "Legendary Creature — Elf" }),
+        ...fallbackCards,
+      ]),
+    });
+
+    expect(results.map((candidate) => candidate.card.name)).toEqual([
+      "Eligible Elf Lord",
+      "Fallback Elf One",
+      "Fallback Elf Two",
+    ]);
+  });
 });
 
 describe("suggestCommanders color identity coverage", () => {
@@ -205,6 +241,7 @@ describe("suggestCommanders color identity coverage", () => {
       searchCards: async (): Promise<SearchCardsResult> => ({ results: rows, total: rows.length }),
       estimateBracket: async (): Promise<BracketEstimate | null> => null,
       isCommanderEligible: async () => true,
+      commanderCandidates: async () => [],
     };
   }
 

@@ -18,6 +18,7 @@ export interface DraftEngine {
   searchCards(query: SearchCardsQuery): Promise<SearchCardsResult>;
   estimateBracket(deck: BracketDeckInput): Promise<BracketEstimate | null>;
   isCommanderEligible(name: string): Promise<boolean>;
+  commanderCandidates(): Promise<SearchCardRow[]>;
 }
 
 /** Card-name resolution the draft pipeline needs — narrow enough to fake in tests. */
@@ -30,6 +31,7 @@ export const engineDraftEngine: DraftEngine = {
   searchCards: (query) => getEngine().searchCards(query),
   estimateBracket: (deck) => getEngine().estimateBracket(deck),
   isCommanderEligible: (name) => getEngine().isCommanderEligible(name),
+  commanderCandidates: () => getEngine().commanderCandidates(),
 };
 
 /** Real `CardResolver`, wrapping the Scryfall localStorage cache. */
@@ -54,6 +56,7 @@ const TOP_TOKEN_COUNT = 8;
 const SEARCH_LIMIT_PER_TOKEN = 40;
 const PRE_RANK_LIMIT = 40;
 const BRACKET_SHORTLIST_SIZE = 12;
+const COMMANDER_ROUND_SIZE = 3;
 
 /** Per-session cache of `search_cards_js` rows by token — the card database is static. */
 export type TokenSearchCache = Map<string, SearchCardRow[]>;
@@ -273,11 +276,9 @@ export async function suggestCommanders(
     if (await engine.isCommanderEligible(row.name)) eligible.push(row);
   }
 
-  const scored = await enrichAndScore(resolver, eligible, profile);
-
   const requiredIdentity = [...new Set(baseCards.flatMap((c) => c.colorIdentity))];
   const background = singleBackgroundAmong(baseCards);
-  const covering = scored.filter(({ card }) => {
+  const coversBaseCards = (card: Card) => {
     if (isWithinColorIdentity(requiredIdentity, card.colorIdentity)) return true;
     return (
       background !== null &&
@@ -287,7 +288,27 @@ export async function suggestCommanders(
         ...background.colorIdentity,
       ])
     );
-  });
+  };
+
+  const scored = await enrichAndScore(resolver, eligible, profile);
+  const covering = scored.filter(({ card }) => coversBaseCards(card));
+
+  if (covering.length < COMMANDER_ROUND_SIZE) {
+    const themedNames = new Set(covering.map(({ card }) => card.name.toLowerCase()));
+    const fallbackRows = (await engine.commanderCandidates()).filter(
+      (row) =>
+        !excluded.has(row.name.toLowerCase()) &&
+        !themedNames.has(row.name.toLowerCase()) &&
+        (isWithinColorIdentity(requiredIdentity, row.color_identity) ||
+          (background !== null &&
+            isWithinColorIdentity(requiredIdentity, [
+              ...row.color_identity,
+              ...background.colorIdentity,
+            ]))),
+    );
+    const fallback = await enrichAndScore(resolver, fallbackRows, profile);
+    covering.push(...fallback.filter(({ card }) => coversBaseCards(card)));
+  }
 
   return covering
     .map(({ card, score }) => ({ card, score, bracketTilt: 0, total: score.total }))

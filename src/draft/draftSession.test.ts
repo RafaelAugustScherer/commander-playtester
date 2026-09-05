@@ -67,6 +67,7 @@ function makeEngine(): DraftEngine {
       data_version: "test",
     }),
     isCommanderEligible: async (name: string) => ELIGIBLE_COMMANDERS.has(name),
+    commanderCandidates: async () => POOL_ROWS,
   };
 }
 
@@ -253,6 +254,7 @@ describe("DraftSession Choose-a-Background pairing", () => {
         data_version: "test",
       }),
       isCommanderEligible: async (name: string) => eligible.has(name),
+      commanderCandidates: async () => rows,
     };
   }
 
