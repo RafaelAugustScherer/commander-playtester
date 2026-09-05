@@ -52,6 +52,7 @@ import {
   commanderZoneAction,
   type CommanderZonePrompt,
 } from "../sim/decisions/commanderZone";
+import { chooseXAction, type XValuePrompt } from "../sim/decisions/xValue";
 import { XpWindow } from "../components/XpWindow";
 import {
   declareAttackersAction,
@@ -255,6 +256,11 @@ interface CommanderZoneTurn {
   resolve: (choice: HumanChoice) => void;
 }
 
+interface XValueTurn {
+  prompt: XValuePrompt;
+  resolve: (choice: HumanChoice) => void;
+}
+
 function formatZoneLabel(zone: string): string {
   if (!zone) return zone;
   return zone.charAt(0).toUpperCase() + zone.slice(1).toLowerCase();
@@ -394,6 +400,8 @@ interface RunnerCallbackDeps {
   >;
   setOptionalCostTurn: Dispatch<SetStateAction<OptionalCostTurn | null>>;
   setCommanderZoneTurn: Dispatch<SetStateAction<CommanderZoneTurn | null>>;
+  setXValuePick: Dispatch<SetStateAction<number>>;
+  setXValueTurn: Dispatch<SetStateAction<XValueTurn | null>>;
 }
 
 function buildRunnerCallbacks(deps: RunnerCallbackDeps): DriverCallbacks {
@@ -428,6 +436,8 @@ function buildRunnerCallbacks(deps: RunnerCallbackDeps): DriverCallbacks {
     setResolutionOptionalPaymentTurn,
     setOptionalCostTurn,
     setCommanderZoneTurn,
+    setXValuePick,
+    setXValueTurn,
   } = deps;
   return {
     onFrame: (env) => {
@@ -661,6 +671,22 @@ function buildRunnerCallbacks(deps: RunnerCallbackDeps): DriverCallbacks {
           },
         });
       }),
+    requestHumanXValue: (_env, prompt) =>
+      new Promise<HumanChoice>((resolve) => {
+        if (isCancelled()) {
+          resolve({ ai: true });
+          return;
+        }
+        setXValuePick(prompt.min);
+        setXValueTurn({
+          prompt,
+          resolve: (choice) => {
+            setXValueTurn(null);
+            setXValuePick(prompt.min);
+            resolve(choice);
+          },
+        });
+      }),
   };
 }
 
@@ -757,6 +783,8 @@ export function RunView({
     useState<OptionalCostTurn | null>(null);
   const [commanderZoneTurn, setCommanderZoneTurn] =
     useState<CommanderZoneTurn | null>(null);
+  const [xValueTurn, setXValueTurn] = useState<XValueTurn | null>(null);
+  const [xValuePick, setXValuePick] = useState(0);
   const [passingTurn, setPassingTurn] = useState(false);
   const [logEntries, setLogEntries] = useState<LoggedEntry[]>([]);
   // On mobile the log is a full-screen drawer, so it always starts closed and
@@ -855,6 +883,8 @@ export function RunView({
             setResolutionOptionalPaymentTurn,
             setOptionalCostTurn,
             setCommanderZoneTurn,
+            setXValuePick,
+            setXValueTurn,
           }),
         );
         runnerRef.current = runner;
@@ -984,7 +1014,8 @@ export function RunView({
         scryTurn ||
         resolutionOptionalPaymentTurn ||
         optionalCostTurn ||
-        commanderZoneTurn)
+        commanderZoneTurn ||
+        xValueTurn)
     ) {
       setPassingTurn(false);
     }
@@ -999,6 +1030,7 @@ export function RunView({
     resolutionOptionalPaymentTurn,
     optionalCostTurn,
     commanderZoneTurn,
+    xValueTurn,
   ]);
 
   // Map draggable hand cards to their play actions for the current window.
@@ -1841,6 +1873,62 @@ export function RunView({
                   onClick={() => commanderZoneTurn.resolve({ ai: true })}
                 >
                   {t("commanderZone.letAi")}
+                </button>
+              </div>
+            </>
+          )}
+
+          {xValueTurn && (
+            <>
+              <div className="control-title">
+                <strong>{t("xValue.title")}</strong>
+              </div>
+              <p className="hint">
+                {t("xValue.source", {
+                  name: xValueTurn.prompt.sourceName || t("xValue.spellFallback"),
+                })}
+              </p>
+              <div className="import__row">
+                <input
+                  className="input"
+                  type="number"
+                  min={xValueTurn.prompt.min}
+                  max={xValueTurn.prompt.max}
+                  value={xValuePick}
+                  onChange={(e) => {
+                    const { min, max } = xValueTurn.prompt;
+                    const n = Math.round(Number(e.target.value));
+                    setXValuePick(
+                      Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : min,
+                    );
+                  }}
+                />
+              </div>
+              <p className="hint">
+                {t("xValue.range", {
+                  min: xValueTurn.prompt.min,
+                  max: xValueTurn.prompt.max,
+                })}
+              </p>
+              <div className="import__row">
+                <button
+                  className="btn"
+                  disabled={
+                    !Number.isInteger(xValuePick) ||
+                    xValuePick < xValueTurn.prompt.min ||
+                    xValuePick > xValueTurn.prompt.max
+                  }
+                  onClick={() =>
+                    xValueTurn.resolve({ action: chooseXAction(xValuePick) })
+                  }
+                >
+                  {t("xValue.confirm")}
+                </button>
+                <button
+                  className="btn btn--ghost"
+                  onClick={() => xValueTurn.resolve({ ai: true })}
+                >
+                  {t("xValue.letAi")}
                 </button>
               </div>
             </>

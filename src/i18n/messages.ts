@@ -327,6 +327,19 @@ export const messages = {
   },
   "commanderZone.letAi": { pt: "IA decide", en: "Let the AI decide" },
 
+  "xValue.title": { pt: "Escolher X", en: "Choose X" },
+  "xValue.source": {
+    pt: "{name} pede um valor para X.",
+    en: "{name} asks for a value for X.",
+  },
+  "xValue.spellFallback": { pt: "Esta mágica", en: "This spell" },
+  "xValue.range": {
+    pt: "X pode ser {min}–{max}.",
+    en: "X can be {min}–{max}.",
+  },
+  "xValue.confirm": { pt: "Confirmar", en: "Confirm" },
+  "xValue.letAi": { pt: "IA decide", en: "Let the AI decide" },
+
   "modes.title": { pt: "Escolher modo", en: "Choose a mode" },
   "modes.source": {
     pt: "{name} pede uma escolha de modo.",
