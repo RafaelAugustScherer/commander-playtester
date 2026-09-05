@@ -57,6 +57,12 @@ import {
   orderTriggersAction,
   type OrderTriggersPrompt,
 } from "../sim/decisions/orderTriggers";
+import {
+  selectSearchCardsAction,
+  chooseOutsideGameAction,
+  type SearchDecisionPrompt,
+  type OutsideGameSelection,
+} from "../sim/decisions/search";
 import { XpWindow } from "../components/XpWindow";
 import {
   declareAttackersAction,
@@ -270,9 +276,104 @@ interface OrderTriggersTurn {
   resolve: (choice: HumanChoice) => void;
 }
 
+interface SearchTurn {
+  prompt: SearchDecisionPrompt;
+  resolve: (choice: HumanChoice) => void;
+}
+
 function formatZoneLabel(zone: string): string {
   if (!zone) return zone;
   return zone.charAt(0).toUpperCase() + zone.slice(1).toLowerCase();
+}
+
+/** One row in the search/outside-game candidate list: a stable key plus its label. */
+interface SearchListItem {
+  key: number;
+  label: string;
+}
+
+function searchListItems(prompt: SearchDecisionPrompt): SearchListItem[] {
+  if (prompt.kind === "outside") {
+    return prompt.entries.map((entry, i) => ({ key: i, label: entry.label }));
+  }
+  return prompt.cards.map((card) => ({ key: card.id, label: card.name }));
+}
+
+/** Build the confirm action: card ids for search/partition, entry sources for outside-game. */
+function searchConfirmAction(prompt: SearchDecisionPrompt, pick: number[]) {
+  if (prompt.kind === "outside") {
+    return chooseOutsideGameAction(
+      pick.map((i) => prompt.entries[i].source as OutsideGameSelection),
+    );
+  }
+  return selectSearchCardsAction(pick);
+}
+
+function searchPanelTitle(
+  prompt: SearchDecisionPrompt,
+  t: (key: MsgKey, vars?: Vars) => string,
+): string {
+  if (prompt.kind === "partition") {
+    return t("search.partitionTitle", {
+      primary: formatZoneLabel(prompt.primaryDestination),
+      rest: formatZoneLabel(prompt.restDestination),
+    });
+  }
+  if (prompt.kind === "outside") return t("search.outsideTitle");
+  return t("search.title");
+}
+
+function SearchPanel({
+  turn,
+  pick,
+  onTogglePick,
+  onConfirm,
+  onLetAi,
+}: {
+  turn: SearchTurn;
+  pick: number[];
+  onTogglePick: (key: number) => void;
+  onConfirm: () => void;
+  onLetAi: () => void;
+}) {
+  const { t } = useI18n();
+  const { prompt } = turn;
+  const atCap = pick.length >= prompt.count;
+  const upTo = prompt.kind === "search" && prompt.upTo;
+  const valid = upTo ? pick.length <= prompt.count : pick.length === prompt.count;
+  return (
+    <>
+      <div className="control-title">
+        <strong>{searchPanelTitle(prompt, t)}</strong>
+      </div>
+      <p className="hint">
+        {t("search.selected", { n: pick.length, max: prompt.count })}
+      </p>
+      <div className="search-list">
+        {searchListItems(prompt).map((item) => {
+          const picked = pick.includes(item.key);
+          return (
+            <button
+              key={item.key}
+              className={picked ? "btn" : "btn--ghost"}
+              disabled={!picked && atCap}
+              onClick={() => onTogglePick(item.key)}
+            >
+              {item.label}
+            </button>
+          );
+        })}
+      </div>
+      <div className="import__row">
+        <button className="btn" disabled={!valid} onClick={onConfirm}>
+          {t("search.confirm")}
+        </button>
+        <button className="btn btn--ghost" onClick={onLetAi}>
+          {t("search.letAi")}
+        </button>
+      </div>
+    </>
+  );
 }
 
 function isTargetOptional(
@@ -413,6 +514,8 @@ interface RunnerCallbackDeps {
   setXValueTurn: Dispatch<SetStateAction<XValueTurn | null>>;
   setOrderTriggersPick: Dispatch<SetStateAction<number[]>>;
   setOrderTriggersTurn: Dispatch<SetStateAction<OrderTriggersTurn | null>>;
+  setSearchPick: Dispatch<SetStateAction<number[]>>;
+  setSearchTurn: Dispatch<SetStateAction<SearchTurn | null>>;
 }
 
 function buildRunnerCallbacks(deps: RunnerCallbackDeps): DriverCallbacks {
@@ -451,6 +554,8 @@ function buildRunnerCallbacks(deps: RunnerCallbackDeps): DriverCallbacks {
     setXValueTurn,
     setOrderTriggersPick,
     setOrderTriggersTurn,
+    setSearchPick,
+    setSearchTurn,
   } = deps;
   return {
     onFrame: (env) => {
@@ -717,6 +822,22 @@ function buildRunnerCallbacks(deps: RunnerCallbackDeps): DriverCallbacks {
           },
         });
       }),
+    requestHumanSearch: (_env, prompt) =>
+      new Promise<HumanChoice>((resolve) => {
+        if (isCancelled()) {
+          resolve({ ai: true });
+          return;
+        }
+        setSearchPick([]);
+        setSearchTurn({
+          prompt,
+          resolve: (choice) => {
+            setSearchTurn(null);
+            setSearchPick([]);
+            resolve(choice);
+          },
+        });
+      }),
   };
 }
 
@@ -818,6 +939,8 @@ export function RunView({
   const [orderTriggersTurn, setOrderTriggersTurn] =
     useState<OrderTriggersTurn | null>(null);
   const [orderTriggersPick, setOrderTriggersPick] = useState<number[]>([]);
+  const [searchTurn, setSearchTurn] = useState<SearchTurn | null>(null);
+  const [searchPick, setSearchPick] = useState<number[]>([]);
   const [passingTurn, setPassingTurn] = useState(false);
   const [logEntries, setLogEntries] = useState<LoggedEntry[]>([]);
   // On mobile the log is a full-screen drawer, so it always starts closed and
@@ -920,6 +1043,8 @@ export function RunView({
             setXValueTurn,
             setOrderTriggersPick,
             setOrderTriggersTurn,
+            setSearchPick,
+            setSearchTurn,
           }),
         );
         runnerRef.current = runner;
@@ -1051,7 +1176,8 @@ export function RunView({
         optionalCostTurn ||
         commanderZoneTurn ||
         xValueTurn ||
-        orderTriggersTurn)
+        orderTriggersTurn ||
+        searchTurn)
     ) {
       setPassingTurn(false);
     }
@@ -1068,6 +1194,7 @@ export function RunView({
     commanderZoneTurn,
     xValueTurn,
     orderTriggersTurn,
+    searchTurn,
   ]);
 
   // Map draggable hand cards to their play actions for the current window.
@@ -2048,6 +2175,26 @@ export function RunView({
                 </button>
               </div>
             </>
+          )}
+
+          {searchTurn && (
+            <SearchPanel
+              turn={searchTurn}
+              pick={searchPick}
+              onTogglePick={(key) =>
+                setSearchPick((prev) => {
+                  if (prev.includes(key)) return prev.filter((k) => k !== key);
+                  if (prev.length >= searchTurn.prompt.count) return prev;
+                  return [...prev, key];
+                })
+              }
+              onConfirm={() =>
+                searchTurn.resolve({
+                  action: searchConfirmAction(searchTurn.prompt, searchPick),
+                })
+              }
+              onLetAi={() => searchTurn.resolve({ ai: true })}
+            />
           )}
         </section>
       )}

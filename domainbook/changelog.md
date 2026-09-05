@@ -12,6 +12,16 @@ depth live there. A purely-internal PR that touches no product or architecture m
 skip its version with a `Skip-Docs: <reason>` trailer instead. There are no
 per-domain changelogs; this file is the single timeline (`ADR-0007`).
 
+## [0.10.0] - 2026-09-05
+
+### Added
+
+- You now browse your own **tutor/search and fetch-land results**: searching
+  your library, splitting a fetch between two destinations, or picking from
+  outside the game (Wish effects) lists the candidates for your seat to pick,
+  instead of the AI deciding
+  (`domains/simulation/features/browse-a-search-yourself.md`).
+
 ## [0.9.0] - 2026-09-05
 
 ### Added
