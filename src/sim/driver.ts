@@ -57,6 +57,10 @@ import {
   parsePhyrexianPaymentPrompt,
   type PhyrexianPaymentPrompt,
 } from "./decisions/phyrexianPayment";
+import {
+  parseCoinFlipLifePrompt,
+  type CoinFlipLifePrompt,
+} from "./decisions/coinFlipAndLife";
 
 export interface MatchResult {
   matchIndex: number;
@@ -308,6 +312,11 @@ export interface DriverCallbacks {
   requestHumanPhyrexianPayment?: (
     env: GameStateEnvelope,
     prompt: PhyrexianPaymentPrompt,
+  ) => Promise<HumanChoice>;
+  /** Called when the human keeps coin-flip results, or picks a life-redistribution option. */
+  requestHumanCoinFlipLife?: (
+    env: GameStateEnvelope,
+    prompt: CoinFlipLifePrompt,
   ) => Promise<HumanChoice>;
 }
 
@@ -650,6 +659,12 @@ export class MatchRunner {
           env,
           cb.requestHumanPhyrexianPayment,
           parsePhyrexianPaymentPrompt(wf, state.objects),
+        ),
+      () =>
+        humanRequest(
+          env,
+          cb.requestHumanCoinFlipLife,
+          parseCoinFlipLifePrompt(wf),
         ),
     ];
     for (const resolve of resolvers) {
