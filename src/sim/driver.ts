@@ -73,6 +73,10 @@ import {
   parseCopyChoicePrompt,
   type CopyChoicePrompt,
 } from "./decisions/copyChoice";
+import {
+  parseCountersPrompt,
+  type CountersPrompt,
+} from "./decisions/counters";
 
 export interface MatchResult {
   matchIndex: number;
@@ -344,6 +348,11 @@ export interface DriverCallbacks {
   requestHumanCopyChoice?: (
     env: GameStateEnvelope,
     prompt: CopyChoicePrompt,
+  ) => Promise<HumanChoice>;
+  /** Called when the human distributes counters/damage/life, proliferates, or populates a token. */
+  requestHumanCounters?: (
+    env: GameStateEnvelope,
+    prompt: CountersPrompt,
   ) => Promise<HumanChoice>;
 }
 
@@ -710,6 +719,12 @@ export class MatchRunner {
           env,
           cb.requestHumanCopyChoice,
           parseCopyChoicePrompt(wf, state),
+        ),
+      () =>
+        humanRequest(
+          env,
+          cb.requestHumanCounters,
+          parseCountersPrompt(wf, state),
         ),
     ];
     for (const resolve of resolvers) {
