@@ -11,15 +11,22 @@ I want to seed a few cards and be offered synergistic cards to add, a few at a t
 So that I can build a legal, measurable Commander deck without knowing the whole card pool
 
 The draft opens from a **Draft a deck** entry in the `deck library`, beside the by-hand
-editor. It produces the same `SavedDeck` the rest of the app already understands, so a
-finished draft flows straight into `match setup`; an unfinished one is saved partial and
-flagged (`deck-library/ADR-0002`).
+editor. It can also be launched from the editor itself with **Draft from this deck**, which
+seeds the draft with the cards already in the list being edited (its commander pre-picked).
+It produces the same `SavedDeck` the rest of the app already understands, so a finished
+draft flows straight into `match setup`; an unfinished one is saved partial and flagged
+(`deck-library/ADR-0002`).
 
 ## Rule: A draft starts from at least three base cards
 
 The user enters three or more `base cards` to seed the theme. One may be flagged as the
 `commander card`. Fewer than three is refused — three is the floor for a theme worth
 ranking against.
+
+Base cards can be entered two ways: **one by one**, where each field suggests matching card
+names as it is typed and a card is flagged commander with a radio; or by **pasting a list**
+of names (the same decklist text the editor accepts), with the commander chosen from a
+select below. Seeding from an existing deck uses the paste form, pre-filled.
 
 ```gherkin
 Example: Three seed cards start a draft
@@ -93,10 +100,11 @@ Example: Commander themes outrank equal non-commander themes
 ## Rule: A round offers three cards, each refreshable, with no repeats in the round
 
 Each `suggestion round` shows exactly three cards whenever at least three legal candidates
-exist in the card database. Commander candidates are narrowed, scored, and ranked locally
-before only the three selected cards are fetched for display. Any one can be refreshed on its
-own, replaced by the closest remaining candidate that has not appeared in this round. Adding
-a card ends the round.
+exist in the card database. Candidates are narrowed, scored, bracket-adjusted, and ranked
+locally before only the three selected cards are fetched for display. Any one can be refreshed
+on its own, replaced by the closest remaining candidate that has not appeared in this round.
+Adding a card ends the round. The next ranking rebuilds its profile from the commander and
+every card selected so far.
 
 ```gherkin
 Example: Refresh swaps one slot for a close, unseen card
@@ -109,6 +117,7 @@ Example: Adding a card starts a fresh round
   Given a round showing three suggestions
   When the author adds one of them to the deck
   Then a new round is offered
+  And its suggestions are scored against the updated deck
   And a card is free to appear again in this new round
 
 Example: Commander ranking produces a full round

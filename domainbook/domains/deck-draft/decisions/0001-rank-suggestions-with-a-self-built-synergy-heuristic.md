@@ -38,16 +38,17 @@ the engine; it has to be built.
 
 Chosen: **a self-built heuristic ranks; the engine narrows and validates.**
 
-- **Narrow:** regular-card rounds query `search_cards_js` with `theme token`s pulled from
-  the deck. Commander rounds instead inspect every Commander-legal, commander-eligible
-  card locally through `get_card_face_data`, because a narrow text search can miss valid
-  leaders before the deck has a commander.
+- **Narrow:** regular-card rounds query `search_cards_js` broadly across the strongest
+  current `theme token`s, cache those local results, and use `get_card_face_data` to supply
+  text and types for scoring. They filter the pool by Commander legality and the chosen
+  color identity. Commander rounds inspect every Commander-legal, commander-eligible card
+  because a narrow search can miss valid leaders before the deck has a commander.
 - **Rank:** the `synergy score` sums the theme tokens a candidate shares with the deck —
   creature subtypes, keywords, salient oracle-text phrases — with `commander weighting`
   applied, plus a term for the deck's role gaps and mana curve. Commander ranking also
   favors the smallest color identity that covers every base card.
-- **Enrich:** after local commander ranking, only the three displayed cards are resolved
-  through Scryfall for images and display data.
+- **Enrich:** after local ranking, only the three displayed cards are resolved through
+  Scryfall for images and display data.
 - **Steer and validate:** for the shortlist, `estimate_bracket_for_deck` supplies the
   `bracket target` tilt (and a plain-language reason, since it names the contributing
   cards), and `classify_deck_js` shows the archetype the deck is drifting toward.

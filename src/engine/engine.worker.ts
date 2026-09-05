@@ -17,7 +17,15 @@ import init, {
   submit_action,
 } from "./vendor/engine_wasm.js";
 import { draftQueries } from "./draftQueries";
-import type { CommanderCandidateData, SearchCardsQuery } from "./draftQueries";
+import type {
+  DraftCandidateData,
+  EngineThemeProfile,
+  SearchCardRow,
+} from "./draftQueries";
+import { frontFace } from "../lib/cardName";
+import { bracketTilt, type BracketTarget } from "../draft/bracket";
+import { rankLocalCandidates } from "../draft/localCandidates";
+import type { ThemeProfile } from "../draft/themes";
 
 // Absolute base URL for engine assets, supplied by the main thread on "ready".
 // It must be resolved against the *page* location, not the worker's: a relative
@@ -28,7 +36,12 @@ let assetBase = import.meta.env.BASE_URL;
 let started = false;
 let dbLoaded = false;
 let commanderConfig: any = null;
-let cachedCommanderCandidates: CommanderCandidateData[] | null = null;
+let cachedCommanderCandidates: DraftCandidateData[] | null = null;
+const cachedThemeCandidates = new Map<string, DraftCandidateData[]>();
+const THEME_COUNT = 8;
+const THEME_SEARCH_LIMIT = 250;
+const BRACKET_SHORTLIST_SIZE = 12;
+const ROUND_SIZE = 3;
 
 async function ensureStarted(): Promise<void> {
   if (started) return;
@@ -71,27 +84,93 @@ function cardTypeLine(cardType: NonNullable<ReturnType<typeof draftQueries.get_c
   return subtypes.length > 0 ? `${types.join(" ")} — ${subtypes.join(" ")}` : types.join(" ");
 }
 
-function commanderCandidates(): CommanderCandidateData[] {
+function candidateData(card: SearchCardRow): DraftCandidateData | null {
+  const face = draftQueries.get_card_face_data(card.name);
+  if (!face) return null;
+  return {
+    name: card.name,
+    manaValue: card.mana_value,
+    typeLine: cardTypeLine(face.card_type),
+    oracleText: face.oracle_text ?? "",
+    colorIdentity: card.color_identity,
+  };
+}
+
+function commanderCandidates(): DraftCandidateData[] {
   if (cachedCommanderCandidates) return cachedCommanderCandidates;
-  const allCards = draftQueries.search_cards_js({ limit: 100_000 }).results;
-  cachedCommanderCandidates = allCards.flatMap((card) => {
-    if (
-      card.legalities?.commander !== "legal" ||
-      !draftQueries.is_card_commander_eligible(card.name)
-    ) {
-      return [];
-    }
-    const face = draftQueries.get_card_face_data(card.name);
-    if (!face) return [];
-    return [{
-      name: card.name,
-      manaValue: card.mana_value,
-      typeLine: cardTypeLine(face.card_type),
-      oracleText: face.oracle_text ?? "",
-      colorIdentity: card.color_identity,
-    }];
-  });
+  cachedCommanderCandidates = draftQueries
+    .search_cards_js({ limit: 100_000 })
+    .results.flatMap((card) => {
+      if (
+        card.legalities?.commander !== "legal" ||
+        !draftQueries.is_card_commander_eligible(card.name)
+      ) {
+        return [];
+      }
+      const candidate = candidateData(card);
+      return candidate ? [candidate] : [];
+    });
   return cachedCommanderCandidates;
+}
+
+function themeCandidates(profile: ThemeProfile): DraftCandidateData[] {
+  const tokens = [...profile.tokenWeights]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, THEME_COUNT)
+    .map(([token]) => token);
+  const candidates = new Map<string, DraftCandidateData>();
+  for (const token of tokens) {
+    let tokenCandidates = cachedThemeCandidates.get(token);
+    if (!tokenCandidates) {
+      tokenCandidates = draftQueries
+        .search_cards_js({ text: token, limit: THEME_SEARCH_LIMIT })
+        .results.flatMap((card) => {
+          if (card.legalities?.commander !== "legal") return [];
+          const candidate = candidateData(card);
+          return candidate ? [candidate] : [];
+        });
+      cachedThemeCandidates.set(token, tokenCandidates);
+    }
+    for (const candidate of tokenCandidates) {
+      candidates.set(candidate.name.toLowerCase(), candidate);
+    }
+  }
+  return [...candidates.values()];
+}
+
+function themeProfile(profile: EngineThemeProfile): ThemeProfile {
+  return {
+    ...profile,
+    tokenWeights: new Map(profile.tokenWeights),
+  };
+}
+
+function rankedCardNames(args: {
+  commanders: string[];
+  mainboard: string[];
+  profile: EngineThemeProfile;
+  target: BracketTarget;
+  exclude: string[];
+}): Array<{ name: string; bracketTilt: number }> {
+  const profile = themeProfile(args.profile);
+  const excluded = new Set(args.exclude.map((name) => name.toLowerCase()));
+  const shortlist = rankLocalCandidates(
+    themeCandidates(profile),
+    profile,
+    excluded,
+  ).slice(0, BRACKET_SHORTLIST_SIZE);
+  return shortlist
+    .map(({ card, score }) => {
+      const estimate = draftQueries.estimate_bracket_for_deck({
+        commander: args.commanders.map(frontFace),
+        main_deck: [...args.mainboard, card.name].map(frontFace),
+      });
+      const tilt = bracketTilt(estimate, args.target);
+      return { name: card.name, bracketTilt: tilt, total: score.total + tilt };
+    })
+    .sort((a, b) => b.total - a.total)
+    .slice(0, ROUND_SIZE)
+    .map(({ name, bracketTilt: tilt }) => ({ name, bracketTilt: tilt }));
 }
 
 async function handle(cmd: string, args: any): Promise<any> {
@@ -154,16 +233,6 @@ async function handle(cmd: string, args: any): Promise<any> {
         state: get_game_state(),
       };
     }
-    case "searchCards": {
-      await ensureStarted();
-      await ensureDb();
-      const { text, colors, limit } = args ?? {};
-      const query: SearchCardsQuery = {};
-      if (text !== undefined) query.text = text;
-      if (colors !== undefined) query.colors = colors;
-      if (limit !== undefined) query.limit = limit;
-      return draftQueries.search_cards_js(query);
-    }
     case "estimateBracket": {
       await ensureStarted();
       await ensureDb();
@@ -180,6 +249,11 @@ async function handle(cmd: string, args: any): Promise<any> {
       await ensureStarted();
       await ensureDb();
       return commanderCandidates();
+    }
+    case "rankCardCandidates": {
+      await ensureStarted();
+      await ensureDb();
+      return rankedCardNames(args);
     }
     default:
       throw new Error(`unknown engine command: ${cmd}`);

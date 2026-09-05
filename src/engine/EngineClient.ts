@@ -9,9 +9,9 @@ import type {
   BracketDeckInput,
   BracketEstimate,
   ClassifyDeckResult,
-  CommanderCandidateData,
-  SearchCardsQuery,
-  SearchCardsResult,
+  DraftCandidateData,
+  RankCardCandidatesInput,
+  RankedCardName,
 } from "./draftQueries";
 
 interface Pending {
@@ -113,11 +113,6 @@ export class EngineClient {
     return this.req("aiProposal", { difficulty, player });
   }
 
-  /** Game-independent card search over the engine's own card database. */
-  searchCards(query: SearchCardsQuery): Promise<SearchCardsResult> {
-    return this.req("searchCards", query);
-  }
-
   /** Game-independent WotC bracket estimate for a (possibly partial) deck. */
   estimateBracket(deck: BracketDeckInput): Promise<BracketEstimate | null> {
     return this.req("estimateBracket", deck);
@@ -128,8 +123,12 @@ export class EngineClient {
     return this.req("classifyDeck", { names });
   }
 
-  commanderCandidates(): Promise<CommanderCandidateData[]> {
+  commanderCandidates(): Promise<DraftCandidateData[]> {
     return this.req("commanderCandidates");
+  }
+
+  rankCardCandidates(input: RankCardCandidatesInput): Promise<RankedCardName[]> {
+    return this.req("rankCardCandidates", input);
   }
 
   terminate(): void {

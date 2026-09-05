@@ -1,4 +1,5 @@
 import type { MouseEvent as ReactMouseEvent } from "react";
+import { Plus, RefreshCw } from "lucide-react";
 import type { RankedCandidate } from "./candidates";
 import { useI18n } from "../i18n/I18nContext";
 import type { Preview } from "../board/CardPreview";
@@ -80,15 +81,23 @@ export function DraftCandidateCard({
           </p>
         )}
         <div className="draft-card__actions">
-          <button className="btn btn--sm" onClick={onPrimary} disabled={busy}>
-            {primaryLabel}
+          <button
+            className="btn btn--sm btn--icon has-tooltip"
+            onClick={onPrimary}
+            disabled={busy}
+            aria-label={primaryLabel}
+            data-tooltip={primaryLabel}
+          >
+            <Plus size={16} aria-hidden="true" />
           </button>
           <button
-            className="btn btn--ghost btn--sm"
+            className="btn btn--ghost btn--sm btn--icon has-tooltip"
             onClick={onRefresh}
             disabled={busy}
+            aria-label={t("draft.round.refresh")}
+            data-tooltip={t("draft.round.refresh")}
           >
-            {t("draft.round.refresh")}
+            <RefreshCw size={15} aria-hidden="true" />
           </button>
         </div>
       </div>

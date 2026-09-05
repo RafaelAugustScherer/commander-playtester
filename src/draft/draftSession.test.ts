@@ -3,12 +3,7 @@ import { DraftSession, DraftSessionError } from "./draftSession";
 import type { DraftEngine, CardResolver } from "./candidates";
 import type { Card } from "../lib/types";
 import { parseDecklist } from "../lib/decklist";
-import type {
-  BracketEstimate,
-  CommanderCandidateData,
-  SearchCardRow,
-  SearchCardsResult,
-} from "../engine/draftQueries";
+import type { DraftCandidateData } from "../engine/draftQueries";
 
 function card(overrides: Partial<Card> = {}): Card {
   return {
@@ -24,17 +19,7 @@ function card(overrides: Partial<Card> = {}): Card {
   };
 }
 
-function row(name: string, colorIdentity: string[] = ["G"]): SearchCardRow {
-  return {
-    name,
-    oracle_id: name,
-    mana_value: 3,
-    color_identity: colorIdentity,
-    legalities: { commander: "legal" },
-  };
-}
-
-function commanderData(candidate: Card): CommanderCandidateData {
+function commanderData(candidate: Card): DraftCandidateData {
   return {
     name: candidate.name,
     manaValue: candidate.manaValue,
@@ -60,23 +45,13 @@ const POOL_CARDS: Card[] = [
   card({ name: "Craterhoof Behemoth", typeLine: "Legendary Creature — Elemental" }),
 ];
 
-const POOL_ROWS: SearchCardRow[] = POOL_CARDS.map((c) => row(c.name));
-
 function makeEngine(): DraftEngine {
   return {
-    searchCards: async (): Promise<SearchCardsResult> => ({
-      results: POOL_ROWS,
-      total: POOL_ROWS.length,
-    }),
-    estimateBracket: async (): Promise<BracketEstimate | null> => ({
-      tier: "exhibition",
-      axes: {},
-      axis_caps_at_tier: {},
-      contributing: {},
-      violations: {},
-      data_version: "test",
-    }),
     commanderCandidates: async () => POOL_CARDS.map(commanderData),
+    rankCardCandidates: async ({ exclude }) =>
+      POOL_CARDS.filter((candidate) => !exclude.includes(candidate.name.toLowerCase()))
+        .slice(0, 3)
+        .map(({ name }) => ({ name, bracketTilt: 0 })),
   };
 }
 
@@ -201,6 +176,30 @@ describe("DraftSession", () => {
     expect(session.round.some((c) => stillAvailable.includes(c.card.name))).toBe(true);
   });
 
+  it("uses the updated deck and theme profile for the next round", async () => {
+    const inputs: Array<Parameters<DraftEngine["rankCardCandidates"]>[0]> = [];
+    const picks = ["Imperious Perfect", "Elvish Clancaller"];
+    const engine: DraftEngine = {
+      commanderCandidates: async () => POOL_CARDS.map(commanderData),
+      rankCardCandidates: async (input) => {
+        inputs.push(input);
+        return [{ name: picks[inputs.length - 1], bracketTilt: 0 }];
+      },
+    };
+    const session = new DraftSession({ engine, resolver: makeResolver() });
+    await session.start(
+      ["Elvish Champion", "Timberwatch Elf", "Elvish Archer"],
+      "Elvish Champion",
+    );
+    await session.addCard(0);
+
+    expect(inputs).toHaveLength(2);
+    expect(inputs[1].mainboard).toContain("Imperious Perfect");
+    const firstElfWeight = new Map(inputs[0].profile.tokenWeights).get("elf") ?? 0;
+    const nextElfWeight = new Map(inputs[1].profile.tokenWeights).get("elf") ?? 0;
+    expect(nextElfWeight).toBe(firstElfWeight + 1);
+  });
+
   it("setBracketTarget updates the target used for subsequent rounds", async () => {
     const session = makeSession();
     await session.start(BASE_NAMES, null);
@@ -252,18 +251,9 @@ describe("DraftSession Choose-a-Background pairing", () => {
   const thirdGreenCard = card({ name: "Third Green Card", colorIdentity: ["G"] });
 
   function makeBgEngine(cards: Card[]): DraftEngine {
-    const rows = cards.map((candidate) => row(candidate.name, candidate.colorIdentity));
     return {
-      searchCards: async (): Promise<SearchCardsResult> => ({ results: rows, total: rows.length }),
-      estimateBracket: async (): Promise<BracketEstimate | null> => ({
-        tier: "exhibition",
-        axes: {},
-        axis_caps_at_tier: {},
-        contributing: {},
-        violations: {},
-        data_version: "test",
-      }),
       commanderCandidates: async () => cards.map(commanderData),
+      rankCardCandidates: async () => [],
     };
   }
 

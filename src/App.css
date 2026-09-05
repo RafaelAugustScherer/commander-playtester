@@ -708,6 +708,11 @@ th {
   flex: 1;
   min-width: 0;
 }
+.draft-entry-row .combobox {
+  flex: 1;
+  min-width: 0;
+  max-width: none;
+}
 .draft-entry-row__commander {
   display: flex;
   align-items: center;

@@ -6,13 +6,11 @@ import { cardSimilarity } from "./similarity";
 import {
   suggestCandidates,
   suggestCommanders,
-  createTokenSearchCache,
   hasChooseABackground,
   singleBackgroundAmong,
   type DraftEngine,
   type CardResolver,
   type RankedCandidate,
-  type TokenSearchCache,
 } from "./candidates";
 import { DEFAULT_BRACKET_TARGET, type BracketTarget } from "./bracket";
 
@@ -64,8 +62,6 @@ export class DraftSession {
   private pool: RankedCandidate[] = [];
   /** Names shown in the current round (refreshes included) — never repeated within it. */
   private shown = new Set<string>();
-  private readonly tokenCache: TokenSearchCache = createTokenSearchCache();
-
   constructor(private readonly deps: DraftSessionDeps) {}
 
   private mainboardCards(): Card[] {
@@ -111,7 +107,6 @@ export class DraftSession {
             engine: this.deps.engine,
             resolver: this.deps.resolver,
             target: this.target,
-            tokenCache: this.tokenCache,
           });
 
     this.rememberResolved(this.pool.map((c) => c.card));
@@ -140,7 +135,6 @@ export class DraftSession {
             resolver: this.deps.resolver,
             target: this.target,
             exclude,
-            tokenCache: this.tokenCache,
           });
 
     this.rememberResolved(fresh.map((c) => c.card));

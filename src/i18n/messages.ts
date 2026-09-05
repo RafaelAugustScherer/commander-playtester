@@ -69,6 +69,10 @@ export const messages = {
   "editor.save": { pt: "Salvar deck", en: "Save deck" },
   "editor.cancel": { pt: "Cancelar", en: "Cancel" },
   "editor.loadSample": { pt: "Carregar exemplo", en: "Load example" },
+  "editor.draftFromDeck": {
+    pt: "Draft a partir deste deck",
+    en: "Draft from this deck",
+  },
 
   "import.label": { pt: "Importar de uma URL", en: "Import from a URL" },
   "import.placeholder": {
@@ -440,6 +444,21 @@ export const messages = {
   },
   "draft.entry.baseCardsLabel": { pt: "Cartas base", en: "Base cards" },
   "draft.entry.baseCardPlaceholder": { pt: "Nome da carta", en: "Card name" },
+  "draft.entry.modeRows": { pt: "Uma a uma", en: "One by one" },
+  "draft.entry.modePaste": { pt: "Colar lista", en: "Paste a list" },
+  "draft.entry.commanderLabel": {
+    pt: "Comandante (opcional)",
+    en: "Commander (optional)",
+  },
+  "draft.entry.noCommander": { pt: "— Sem comandante —", en: "— No commander —" },
+  "draft.entry.commanderSearchPlaceholder": {
+    pt: "Escolher comandante…",
+    en: "Pick a commander…",
+  },
+  "draft.entry.commanderNoMatch": {
+    pt: "Nenhuma carta corresponde",
+    en: "No matching card",
+  },
   "draft.entry.commanderFlag": { pt: "Comandante", en: "Commander" },
   "draft.entry.unflag": { pt: "Remover", en: "Unflag" },
   "draft.entry.removeCard": { pt: "Remover carta", en: "Remove card" },

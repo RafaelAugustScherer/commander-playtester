@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { toCard, resolveDeck, type FetchLike } from "./scryfall";
+import {
+  toCard,
+  resolveDeck,
+  fetchCardNameSuggestions,
+  type FetchLike,
+} from "./scryfall";
 import { parseDecklist } from "./decklist";
 
 describe("toCard", () => {
@@ -95,6 +100,36 @@ describe("resolveDeck", () => {
     expect(deck.unresolved).toEqual(["Nonexistent Card"]);
   });
 
+});
+
+describe("fetchCardNameSuggestions", () => {
+  it("queries the autocomplete endpoint and returns the names", async () => {
+    let calledUrl = "";
+    const fetchImpl: FetchLike = async (url) => {
+      calledUrl = url;
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({ data: ["Sol Ring", "Solemn Simulacrum"] }),
+      };
+    };
+    const names = await fetchCardNameSuggestions("sol", fetchImpl);
+    expect(names).toEqual(["Sol Ring", "Solemn Simulacrum"]);
+    expect(calledUrl).toContain("/cards/autocomplete?q=sol");
+  });
+
+  it("skips the request for queries shorter than two characters", async () => {
+    let called = false;
+    const fetchImpl: FetchLike = async () => {
+      called = true;
+      return { ok: true, status: 200, json: async () => ({ data: [] }) };
+    };
+    expect(await fetchCardNameSuggestions("s", fetchImpl)).toEqual([]);
+    expect(called).toBe(false);
+  });
+});
+
+describe("resolveDeck (two-sided)", () => {
   it("resolves a stored two-sided name by querying its front face", async () => {
     const parsed = parseDecklist("Deck\n1 Commit // Memory");
     // Scryfall knows the card only under the front face "Commit"; it echoes the

@@ -62,6 +62,22 @@ Example: The name field previews the commander
   Then its placeholder shows the commander's name
 ```
 
+## Rule: The editor can hand its list to a deck draft
+
+While editing, the author can start an assisted draft seeded from the cards currently in
+the editor with **Draft from this deck**. The cards in the list become the draft's `base
+cards` and the list's commander is pre-picked, so an existing or half-typed deck can be
+grown through the `draft-a-deck` flow. The action is offered only once the list holds at
+least three distinct cards — the draft's own floor.
+
+```gherkin
+Example: Drafting from the deck being edited
+  Given the editor holds a commander and a handful of cards
+  When the author chooses "Draft from this deck"
+  Then a draft opens seeded with those cards
+  And the list's commander is already picked
+```
+
 ## Rule: A saved deck round-trips
 
 ```gherkin

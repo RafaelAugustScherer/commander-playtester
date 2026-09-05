@@ -1,19 +1,44 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { SavedDeck } from "../deck/model";
 import { fetchCardsCached } from "../lib/scryfallCache";
 import { getEngine } from "../engine/EngineClient";
 import { frontFace } from "../lib/cardName";
+import { parseDecklist } from "../lib/decklist";
 import type { BracketEstimate, ClassifyDeckResult } from "../engine/draftQueries";
 import { DraftSession } from "./draftSession";
 import { engineDraftEngine, scryfallCardResolver } from "./candidates";
 import { BRACKET_TARGETS, DEFAULT_BRACKET_TARGET, type BracketTarget } from "./bracket";
 import { DraftCandidateCard } from "./DraftCandidateCard";
+import { CardNameInput } from "../components/CardNameInput";
+import { SearchableSelect } from "../components/SearchableSelect";
 import { CardPreview, type Preview } from "../board/CardPreview";
 import { useI18n } from "../i18n/I18nContext";
 import type { MsgKey } from "../i18n/messages";
 
 const MIN_BASE_CARDS = 3;
 const MAX_BASE_CARD_ROWS = 10;
+
+/** Seed cards for a draft launched from an existing deck (see `DeckEditor`). */
+export interface DraftSeed {
+  names: string[];
+  commander: string | null;
+}
+
+type EntryMode = "rows" | "paste";
+
+/** Unique base-card names parsed from pasted decklist text, order preserved. */
+function parsePastedNames(text: string): string[] {
+  const parsed = parseDecklist(text);
+  const seen = new Set<string>();
+  const names: string[] = [];
+  for (const entry of [...parsed.commanders, ...parsed.mainboard]) {
+    const key = entry.name.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    names.push(entry.name);
+  }
+  return names;
+}
 
 const BRACKET_TARGET_LABEL: Record<BracketTarget, MsgKey> = {
   exhibition: "draft.bracket.exhibition",
@@ -69,11 +94,118 @@ function shiftCommanderRow(row: number | null, removedIndex: number): number | n
   return row > removedIndex ? row - 1 : row;
 }
 
-/** Entry form: three or more base cards, an optional commander flag, and the bracket target. */
+/** The rows-mode inputs: up to ten card-name fields with autocomplete + a commander flag. */
+function DraftEntryRows({
+  names,
+  commanderRow,
+  onSetName,
+  onAddRow,
+  onRemoveRow,
+  onSetCommanderRow,
+}: {
+  names: string[];
+  commanderRow: number | null;
+  onSetName: (index: number, value: string) => void;
+  onAddRow: () => void;
+  onRemoveRow: (index: number) => void;
+  onSetCommanderRow: (row: number | null) => void;
+}) {
+  const { t } = useI18n();
+  return (
+    <>
+      {names.map((name, i) => (
+        <div className="draft-entry-row" key={i}>
+          <CardNameInput
+            value={name}
+            onChange={(value) => onSetName(i, value)}
+            placeholder={t("draft.entry.baseCardPlaceholder")}
+          />
+          <label className="draft-entry-row__commander">
+            <input
+              type="radio"
+              name="draft-commander"
+              checked={commanderRow === i}
+              onChange={() => onSetCommanderRow(i)}
+              disabled={!name.trim()}
+            />
+            {t("draft.entry.commanderFlag")}
+          </label>
+          {commanderRow === i && (
+            <button
+              type="button"
+              className="btn btn--ghost btn--sm"
+              onClick={() => onSetCommanderRow(null)}
+            >
+              {t("draft.entry.unflag")}
+            </button>
+          )}
+          {names.length > MIN_BASE_CARDS && (
+            <button
+              type="button"
+              className="btn btn--ghost btn--sm"
+              onClick={() => onRemoveRow(i)}
+              aria-label={t("draft.entry.removeCard")}
+            >
+              ×
+            </button>
+          )}
+        </div>
+      ))}
+      {names.length < MAX_BASE_CARD_ROWS && (
+        <button type="button" className="btn btn--ghost btn--sm" onClick={onAddRow}>
+          {t("draft.entry.addCard")}
+        </button>
+      )}
+    </>
+  );
+}
+
+/** The paste-mode inputs: a decklist textarea and an optional commander picker. */
+function DraftEntryPaste({
+  text,
+  commander,
+  onSetText,
+  onSetCommander,
+}: {
+  text: string;
+  commander: string;
+  onSetText: (value: string) => void;
+  onSetCommander: (value: string) => void;
+}) {
+  const { t } = useI18n();
+  const noCommander = t("draft.entry.noCommander");
+  const pastedNames = useMemo(() => parsePastedNames(text), [text]);
+  const options = [noCommander, ...pastedNames];
+  return (
+    <>
+      <textarea
+        className="import__textarea"
+        value={text}
+        onChange={(e) => onSetText(e.target.value)}
+        placeholder={"Sol Ring\nArcane Signet\n1 Cultivate\n..."}
+        spellCheck={false}
+      />
+      <label className="field" style={{ marginTop: "0.6rem" }}>
+        <span className="field__label">{t("draft.entry.commanderLabel")}</span>
+        <SearchableSelect
+          options={options}
+          value={commander || noCommander}
+          onChange={(value) => onSetCommander(value === noCommander ? "" : value)}
+          placeholder={t("draft.entry.commanderSearchPlaceholder")}
+          emptyLabel={t("draft.entry.commanderNoMatch")}
+        />
+      </label>
+    </>
+  );
+}
+
+/** Entry form: three or more base cards, an optional commander, and the bracket target. */
 function DraftEntry({
+  seed,
   onStart,
   onCancel,
 }: {
+  seed?: DraftSeed;
   onStart: (
     names: string[],
     commanderName: string | null,
@@ -82,8 +214,11 @@ function DraftEntry({
   onCancel: () => void;
 }) {
   const { t } = useI18n();
+  const [mode, setMode] = useState<EntryMode>(seed ? "paste" : "rows");
   const [names, setNames] = useState<string[]>(["", "", ""]);
   const [commanderRow, setCommanderRow] = useState<number | null>(null);
+  const [pasteText, setPasteText] = useState<string>(seed ? seed.names.join("\n") : "");
+  const [pasteCommander, setPasteCommander] = useState<string>(seed?.commander ?? "");
   const [target, setTarget] = useState<BracketTarget>(DEFAULT_BRACKET_TARGET);
   const [status, setStatus] = useState<EntryStatus>({ kind: "idle" });
   const [unresolved, setUnresolved] = useState<string[]>([]);
@@ -101,9 +236,18 @@ function DraftEntry({
     setCommanderRow((row) => shiftCommanderRow(row, index));
   }
 
+  /** The raw names and flagged commander for the active input mode. */
+  function collectEntry(): { names: string[]; commander: string } {
+    if (mode === "paste") {
+      return { names: parsePastedNames(pasteText), commander: pasteCommander.trim() };
+    }
+    const commander = commanderRow !== null ? (names[commanderRow]?.trim() ?? "") : "";
+    return { names, commander };
+  }
+
   async function handleStart() {
-    const trimmed = names.map((n) => n.trim()).filter(Boolean);
-    const unique = [...new Set(trimmed)];
+    const entry = collectEntry();
+    const unique = [...new Set(entry.names.map((n) => n.trim()).filter(Boolean))];
     if (unique.length < MIN_BASE_CARDS) {
       setStatus({
         kind: "error",
@@ -122,11 +266,10 @@ function DraftEntry({
       return;
     }
 
-    const flaggedName = commanderRow !== null ? names[commanderRow]?.trim() : "";
     const commanderName =
-      flaggedName &&
-      resolvedNames.some((n) => n.toLowerCase() === flaggedName.toLowerCase())
-        ? flaggedName
+      entry.commander &&
+      resolvedNames.some((n) => n.toLowerCase() === entry.commander.toLowerCase())
+        ? entry.commander
         : null;
 
     setStatus({ kind: "starting" });
@@ -153,52 +296,41 @@ function DraftEntry({
       </div>
       <p className="hint">{t("draft.entry.subtitle")}</p>
 
+      <div className="seg" style={{ marginBottom: "0.75rem" }}>
+        <button
+          className={`seg__btn ${mode === "rows" ? "seg__btn--active" : ""}`}
+          onClick={() => setMode("rows")}
+          aria-pressed={mode === "rows"}
+        >
+          {t("draft.entry.modeRows")}
+        </button>
+        <button
+          className={`seg__btn ${mode === "paste" ? "seg__btn--active" : ""}`}
+          onClick={() => setMode("paste")}
+          aria-pressed={mode === "paste"}
+        >
+          {t("draft.entry.modePaste")}
+        </button>
+      </div>
+
       <div className="field">
         <span className="field__label">{t("draft.entry.baseCardsLabel")}</span>
-        {names.map((name, i) => (
-          <div className="draft-entry-row" key={i}>
-            <input
-              className="input"
-              value={name}
-              onChange={(e) => setName(i, e.target.value)}
-              placeholder={t("draft.entry.baseCardPlaceholder")}
-              spellCheck={false}
-            />
-            <label className="draft-entry-row__commander">
-              <input
-                type="radio"
-                name="draft-commander"
-                checked={commanderRow === i}
-                onChange={() => setCommanderRow(i)}
-                disabled={!name.trim()}
-              />
-              {t("draft.entry.commanderFlag")}
-            </label>
-            {commanderRow === i && (
-              <button
-                type="button"
-                className="btn btn--ghost btn--sm"
-                onClick={() => setCommanderRow(null)}
-              >
-                {t("draft.entry.unflag")}
-              </button>
-            )}
-            {names.length > MIN_BASE_CARDS && (
-              <button
-                type="button"
-                className="btn btn--ghost btn--sm"
-                onClick={() => removeRow(i)}
-                aria-label={t("draft.entry.removeCard")}
-              >
-                ×
-              </button>
-            )}
-          </div>
-        ))}
-        {names.length < MAX_BASE_CARD_ROWS && (
-          <button type="button" className="btn btn--ghost btn--sm" onClick={addRow}>
-            {t("draft.entry.addCard")}
-          </button>
+        {mode === "rows" ? (
+          <DraftEntryRows
+            names={names}
+            commanderRow={commanderRow}
+            onSetName={setName}
+            onAddRow={addRow}
+            onRemoveRow={removeRow}
+            onSetCommanderRow={setCommanderRow}
+          />
+        ) : (
+          <DraftEntryPaste
+            text={pasteText}
+            commander={pasteCommander}
+            onSetText={setPasteText}
+            onSetCommander={setPasteCommander}
+          />
         )}
       </div>
 
@@ -624,9 +756,11 @@ function DraftSessionView({
 
 /** Assisted deck draft (`draft-a-deck`): seed cards, a commander step, then suggestion rounds. */
 export function DraftView({
+  seed,
   onSave,
   onExit,
 }: {
+  seed?: DraftSeed;
   onSave: (deck: SavedDeck) => void;
   onExit: () => void;
 }) {
@@ -648,7 +782,7 @@ export function DraftView({
   }
 
   if (!started || !sessionRef.current) {
-    return <DraftEntry onStart={handleStart} onCancel={onExit} />;
+    return <DraftEntry seed={seed} onStart={handleStart} onCancel={onExit} />;
   }
 
   return (

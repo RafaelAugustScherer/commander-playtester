@@ -3,7 +3,7 @@ import "./App.css";
 import { DeckLibrary } from "./deck/DeckLibrary";
 import { DeckDetail } from "./deck/DeckDetail";
 import { DeckEditor } from "./deck/DeckEditor";
-import { DraftView } from "./draft/DraftView";
+import { DraftView, type DraftSeed } from "./draft/DraftView";
 import { useDecks } from "./deck/useDecks";
 import { getLastPlayedDeckId, setLastPlayedDeckId } from "./deck/storage";
 import type { SavedDeck } from "./deck/model";
@@ -50,11 +50,13 @@ function DecksView({
   editing,
   selected,
   drafting,
+  draftSeed,
   save,
   remove,
   setEditing,
   setSelected,
   setDrafting,
+  setDraftSeed,
   setPlayDeck,
   setView,
 }: {
@@ -62,22 +64,29 @@ function DecksView({
   editing: EditingState;
   selected: SavedDeck | null;
   drafting: boolean;
+  draftSeed: DraftSeed | null;
   save: (deck: SavedDeck) => void;
   remove: (id: string) => void;
   setEditing: (value: EditingState) => void;
   setSelected: (value: SavedDeck | null) => void;
   setDrafting: (value: boolean) => void;
+  setDraftSeed: (value: DraftSeed | null) => void;
   setPlayDeck: (value: SavedDeck | null) => void;
   setView: (value: View) => void;
 }) {
+  function stopDrafting() {
+    setDrafting(false);
+    setDraftSeed(null);
+  }
   if (drafting) {
     return (
       <DraftView
+        seed={draftSeed ?? undefined}
         onSave={(deck) => {
           save(deck);
-          setDrafting(false);
+          stopDrafting();
         }}
-        onExit={() => setDrafting(false)}
+        onExit={stopDrafting}
       />
     );
   }
@@ -90,6 +99,11 @@ function DecksView({
           setEditing(null);
         }}
         onCancel={() => setEditing(null)}
+        onDraft={(names, commander) => {
+          setDraftSeed({ names, commander });
+          setEditing(null);
+          setDrafting(true);
+        }}
       />
     );
   }
@@ -113,7 +127,10 @@ function DecksView({
       onSelect={setSelected}
       onNew={() => setEditing("new")}
       onEdit={(deck) => setEditing(deck)}
-      onDraft={() => setDrafting(true)}
+      onDraft={() => {
+        setDraftSeed(null);
+        setDrafting(true);
+      }}
     />
   );
 }
@@ -169,6 +186,7 @@ export function App() {
   const [selected, setSelected] = useState<SavedDeck | null>(null);
   const [editing, setEditing] = useState<EditingState>(null);
   const [drafting, setDrafting] = useState(false);
+  const [draftSeed, setDraftSeed] = useState<DraftSeed | null>(null);
   const [playDeck, setPlayDeck] = useState<SavedDeck | null>(null);
   const [runConfig, setRunConfig] = useState<RunConfig | null>(null);
 
@@ -205,11 +223,13 @@ export function App() {
                 editing={editing}
                 selected={selected}
                 drafting={drafting}
+                draftSeed={draftSeed}
                 save={save}
                 remove={remove}
                 setEditing={setEditing}
                 setSelected={setSelected}
                 setDrafting={setDrafting}
+                setDraftSeed={setDraftSeed}
                 setPlayDeck={setPlayDeck}
                 setView={setView}
               />

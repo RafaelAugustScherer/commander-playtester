@@ -6,6 +6,7 @@
 // docs/engine-upgrade.md). Game-independent: they need the card database
 // loaded but not a running game (deck-draft/ADR-0001, TDR-0001).
 
+import type { CardRole } from "../lib/types";
 import * as engineWasm from "./vendor/engine_wasm.js";
 
 export interface SearchCardsQuery {
@@ -27,12 +28,32 @@ export interface SearchCardsResult {
   total: number;
 }
 
-export interface CommanderCandidateData {
+export interface DraftCandidateData {
   name: string;
   manaValue: number;
   typeLine: string;
   oracleText: string;
   colorIdentity: string[];
+}
+
+export interface EngineThemeProfile {
+  tokenWeights: Array<[string, number]>;
+  curve: number[];
+  roleCounts: Record<CardRole, number>;
+  colorIdentity: string[];
+}
+
+export interface RankCardCandidatesInput {
+  commanders: string[];
+  mainboard: string[];
+  profile: EngineThemeProfile;
+  target: string;
+  exclude: string[];
+}
+
+export interface RankedCardName {
+  name: string;
+  bracketTilt: number;
 }
 
 export interface CardFaceData {

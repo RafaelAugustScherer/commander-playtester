@@ -28,10 +28,12 @@ export function DeckEditor({
   initial,
   onSave,
   onCancel,
+  onDraft,
 }: {
   initial?: SavedDeck;
   onSave: (deck: SavedDeck) => void;
   onCancel: () => void;
+  onDraft: (names: string[], commander: string | null) => void;
 }) {
   const { t } = useI18n();
   const [name, setName] = useState(initial?.name ?? "");
@@ -64,6 +66,16 @@ export function DeckEditor({
   const mainboardCount = parsed.mainboard.reduce((n, e) => n + e.quantity, 0);
   const total = commanderCount + mainboardCount;
   const isHundred = total === 100;
+
+  const draftNames = [
+    ...parsed.commanders.map((e) => e.name),
+    ...parsed.mainboard.map((e) => e.name),
+  ];
+  const canDraft = new Set(draftNames.map((n) => n.toLowerCase())).size >= 3;
+
+  function handleDraft() {
+    onDraft(draftNames, parsed.commanders[0]?.name ?? null);
+  }
 
   function handleSave() {
     const now = Date.now();
@@ -180,6 +192,11 @@ export function DeckEditor({
         <button className="btn btn--ghost" onClick={onCancel}>
           {t("editor.cancel")}
         </button>
+        {canDraft && (
+          <button className="btn btn--ghost" onClick={handleDraft}>
+            {t("editor.draftFromDeck")}
+          </button>
+        )}
         {!initial && (
           <button
             className="btn btn--ghost"
