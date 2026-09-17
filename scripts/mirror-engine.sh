@@ -63,6 +63,18 @@ else
     --notes "Durable mirror of the pinned phase-rs $VERSION web assets (WASM + card-data). Consumed as a fallback by scripts/fetch-engine.sh. Not for general download."
 fi
 
+# The mirror upload above succeeded (set -e would have aborted otherwise), so
+# only THIS release is now current. Prune every older engine-<version> mirror
+# release + tag: they are unreferenced once the manifest points here, and each
+# holds a full ~45 MiB asset set.
+echo
+echo "Pruning superseded engine mirror releases"
+gh release list --repo "$REPO" --json tagName -q '.[].tagName' \
+  | grep '^engine-v' | grep -vx "$TAG" | while read -r old; do
+  echo "  deleting $old"
+  gh release delete "$old" --repo "$REPO" --cleanup-tag --yes
+done
+
 echo
 echo "Done. Set this in src/engine/vendor/engine-manifest.json under \"mirror\":"
 echo "  \"base\": \"https://github.com/$REPO/releases/download/$TAG\""
