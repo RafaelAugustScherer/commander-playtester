@@ -454,6 +454,43 @@ export const messages = {
   "coinFlipLife.seat": { pt: "Assento {n}", en: "Seat {n}" },
   "coinFlipLife.letAi": { pt: "IA decide", en: "Let the AI decide" },
 
+  "dieKeep.title": {
+    pt: "Ignorar resultados de dado",
+    en: "Ignore die rolls",
+  },
+  "dieKeep.hint": {
+    pt: "Escolha {n} resultado(s) para ignorar.",
+    en: "Choose {n} roll(s) to ignore.",
+  },
+  "dieKeep.picked": {
+    pt: "Escolhidos: {picked} / {n}",
+    en: "Chosen {picked} of {n}",
+  },
+  "dieKeep.roll": { pt: "Dado: {result}", en: "Rolled {result}" },
+  "dieKeep.confirm": { pt: "Confirmar", en: "Confirm" },
+  "dieKeep.letAi": { pt: "IA decide", en: "Let the AI decide" },
+
+  "ripple.revealTitle": { pt: "Ondulação", en: "Ripple" },
+  "ripple.revealHint": {
+    pt: "Você pode revelar as {n} cartas do topo do seu grimório.",
+    en: "You may reveal the top {n} cards of your library.",
+  },
+  "ripple.reveal": { pt: "Revelar {n}", en: "Reveal {n}" },
+  "ripple.decline": { pt: "Não revelar", en: "Don't reveal" },
+  "ripple.bottomTitle": {
+    pt: "Ordenar cartas no fundo",
+    en: "Order cards on the bottom",
+  },
+  "ripple.bottomHint": {
+    pt: "Coloque as cartas não conjuradas no fundo do grimório nesta ordem (topo primeiro).",
+    en: "Put the uncast cards on the bottom of your library in this order (top first).",
+  },
+  "ripple.cardFallback": { pt: "Carta {number}", en: "Card {number}" },
+  "ripple.moveUp": { pt: "Mover para cima", en: "Move up" },
+  "ripple.moveDown": { pt: "Mover para baixo", en: "Move down" },
+  "ripple.confirm": { pt: "Confirmar", en: "Confirm" },
+  "ripple.letAi": { pt: "IA decide", en: "Let the AI decide" },
+
   "equipCrew.sourceFallback": { pt: "isto", en: "this" },
   "equipCrew.equipTitle": { pt: "Equipar {name}", en: "Equip {name}" },
   "equipCrew.stationTitle": { pt: "Guarnecer {name}", en: "Station {name}" },

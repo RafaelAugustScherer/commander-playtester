@@ -12,6 +12,22 @@ depth live there. A purely-internal PR that touches no product or architecture m
 skip its version with a `Skip-Docs: <reason>` trailer instead. There are no
 per-domain changelogs; this file is the single timeline (`ADR-0007`).
 
+## [0.20.0] - 2026-09-17
+
+### Changed
+
+- Re-pinned the vendored phase-rs engine from v0.71.0 to v0.86.0
+  (`ADR-0006`, `docs/engine-upgrade.md`).
+
+### Added
+
+- You now resolve **die rolls you must ignore** ("ignore the lowest roll"),
+  picking which rolls to drop instead of the AI
+  (`domains/simulation/features/ignore-die-rolls.md`).
+- You now resolve **ripple**: whether to reveal your library's top cards, and
+  the order the uncast ones go to the bottom, instead of the AI
+  (`domains/simulation/features/reveal-and-order-ripple.md`).
+
 ## [0.19.0] - 2026-09-05
 
 ### Added

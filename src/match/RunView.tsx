@@ -112,6 +112,15 @@ import {
   assignBlockerDamageAction,
   type CombatDamagePrompt,
 } from "../sim/decisions/combatDamage";
+import {
+  selectDieRollsAction,
+  type DieKeepPrompt,
+} from "../sim/decisions/dieKeep";
+import {
+  rippleRevealAction,
+  rippleBottomOrderAction,
+  type RipplePrompt,
+} from "../sim/decisions/ripple";
 import { XpWindow } from "../components/XpWindow";
 import {
   declareAttackersAction,
@@ -764,6 +773,159 @@ function CoinFlipLifePanel({
       <div className="import__row">
         <button className="btn btn--ghost" onClick={onLetAi}>
           {t("coinFlipLife.letAi")}
+        </button>
+      </div>
+    </>
+  );
+}
+
+interface DieKeepTurn {
+  prompt: DieKeepPrompt;
+  resolve: (choice: HumanChoice) => void;
+}
+
+function DieKeepPanel({
+  turn,
+  pick,
+  onTogglePick,
+  onConfirm,
+  onLetAi,
+}: {
+  turn: DieKeepTurn;
+  pick: Set<number>;
+  onTogglePick: (index: number) => void;
+  onConfirm: () => void;
+  onLetAi: () => void;
+}) {
+  const { t } = useI18n();
+  const { prompt } = turn;
+  const atCap = pick.size >= prompt.ignoreCount;
+  return (
+    <>
+      <div className="control-title">
+        <strong>{t("dieKeep.title")}</strong>
+      </div>
+      <p className="hint">{t("dieKeep.hint", { n: prompt.ignoreCount })}</p>
+      <p className="hint">
+        {t("dieKeep.picked", { picked: pick.size, n: prompt.ignoreCount })}
+      </p>
+      <div className="search-list">
+        {prompt.results.map((result, index) => {
+          const selectable = prompt.ignorableIndices.includes(index);
+          const picked = pick.has(index);
+          return (
+            <button
+              key={index}
+              className={picked ? "btn" : "btn--ghost"}
+              disabled={!selectable || (!picked && atCap)}
+              onClick={() => onTogglePick(index)}
+            >
+              {t("dieKeep.roll", { result })}
+            </button>
+          );
+        })}
+      </div>
+      <div className="import__row">
+        <button
+          className="btn"
+          disabled={pick.size !== prompt.ignoreCount}
+          onClick={onConfirm}
+        >
+          {t("dieKeep.confirm")}
+        </button>
+        <button className="btn btn--ghost" onClick={onLetAi}>
+          {t("dieKeep.letAi")}
+        </button>
+      </div>
+    </>
+  );
+}
+
+interface RippleTurn {
+  prompt: RipplePrompt;
+  resolve: (choice: HumanChoice) => void;
+}
+
+function RipplePanel({
+  turn,
+  order,
+  onMove,
+  onConfirm,
+  onLetAi,
+}: {
+  turn: RippleTurn;
+  order: number[];
+  onMove: (position: number, delta: number) => void;
+  onConfirm: () => void;
+  onLetAi: () => void;
+}) {
+  const { t } = useI18n();
+  const { prompt, resolve } = turn;
+
+  if (prompt.kind === "reveal") {
+    return (
+      <>
+        <div className="control-title">
+          <strong>{t("ripple.revealTitle")}</strong>
+        </div>
+        <p className="hint">{t("ripple.revealHint", { n: prompt.count })}</p>
+        <div className="import__row">
+          <button
+            className="btn"
+            onClick={() => resolve({ action: rippleRevealAction(true) })}
+          >
+            {t("ripple.reveal", { n: prompt.count })}
+          </button>
+          <button
+            className="btn btn--ghost"
+            onClick={() => resolve({ action: rippleRevealAction(false) })}
+          >
+            {t("ripple.decline")}
+          </button>
+        </div>
+      </>
+    );
+  }
+
+  const byId = new Map(prompt.cards.map((c) => [c.id, c]));
+  return (
+    <>
+      <div className="control-title">
+        <strong>{t("ripple.bottomTitle")}</strong>
+      </div>
+      <p className="hint">{t("ripple.bottomHint")}</p>
+      {order.map((id, position) => (
+        <div className="import__row" key={id}>
+          <div>
+            <strong>
+              {byId.get(id)?.name ||
+                t("ripple.cardFallback", { number: position + 1 })}
+            </strong>
+          </div>
+          <button
+            className="btn btn--ghost"
+            aria-label={t("ripple.moveUp")}
+            disabled={position === 0}
+            onClick={() => onMove(position, -1)}
+          >
+            ▲
+          </button>
+          <button
+            className="btn btn--ghost"
+            aria-label={t("ripple.moveDown")}
+            disabled={position === order.length - 1}
+            onClick={() => onMove(position, 1)}
+          >
+            ▼
+          </button>
+        </div>
+      ))}
+      <div className="import__row">
+        <button className="btn" onClick={onConfirm}>
+          {t("ripple.confirm")}
+        </button>
+        <button className="btn btn--ghost" onClick={onLetAi}>
+          {t("ripple.letAi")}
         </button>
       </div>
     </>
@@ -1775,6 +1937,10 @@ interface RunnerCallbackDeps {
   setCountersTurn: Dispatch<SetStateAction<CountersTurn | null>>;
   setCombatDamagePick: Dispatch<SetStateAction<number[]>>;
   setCombatDamageTurn: Dispatch<SetStateAction<CombatDamageTurn | null>>;
+  setDieKeepPick: Dispatch<SetStateAction<Set<number>>>;
+  setDieKeepTurn: Dispatch<SetStateAction<DieKeepTurn | null>>;
+  setRipplePick: Dispatch<SetStateAction<number[]>>;
+  setRippleTurn: Dispatch<SetStateAction<RippleTurn | null>>;
 }
 
 function buildRunnerCallbacks(deps: RunnerCallbackDeps): DriverCallbacks {
@@ -1832,6 +1998,10 @@ function buildRunnerCallbacks(deps: RunnerCallbackDeps): DriverCallbacks {
     setCountersTurn,
     setCombatDamagePick,
     setCombatDamageTurn,
+    setDieKeepPick,
+    setDieKeepTurn,
+    setRipplePick,
+    setRippleTurn,
   } = deps;
   return {
     onFrame: (env) => {
@@ -2259,6 +2429,40 @@ function buildRunnerCallbacks(deps: RunnerCallbackDeps): DriverCallbacks {
           },
         });
       }),
+    requestHumanDieKeep: (_env, prompt) =>
+      new Promise<HumanChoice>((resolve) => {
+        if (isCancelled()) {
+          resolve({ ai: true });
+          return;
+        }
+        setDieKeepPick(new Set());
+        setDieKeepTurn({
+          prompt,
+          resolve: (choice) => {
+            setDieKeepTurn(null);
+            setDieKeepPick(new Set());
+            resolve(choice);
+          },
+        });
+      }),
+    requestHumanRipple: (_env, prompt) =>
+      new Promise<HumanChoice>((resolve) => {
+        if (isCancelled()) {
+          resolve({ ai: true });
+          return;
+        }
+        setRipplePick(
+          prompt.kind === "bottomOrder" ? prompt.cards.map((c) => c.id) : [],
+        );
+        setRippleTurn({
+          prompt,
+          resolve: (choice) => {
+            setRippleTurn(null);
+            setRipplePick([]);
+            resolve(choice);
+          },
+        });
+      }),
   };
 }
 
@@ -2398,6 +2602,10 @@ export function RunView({
   const [combatDamageTurn, setCombatDamageTurn] =
     useState<CombatDamageTurn | null>(null);
   const [combatDamagePick, setCombatDamagePick] = useState<number[]>([]);
+  const [dieKeepTurn, setDieKeepTurn] = useState<DieKeepTurn | null>(null);
+  const [dieKeepPick, setDieKeepPick] = useState<Set<number>>(new Set());
+  const [rippleTurn, setRippleTurn] = useState<RippleTurn | null>(null);
+  const [ripplePick, setRipplePick] = useState<number[]>([]);
   const [passingTurn, setPassingTurn] = useState(false);
   const [logEntries, setLogEntries] = useState<LoggedEntry[]>([]);
   // On mobile the log is a full-screen drawer, so it always starts closed and
@@ -2519,6 +2727,10 @@ export function RunView({
             setCountersTurn,
             setCombatDamagePick,
             setCombatDamageTurn,
+            setDieKeepPick,
+            setDieKeepTurn,
+            setRipplePick,
+            setRippleTurn,
           }),
         );
         runnerRef.current = runner;
@@ -2660,7 +2872,9 @@ export function RunView({
         wardUnlessTurn ||
         copyChoiceTurn ||
         countersTurn ||
-        combatDamageTurn)
+        combatDamageTurn ||
+        dieKeepTurn ||
+        rippleTurn)
     ) {
       setPassingTurn(false);
     }
@@ -2687,6 +2901,8 @@ export function RunView({
     copyChoiceTurn,
     countersTurn,
     combatDamageTurn,
+    dieKeepTurn,
+    rippleTurn,
   ]);
 
   // Map draggable hand cards to their play actions for the current window.
@@ -3760,6 +3976,55 @@ export function RunView({
                 })
               }
               onLetAi={() => coinFlipLifeTurn.resolve({ ai: true })}
+            />
+          )}
+
+          {dieKeepTurn && (
+            <DieKeepPanel
+              turn={dieKeepTurn}
+              pick={dieKeepPick}
+              onTogglePick={(index) =>
+                setDieKeepPick((prev) => {
+                  const next = new Set(prev);
+                  if (next.has(index)) {
+                    next.delete(index);
+                  } else if (next.size < dieKeepTurn.prompt.ignoreCount) {
+                    next.add(index);
+                  }
+                  return next;
+                })
+              }
+              onConfirm={() =>
+                dieKeepTurn.resolve({
+                  action: selectDieRollsAction([...dieKeepPick]),
+                })
+              }
+              onLetAi={() => dieKeepTurn.resolve({ ai: true })}
+            />
+          )}
+
+          {rippleTurn && (
+            <RipplePanel
+              turn={rippleTurn}
+              order={ripplePick}
+              onMove={(position, delta) =>
+                setRipplePick((prev) => {
+                  const next = [...prev];
+                  const target = position + delta;
+                  if (target < 0 || target >= next.length) return prev;
+                  [next[position], next[target]] = [
+                    next[target],
+                    next[position],
+                  ];
+                  return next;
+                })
+              }
+              onConfirm={() =>
+                rippleTurn.resolve({
+                  action: rippleBottomOrderAction(ripplePick),
+                })
+              }
+              onLetAi={() => rippleTurn.resolve({ ai: true })}
             />
           )}
 
