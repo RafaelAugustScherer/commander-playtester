@@ -327,7 +327,7 @@ async function handle(cmd: string, args: any): Promise<any> {
       const res = submit_action(actor, action);
       return {
         result: res,
-        logEntries: res?.log_entries ?? [],
+        logEntries: res?.result?.log_entries ?? [],
         state: get_game_state(),
       };
     }
