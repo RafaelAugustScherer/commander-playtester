@@ -6,7 +6,7 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: radial-gradient(1200px 700px at 50% -12%, #4a3117, #160f08 75%);
+  background: var(--bg);
   font-family: var(--font-body);
   color: var(--text);
 }
@@ -23,9 +23,9 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
-  border: 1px solid var(--accent);
+  border: 1px solid var(--face-dk);
   background: var(--winbg);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--bevel-raised), 0 10px 30px rgba(0, 0, 0, 0.5);
   overflow: hidden;
 }
 
@@ -36,7 +36,7 @@
   gap: 8px;
   height: 30px;
   padding: 0 6px 0 9px;
-  background: linear-gradient(var(--accent), var(--accent-2));
+  background: var(--accent);
 }
 .xp-titlebar__icon {
   width: 18px;
@@ -94,7 +94,7 @@
 .xpscroll__bar {
   flex: 0 0 16px;
   display: flex;
-  background: var(--inset);
+  background: var(--strip);
   box-shadow: var(--bevel-well);
 }
 .xpscroll--y > .xpscroll__bar {
@@ -106,14 +106,11 @@
 .xpscroll__btn {
   flex: 0 0 16px;
   padding: 0;
-  background-color: var(--accent);
+  background-color: var(--face);
   background-repeat: no-repeat;
   background-position: center;
-  border: 1px solid var(--accent-2);
+  border: none;
   box-shadow: var(--bevel-raised);
-}
-.xpscroll__btn:hover {
-  background-color: var(--accent-bright);
 }
 .xpscroll__btn:active {
   box-shadow: var(--bevel-pressed);
@@ -136,7 +133,8 @@
 }
 .xpscroll__thumb {
   position: absolute;
-  border: 1px solid var(--accent-2);
+  border: none;
+  background: var(--face);
   box-shadow: var(--bevel-raised);
 }
 .xpscroll--y > .xpscroll__bar .xpscroll__thumb {
@@ -144,17 +142,12 @@
   right: 0;
   top: 0;
   min-height: 24px;
-  background: linear-gradient(90deg, var(--accent-bright), var(--accent));
 }
 .xpscroll--x > .xpscroll__bar .xpscroll__thumb {
   top: 0;
   bottom: 0;
   left: 0;
   min-width: 24px;
-  background: linear-gradient(180deg, var(--accent-bright), var(--accent));
-}
-.xpscroll__thumb:hover {
-  background: var(--accent-bright);
 }
 .xpscroll__thumb:active {
   box-shadow: var(--bevel-pressed);
@@ -171,9 +164,9 @@ body.xpscroll-dragging {
   align-items: center;
   gap: 4px;
   padding: 0 5px;
-  background: linear-gradient(180deg, var(--accent-bright), var(--accent-2));
-  border-top: 1px solid rgba(255, 255, 255, 0.5);
-  box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.25);
+  background: var(--face);
+  border-top: 1px solid var(--face-hi);
+  box-shadow: var(--bevel-raised);
 }
 .xp-taskbtn {
   height: 26px;
@@ -183,14 +176,14 @@ body.xpscroll-dragging {
   align-items: center;
   gap: 7px;
   font: 700 12px var(--font-body);
-  color: var(--accent-ink);
-  background: linear-gradient(180deg, var(--accent-bright), var(--accent));
-  border: 1px solid var(--accent-2);
+  color: var(--text);
+  background: var(--face);
+  border: none;
   box-shadow: var(--bevel-raised);
 }
 .xp-taskbtn--active {
-  background: linear-gradient(180deg, var(--accent-2), #96562f);
-  border: 1px solid #7d4526;
+  background: var(--face);
+  border: none;
   box-shadow: var(--bevel-pressed);
 }
 .xp-taskbtn__icon {
@@ -214,10 +207,13 @@ body.xpscroll-dragging {
   align-items: center;
   gap: 6px;
   font: 700 12px var(--font-body);
-  color: var(--accent-ink);
-  background: linear-gradient(180deg, var(--accent-bright), var(--accent));
-  border: 1px solid var(--accent-2);
+  color: var(--text);
+  background: var(--face);
+  border: none;
   box-shadow: var(--bevel-raised);
+}
+.xp-lang__btn:active {
+  box-shadow: var(--bevel-pressed);
 }
 .xp-lang__caret {
   opacity: 0.8;
@@ -232,8 +228,8 @@ body.xpscroll-dragging {
   list-style: none;
   min-width: 100%;
   background: var(--winbg);
-  border: 1px solid var(--accent);
-  box-shadow: 0 -6px 14px rgba(0, 0, 0, 0.5);
+  border: 1px solid var(--face-dk);
+  box-shadow: var(--bevel-raised), 0 6px 14px rgba(0, 0, 0, 0.4);
   z-index: 70;
 }
 .xp-lang__item {
@@ -341,7 +337,8 @@ body.xpscroll-dragging {
   min-height: 220px;
   resize: vertical;
   background: var(--inset);
-  color: #e2d4bd;
+  color: var(--text);
+  box-shadow: var(--bevel-well);
   border: 1px solid var(--line);
   border-radius: 0;
   padding: 0.75rem;
@@ -371,25 +368,21 @@ body.xpscroll-dragging {
 }
 
 .btn {
-  background: linear-gradient(var(--accent), var(--accent-2));
-  color: var(--accent-ink);
-  border: 1px solid var(--accent-edge);
+  background: var(--face);
+  color: var(--text);
+  border: none;
   border-radius: 0;
+  box-shadow: var(--bevel-raised);
   padding: 0.5rem 1rem;
   font-weight: 700;
 }
-.btn:hover:not(:disabled) {
-  background: linear-gradient(var(--accent-bright), var(--accent));
+.btn:active:not(:disabled) {
+  box-shadow: var(--bevel-pressed);
 }
 
 .btn--ghost {
-  background: var(--panel-2);
   color: var(--text);
-  border: 1px solid var(--line);
   font-weight: 400;
-}
-.btn--ghost:hover:not(:disabled) {
-  border-color: var(--accent);
 }
 
 /* Enchanted glint — a Minecraft-style violet sheen that sweeps across the
@@ -400,6 +393,8 @@ body.xpscroll-dragging {
   position: relative;
   overflow: hidden;
   isolation: isolate;
+  background: #3a2a63;
+  color: #fff;
   border-color: color-mix(in srgb, #a880ff 55%, var(--line));
   box-shadow: 0 0 10px rgba(150, 90, 255, 0.35);
 }
@@ -519,11 +514,7 @@ th {
 
 .bar {
   height: 12px;
-  background: repeating-linear-gradient(
-    90deg,
-    var(--accent-bright) 0 9px,
-    var(--accent) 9px 11px
-  );
+  background: var(--accent);
   border-radius: 0;
   min-width: 2px;
 }
@@ -585,6 +576,7 @@ th {
   color: var(--text);
   border: 1px solid var(--line);
   border-radius: 0;
+  box-shadow: var(--bevel-well);
   padding: 0.5rem 0.6rem;
   font-size: 0.9rem;
 }
@@ -664,19 +656,20 @@ th {
 }
 
 .seg__btn {
-  background: var(--panel-2);
+  background: var(--face);
   color: var(--muted);
-  border: 1px solid var(--line);
+  border: none;
   border-radius: 0;
+  box-shadow: var(--bevel-raised);
   padding: 0.4rem 0.9rem;
   font-weight: 700;
   cursor: pointer;
 }
 
 .seg__btn--active {
-  color: var(--accent-ink);
-  border: 1px solid var(--accent-edge);
-  background: linear-gradient(var(--accent), var(--accent-2));
+  color: var(--text);
+  background: var(--face);
+  box-shadow: var(--bevel-pressed);
 }
 
 .seg__btn--speed {
@@ -986,11 +979,7 @@ th {
 }
 /* The player's playmat: larger surface, larger cards. */
 .seat--you {
-  background: linear-gradient(
-    180deg,
-    rgba(196, 127, 77, 0.14),
-    rgba(196, 127, 77, 0.04)
-  );
+  background: rgba(10, 36, 106, 0.08);
   padding: 0.8rem 1rem 1rem;
 }
 .seat--you .seat__name {
@@ -1130,7 +1119,7 @@ th {
 .card--text {
   background: var(--inset);
   border: 1px solid var(--line);
-  color: #e2d4bd;
+  color: var(--text);
   padding: 0.12rem 0.35rem;
   font-size: 0.66rem;
   max-width: 96px;
@@ -1167,6 +1156,12 @@ th {
 
 .play-controls {
   border-color: var(--accent);
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  background: var(--winbg);
+  border-bottom: 1px solid var(--border);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 .chip--btn {
   cursor: pointer;
@@ -1496,7 +1491,7 @@ th {
   gap: 8px;
   height: 28px;
   padding: 0 4px 0 9px;
-  background: linear-gradient(var(--accent), var(--accent-2));
+  background: var(--accent);
   cursor: move;
   user-select: none;
 }
@@ -1519,14 +1514,14 @@ th {
   width: 20px;
   height: 18px;
   padding: 0;
-  color: var(--accent-ink);
-  background: var(--accent-bright);
-  border: 1px solid var(--accent-edge);
+  color: var(--text);
+  background: var(--face);
+  border: none;
   box-shadow: var(--bevel-raised);
   cursor: pointer;
 }
 .xpwin__close:hover {
-  background: var(--warn);
+  background: var(--face-lt);
 }
 .xpwin__close:active {
   box-shadow: var(--bevel-pressed);
@@ -2027,6 +2022,12 @@ th {
   .xp-taskbtn,
   .xp-lang__btn {
     min-height: 44px;
+  }
+
+  /* Let the window buttons size to their labels so Settings + language stay
+     on screen instead of being pushed off the right edge. */
+  .xp-taskbtn {
+    min-width: 0;
   }
 
   /* Hand: one horizontally-scrollable strip with larger, more readable cards. */

@@ -623,7 +623,7 @@ function SeatHead({
                 <Circle
                   key={`${pip.color}-${i}`}
                   size={11}
-                  color={color}
+                  color="#404040"
                   fill={color}
                 />
               ));
@@ -1020,7 +1020,7 @@ function Card({
       title={attackTarget}
       style={
         attackTargetColor
-          ? { background: attackTargetColor, color: "#1b1206" }
+          ? { background: attackTargetColor, color: "#ffffff" }
           : undefined
       }
     >

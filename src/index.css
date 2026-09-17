@@ -1,50 +1,61 @@
 :root {
-  /* Copper Ember — Windows XP "classic" skin over a walnut/copper dark palette */
-  --bg: #160f08; /* desktop backdrop — deepest walnut */
-  --winbg: #291c12; /* window background */
-  --panel: #291c12; /* window surface (alias of winbg) */
-  --panel-2: #372615; /* cards, rows, tiles, unselected chips */
-  --inset: #1e140c; /* inputs, sunken wells, striped-bar track */
-  --border: #5c4029; /* hairline borders / dividers */
-  --line: #5c4029; /* alias for --border (design token name) */
-  --text: #f1e4d0; /* primary text — candlelight cream */
-  --muted: #c09c77; /* secondary text */
-  --accent: #c47f4d; /* copper — primary accent, borders, gradients */
-  --accent-2: #a86539; /* darker copper — gradient stops, selected list bg */
-  --accent-bright: #d99b6a; /* highlights, links, bar stripes */
-  --accent-edge: #d6a377; /* light border on primary (copper) buttons */
-  --accent-ink: #241207; /* text/icon on copper surfaces */
-  --good: #8aa35a; /* positive stat values / log events */
-  --warn: #dca24a; /* caution values / warnings */
-  --bad: #cf5a37; /* damage / concede / eliminate */
-  --strip: #20140b; /* sub-header / rail backgrounds */
+  /* Windows Classic ("performance mode") — flat silver-gray chrome, solid navy
+     title bars, hard 3D bevels, no gradients or glass. */
+  --bg: #3a6ea5; /* desktop backdrop — classic Windows blue */
+  --winbg: #ece9d8; /* window surface — 3D face (silver-gray) */
+  --panel: #ece9d8; /* window surface (alias of winbg) */
+  --panel-2: #e4e0d3; /* cards, rows, tiles, unselected chips */
+  --inset: #ffffff; /* inputs, sunken wells, striped-bar track */
+  --border: #9a9689; /* hairline borders / dividers */
+  --line: #9a9689; /* alias for --border (design token name) */
+  --text: #000000; /* primary text — black on gray */
+  --muted: #4a4a4a; /* secondary text */
+  --accent: #0a246a; /* navy — title bars, selection, links, focus */
+  --accent-2: #0a1e57; /* darker navy — selected list bg, solid title stops */
+  --accent-bright: #2a4a9a; /* lighter navy — hover / stripes */
+  --accent-edge: #0a246a; /* navy border on selected surfaces */
+  --accent-ink: #ffffff; /* text/icon on navy surfaces */
+  --good: #128a3a; /* positive stat values / log events */
+  --warn: #9a6b00; /* caution values / warnings */
+  --bad: #c0341d; /* damage / concede / eliminate */
+  --strip: #d6d2c6; /* sub-header / rail backgrounds */
 
-  --taskbar-h: 34px; /* XP taskbar height */
+  /* Gray 3D chrome (buttons, taskbar, scrollbars) — the flat classic face. */
+  --face: #ece9d8; /* button / taskbar / thumb face */
+  --face-hi: #ffffff; /* bevel outer highlight (top-left) */
+  --face-lt: #dfdfdf; /* bevel inner light (top-left) */
+  --face-sh: #808080; /* bevel inner shadow (bottom-right) */
+  --face-dk: #404040; /* bevel outer dark shadow (bottom-right) */
 
-  /* XP classic — square corners everywhere. */
+  --taskbar-h: 34px; /* classic taskbar height */
+
+  /* Classic — square corners everywhere. */
   --radius: 0;
   --radius-sm: 0;
 
-  /* XP bevels. */
-  --bevel-raised: inset 1px 1px 0 rgba(255, 255, 255, 0.55),
-    inset -1px -1px 0 rgba(0, 0, 0, 0.3);
-  --bevel-pressed: inset 1px 1px 2px rgba(0, 0, 0, 0.55),
-    inset -1px -1px 0 rgba(255, 255, 255, 0.14);
-  --bevel-well: inset 1px 1px 2px rgba(0, 0, 0, 0.5),
-    inset -1px -1px 0 rgba(255, 255, 255, 0.15);
+  /* Authentic Windows Classic double 3D bevels (hard-edged, no blur). */
+  --bevel-raised: inset 1px 1px 0 var(--face-hi),
+    inset -1px -1px 0 var(--face-dk), inset 2px 2px 0 var(--face-lt),
+    inset -2px -2px 0 var(--face-sh);
+  --bevel-pressed: inset 1px 1px 0 var(--face-sh),
+    inset -1px -1px 0 var(--face-hi), inset 2px 2px 0 var(--face-dk),
+    inset -2px -2px 0 var(--face-lt);
+  --bevel-well: inset 1px 1px 0 var(--face-sh),
+    inset -1px -1px 0 var(--face-hi), inset 2px 2px 0 var(--face-dk),
+    inset -2px -2px 0 var(--face-lt);
 
-  /* Scrollbar arrow glyphs (copper-ink triangles), shared by the native
-     fallback and the XpScroll component. */
-  --arrow-up: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M8 5 11.5 10.5 4.5 10.5Z' fill='%23241207'/%3E%3C/svg%3E");
-  --arrow-down: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4.5 5.5 11.5 5.5 8 11Z' fill='%23241207'/%3E%3C/svg%3E");
-  --arrow-left: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M5 8 10.5 5 10.5 11Z' fill='%23241207'/%3E%3C/svg%3E");
-  --arrow-right: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M11 8 5.5 5 5.5 11Z' fill='%23241207'/%3E%3C/svg%3E");
+  /* Scrollbar arrow glyphs (black triangles), shared by the native fallback
+     and the XpScroll component. */
+  --arrow-up: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M8 5 11.5 10.5 4.5 10.5Z' fill='%23000000'/%3E%3C/svg%3E");
+  --arrow-down: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4.5 5.5 11.5 5.5 8 11Z' fill='%23000000'/%3E%3C/svg%3E");
+  --arrow-left: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M5 8 10.5 5 10.5 11Z' fill='%23000000'/%3E%3C/svg%3E");
+  --arrow-right: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M11 8 5.5 5 5.5 11Z' fill='%23000000'/%3E%3C/svg%3E");
 
   --font-display: "Noto Sans", "Trebuchet MS", Tahoma, sans-serif; /* titles, headings */
   --font-body: "Noto Sans", Tahoma, Verdana, "Segoe UI", sans-serif; /* UI / body */
 
-  color-scheme: dark;
-  scrollbar-color: var(--accent) var(--inset); /* Firefox: copper thumb on inset track */
+  color-scheme: light;
+  scrollbar-color: var(--face) var(--strip); /* Firefox: gray thumb on gray track */
   font-family: var(--font-body);
   color: var(--text);
   background: var(--bg);
@@ -69,11 +80,11 @@ body {
   overflow-x: clip;
 }
 
-/* Visible keyboard focus across the app (custom dark theme suppresses the UA ring). */
+/* Visible keyboard focus across the app (custom theme suppresses the UA ring). */
 :focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
-  border-radius: 3px;
+  border-radius: 0;
 }
 
 h1,
@@ -116,44 +127,32 @@ textarea {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
-/* ── XP scrollbars: square inset track, raised copper thumb, arrow buttons ── */
+/* ── Classic scrollbars: gray inset track, raised gray thumb, arrow buttons ── */
 ::-webkit-scrollbar {
   width: 16px;
   height: 16px;
 }
 ::-webkit-scrollbar-track {
-  background: var(--inset);
+  background: var(--strip);
   box-shadow: var(--bevel-well);
 }
 ::-webkit-scrollbar-corner {
-  background: var(--inset);
+  background: var(--strip);
 }
 ::-webkit-scrollbar-thumb {
   min-height: 32px;
   min-width: 32px;
-  background: linear-gradient(90deg, var(--accent-bright), var(--accent));
-  border: 1px solid var(--accent-2);
+  background: var(--face);
   box-shadow: var(--bevel-raised);
 }
-::-webkit-scrollbar-thumb:vertical {
-  background: linear-gradient(180deg, var(--accent-bright), var(--accent));
-}
-::-webkit-scrollbar-thumb:hover {
-  background: var(--accent-bright);
-}
 ::-webkit-scrollbar-thumb:active {
-  background: linear-gradient(var(--accent-2), var(--accent));
   box-shadow: var(--bevel-pressed);
 }
 ::-webkit-scrollbar-button:single-button {
-  background-color: var(--accent);
-  border: 1px solid var(--accent-2);
+  background-color: var(--face);
   box-shadow: var(--bevel-raised);
   background-repeat: no-repeat;
   background-position: center;
-}
-::-webkit-scrollbar-button:single-button:hover {
-  background-color: var(--accent-bright);
 }
 ::-webkit-scrollbar-button:single-button:active {
   box-shadow: var(--bevel-pressed);
