@@ -81,6 +81,8 @@ import {
   parseCombatDamagePrompt,
   type CombatDamagePrompt,
 } from "./decisions/combatDamage";
+import { parseDieKeepPrompt, type DieKeepPrompt } from "./decisions/dieKeep";
+import { parseRipplePrompt, type RipplePrompt } from "./decisions/ripple";
 
 export interface MatchResult {
   matchIndex: number;
@@ -362,6 +364,16 @@ export interface DriverCallbacks {
   requestHumanCombatDamage?: (
     env: GameStateEnvelope,
     prompt: CombatDamagePrompt,
+  ) => Promise<HumanChoice>;
+  /** Called when the human rolls several dice and must pick which to ignore (CR 706.6). */
+  requestHumanDieKeep?: (
+    env: GameStateEnvelope,
+    prompt: DieKeepPrompt,
+  ) => Promise<HumanChoice>;
+  /** Called when the human resolves ripple: reveal the top N cards, then order the uncast rest on the bottom. */
+  requestHumanRipple?: (
+    env: GameStateEnvelope,
+    prompt: RipplePrompt,
   ) => Promise<HumanChoice>;
 }
 
@@ -741,6 +753,9 @@ export class MatchRunner {
           cb.requestHumanCombatDamage,
           parseCombatDamagePrompt(wf, state),
         ),
+      () => humanRequest(env, cb.requestHumanDieKeep, parseDieKeepPrompt(wf)),
+      () =>
+        humanRequest(env, cb.requestHumanRipple, parseRipplePrompt(wf, state)),
     ];
     for (const resolve of resolvers) {
       const req = resolve();

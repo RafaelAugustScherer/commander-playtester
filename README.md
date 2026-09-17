@@ -33,7 +33,7 @@ backend, no accounts — everything is local.
 
 ```bash
 npm install
-npm run fetch-engine   # download the phase-rs WASM + card database (~123 MiB, one-time)
+npm run fetch-engine   # download the phase-rs WASM + card database (~124 MiB, one-time)
 npm run dev            # start the dev server
 ```
 
@@ -49,11 +49,11 @@ npm run lint      # lint
 
 ### Engine assets
 
-The compiled WASM (`engine_wasm_bg.wasm`, ~28 MiB) and card database (fetched as
+The compiled WASM (`engine_wasm_bg.wasm`, ~30 MiB) and card database (fetched as
 `card-data.json`, ~95 MiB) are too large to commit, so they are git-ignored and
 fetched by `scripts/fetch-engine.sh` (run via `npm run fetch-engine`) into
 `public/engine/`. The card database is stored gzipped as `card-data.json.gz`
-(~16 MiB) — the raw JSON exceeds GitHub Pages' per-file limit, so the engine
+(~15 MiB) — the raw JSON exceeds GitHub Pages' per-file limit, so the engine
 worker decompresses it at runtime via `DecompressionStream`. The wasm-bindgen
 glue that pairs with them (`src/engine/vendor/engine_wasm.js`) **is** committed.
 

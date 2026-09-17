@@ -1,30 +1,30 @@
 {
   "$comment": "Single source of truth for the pinned phase-rs engine snapshot. The three vendored pieces below (glue + wasm + card-data) MUST stay a matched set — they are one coherent release. scripts/fetch-engine.sh reads this file, downloads the assets, and verifies each SHA-256 before use. To bump the engine, follow docs/engine-upgrade.md (or run the phase-rs-upgrade agent). The content hash in each CDN filename is the first 16 hex chars of that asset's sha256.",
-  "version": "v0.71.0",
+  "version": "v0.86.0",
   "source": {
     "repo": "https://github.com/phase-rs/phase",
-    "tag": "v0.71.0",
-    "releaseNotes": "https://github.com/phase-rs/phase/releases/tag/v0.71.0"
+    "tag": "v0.86.0",
+    "releaseNotes": "https://github.com/phase-rs/phase/releases/tag/v0.86.0"
   },
   "assets": {
     "wasm": {
-      "url": "https://data.phase-rs.dev/wasm/engine_wasm_bg-dbb5440bedd9206e.wasm",
-      "sha256": "dbb5440bedd9206e25da3c5e524586e731f9f8afc6e715d331bb97006e609c65",
+      "url": "https://data.phase-rs.dev/wasm/engine_wasm_bg-35566b8e95f311df.wasm",
+      "sha256": "35566b8e95f311df8b50f431b818a39a03a7d6a30bd7a56d5429178c6147cf4a",
       "dest": "engine_wasm_bg.wasm"
     },
     "cardData": {
-      "url": "https://data.phase-rs.dev/card-data-b9afcc03098f0f7b.json",
-      "sha256": "b9afcc03098f0f7b8bc26f03433d331a9c681c428e9df7f0dea21ef9e7be70f2",
+      "url": "https://data.phase-rs.dev/card-data-ab7a4b65e8fba840.json",
+      "sha256": "ab7a4b65e8fba8407a928eae8f261abb078f43c081923e9c0f4af30a9c40ff26",
       "dest": "card-data.json.gz",
       "gzip": true
     },
     "glue": {
       "path": "src/engine/vendor/engine_wasm.js",
-      "sha256": "594b5217624f615916f6bd175e65c7e453af3479400bc29ed6b2727303e0970c"
+      "sha256": "388b184567b310d1ea7339063170d8a0b831f3bb8d9f45fc5f33f515d4d7cf61"
     }
   },
   "mirror": {
-    "base": "https://github.com/RafaelAugustScherer/commander-playtester/releases/download/engine-v0.71.0",
+    "base": "https://github.com/RafaelAugustScherer/commander-playtester/releases/download/engine-v0.86.0",
     "$comment": "Optional durable fallback. The phase-rs CDN prunes old content-hashed URLs (see domainbook/debt/0001), so a pinned URL can eventually 404. Set this to a base URL that hosts copies of the asset filenames (e.g. a GitHub Release download base like https://github.com/<owner>/<repo>/releases/download/engine-v0.55.0). scripts/mirror-engine.sh publishes the current pinned set there; fetch-engine.sh falls back to <base>/<filename> when the primary URL fails. The SHA-256 checks above still apply to the mirrored copy."
   }
 }
