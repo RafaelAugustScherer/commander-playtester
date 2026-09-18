@@ -99,7 +99,7 @@ export interface MatchResult {
 export interface LegalActions {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   actions: any[];
-  auto_pass_recommended?: boolean;
+  autoPassRecommended?: boolean;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   [k: string]: any;
 }

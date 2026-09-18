@@ -12,6 +12,20 @@ depth live there. A purely-internal PR that touches no product or architecture m
 skip its version with a `Skip-Docs: <reason>` trailer instead. There are no
 per-domain changelogs; this file is the single timeline (`ADR-0007`).
 
+## [0.21.0] - 2026-09-17
+
+### Added
+
+- Play mode gains a **fast-forward** control that auto-runs opponent turns
+  until you have an action, so you no longer pass every AI priority window
+  (`domains/simulation/features/step-through-a-turn.md`).
+
+### Changed
+
+- Play-mode playback controls replace the fastest speed with the fast-forward
+  toggle, keeping slow and normal; watch mode keeps all three speeds
+  (`domains/simulation/features/step-through-a-turn.md`).
+
 ## [0.20.0] - 2026-09-17
 
 ### Changed
