@@ -170,6 +170,10 @@ export const messages = {
   "run.matchOf": { pt: "Partida {i} de {n}", en: "Match {i} of {n}" },
   "run.match": { pt: "Partida", en: "Match" },
   "run.pause": { pt: "Pausar", en: "Pause" },
+  "run.fastForward": {
+    pt: "Avançar até sua próxima ação",
+    en: "Fast-forward to your next action",
+  },
   "run.exit": { pt: "Sair", en: "Exit" },
   "run.yourWins": { pt: "Vitórias suas: {w}/{n}", en: "Your wins: {w}/{n}" },
   "run.winRate": { pt: "Win rate: {p}%", en: "Win rate: {p}%" },

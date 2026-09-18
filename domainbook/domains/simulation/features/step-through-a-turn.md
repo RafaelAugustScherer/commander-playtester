@@ -154,6 +154,32 @@ Example: An opponent acting pauses the pass
   Then the pass stops and control returns to you
 ```
 
+## Rule: Fast-forward auto-runs opponent turns until you have an action (play mode only)
+
+Play mode replaces the fastest speed with a fast-forward toggle, leaving slow
+and normal plus fast-forward; watch mode keeps all three speeds and has no
+fast-forward. While engaged, every priority window the engine
+flags as nothing-to-do is passed automatically, so opponent turns run without
+you clicking through them. It idles the moment the engine offers you a real
+decision, handing control back, and resumes once you resolve it.
+
+```gherkin
+Example: Opponent turns run themselves while fast-forward is on
+  Given you are playing and have engaged fast-forward
+  When it becomes an opponent's turn and you have nothing to decide
+  Then their turn advances automatically without prompting you to pass
+
+Example: Fast-forward stops when you have a decision
+  Given fast-forward is on and running through opponent turns
+  When the engine offers you a real decision
+  Then fast-forward idles and control returns to you
+  And it resumes after you resolve that decision
+
+Example: Fast-forward is a play-mode control
+  Given you are watching an AI-only match
+  Then the controls show the three speeds with no fast-forward button
+```
+
 ## Open Questions
 
 - Whether play and watch share one driver with the human as a swappable controller.

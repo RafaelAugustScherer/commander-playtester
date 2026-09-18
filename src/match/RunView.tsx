@@ -211,6 +211,15 @@ function PauseGlyph({ size = 16 }: { size?: number }) {
   );
 }
 
+function SkipGlyph({ size = 16 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M5 5 L15 12 L5 19 Z" />
+      <rect x="16.5" y="5" width="3" height="14" rx="1.5" />
+    </svg>
+  );
+}
+
 /** Cast/play action types that put a hand card onto the board (drag targets). */
 const PLAYABLE_TYPES = new Set([
   "PlayLand",
@@ -2607,6 +2616,7 @@ export function RunView({
   const [rippleTurn, setRippleTurn] = useState<RippleTurn | null>(null);
   const [ripplePick, setRipplePick] = useState<number[]>([]);
   const [passingTurn, setPassingTurn] = useState(false);
+  const [fastForward, setFastForward] = useState(false);
   const [logEntries, setLogEntries] = useState<LoggedEntry[]>([]);
   // On mobile the log is a full-screen drawer, so it always starts closed and
   // its state isn't persisted (a remembered "open" would cover the board). On
@@ -2772,6 +2782,14 @@ export function RunView({
     }
   }
 
+  function toggleFastForward() {
+    setFastForward((v) => !v);
+    if (paused) {
+      runnerRef.current?.resume();
+      setPaused(false);
+    }
+  }
+
   // Reset any in-flight drag / ability pick when the priority window changes.
   useEffect(() => {
     setDragging(null);
@@ -2837,6 +2855,21 @@ export function RunView({
     );
     return () => clearTimeout(id);
   }, [passingTurn, humanTurn, speed]);
+
+  // Fast-forward: while engaged, auto-pass every priority window the engine
+  // flags as nothing-to-do, so opponent turns run themselves until a real
+  // decision needs the human; idles on any window it doesn't flag.
+  useEffect(() => {
+    if (!fastForward || paused || !humanTurn) return;
+    if (!humanTurn.legal.autoPassRecommended) return;
+    const pass = findPass(humanTurn.legal.actions ?? []);
+    if (!pass) return;
+    const id = setTimeout(
+      () => humanTurn.resolve({ action: pass }),
+      Math.max(120, PACE_MS[speed]),
+    );
+    return () => clearTimeout(id);
+  }, [fastForward, paused, humanTurn, speed]);
 
   // Passing the turn skips your own combat (no attackers).
   useEffect(() => {
@@ -3172,7 +3205,10 @@ export function RunView({
                   <PauseGlyph size={16} />
                 </button>
                 <div className="seg">
-                  {(["slow", "normal", "fast"] as Speed[]).map((s) => (
+                  {(config.mode === "play"
+                    ? (["slow", "normal"] as Speed[])
+                    : (["slow", "normal", "fast"] as Speed[])
+                  ).map((s) => (
                     <button
                       key={s}
                       className={`seg__btn seg__btn--speed has-tooltip ${speed === s && !paused ? "seg__btn--active" : ""}`}
@@ -3186,6 +3222,17 @@ export function RunView({
                       ))}
                     </button>
                   ))}
+                  {config.mode === "play" && (
+                    <button
+                      className={`seg__btn seg__btn--speed has-tooltip ${fastForward ? "seg__btn--active" : ""}`}
+                      onClick={toggleFastForward}
+                      aria-pressed={fastForward}
+                      aria-label={t("run.fastForward")}
+                      data-tooltip={t("run.fastForward")}
+                    >
+                      <SkipGlyph />
+                    </button>
+                  )}
                 </div>
                 <button
                   className="btn btn--ghost btn--sm"
