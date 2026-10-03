@@ -12,6 +12,20 @@ depth live there. A purely-internal PR that touches no product or architecture m
 skip its version with a `Skip-Docs: <reason>` trailer instead. There are no
 per-domain changelogs; this file is the single timeline (`ADR-0007`).
 
+## [0.30.0] - 2026-10-03
+
+### Added
+
+- A **Customization** section below the bracket target holds the Tribal switch and two new
+  ones, **Suggest planeswalkers** and **Suggest dungeon mechanics**
+  (`domains/deck-draft/features/draft-a-deck.md`).
+
+### Changed
+
+- Drafts no longer offer planeswalkers or dungeon and initiative cards unless their switch
+  is on; the type balance targets no planeswalkers while it is off
+  (`domains/deck-draft/features/draft-a-deck.md`).
+
 ## [0.29.0] - 2026-10-03
 
 ### Fixed

@@ -155,7 +155,8 @@ Example: An incidental tribe barely counts
 
 ## Rule: Tribal mode keeps creature slots on the chosen tribes
 
-Beside the bracket buttons, a **Tribal** switch turns on `tribal mode`. While it is on, the
+In the `customization` section below the bracket target, a **Tribal** switch turns on
+`tribal mode`. While it is on, the
 author picks one or more creature types by hand, typing to get suggestions from the full
 list of creature types. Every creature slot then offers only creatures of those types — a
 Changeling counts as every type — and the pool reaches each tribe's most-printed members
@@ -179,6 +180,35 @@ Example: Turning tribal mode off keeps the tribes
   When the author turns tribal mode off
   Then creature slots are open again
   And turning it back on restores Elf
+```
+
+## Rule: Planeswalkers and dungeon cards are offered only when asked for
+
+The `customization` section also holds two switches, both off by default: **Suggest
+planeswalkers** and **Suggest dungeon mechanics**. While the first is off, no planeswalker
+is offered — not as a commander, not in any slot — and the `type balance` gives the
+planeswalker share to the other types, so no slot asks for one. While the second is off,
+no card whose rules text names a dungeon or the initiative is offered ("venture into the
+dungeon", "completed a dungeon", "take the initiative"). Turning either on or off while
+drafting re-offers the current round at once.
+
+```gherkin
+Example: A superfriends-style commander gets no planeswalkers by default
+  Given a draft whose commander is "Atraxa, Praetors' Voice"
+  When rounds are suggested
+  Then no planeswalker is offered
+  And the type balance targets zero planeswalkers
+
+Example: Turning planeswalkers on brings them back
+  Given a draft with planeswalkers off
+  When the author turns on "Suggest planeswalkers"
+  Then the type balance targets planeswalkers again
+  And the current round is re-offered
+
+Example: Dungeon cards stay out by default
+  Given a draft with dungeon mechanics off
+  When rounds are suggested
+  Then no card that ventures into the dungeon or takes the initiative is offered
 ```
 
 ## Rule: Among comparable fits, more-played cards rank higher
@@ -277,6 +307,7 @@ artifacts, enchantments and planeswalkers for the whole deck, set by the command
 commander whose text asks for a type — "whenever you cast an instant or sorcery spell",
 "enchantment spells you cast", "Elves you control" — moves part of the deck toward that
 type; one that asks for nothing keeps the across-deck baseline (`deck-draft/ADR-0003`).
+Planeswalkers get no share unless the author turns them on in `customization`.
 
 Each of a round's three slots gets a `slot type`: the type that trails its share of the
 cards drafted so far by the most, counting each card by one type (Land, then Creature,

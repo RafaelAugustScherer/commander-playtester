@@ -10,6 +10,7 @@ import type {
   ClassifyDeckResult,
 } from "../engine/draftQueries";
 import { DraftSession, type TribalMode } from "./draftSession";
+import { DEFAULT_CUSTOMIZATION, type DraftCustomization } from "./customization";
 import { engineDraftEngine, scryfallCardResolver } from "./candidates";
 import { BRACKET_TARGETS, DEFAULT_BRACKET_TARGET, type BracketTarget } from "./bracket";
 import { DraftCandidateCard } from "./DraftCandidateCard";
@@ -147,30 +148,60 @@ function BracketTargetPicker({
   );
 }
 
-/** The bracket target picker with the tribal toggle beside it, and the tribes when on. */
-function DraftSteering({
-  target,
-  tribal,
+function SuggestToggle({
+  label,
+  pressed,
   disabled,
-  targetHint,
-  onTargetChange,
-  onTribalChange,
+  onChange,
 }: {
-  target: BracketTarget;
-  tribal: TribalMode;
+  label: string;
+  pressed: boolean;
   disabled?: boolean;
-  /** Shown under the bracket buttons, above the tribes. */
-  targetHint?: string;
-  onTargetChange: (target: BracketTarget) => void;
-  onTribalChange: (tribal: TribalMode) => void;
+  onChange: (pressed: boolean) => void;
 }) {
   return (
+    <button
+      className={`seg__btn ${pressed ? "seg__btn--active" : ""}`}
+      onClick={() => onChange(!pressed)}
+      aria-pressed={pressed}
+      disabled={disabled}
+    >
+      {label}
+    </button>
+  );
+}
+
+function DraftCustomizationPicker({
+  tribal,
+  customization,
+  disabled,
+  onTribalChange,
+  onCustomizationChange,
+}: {
+  tribal: TribalMode;
+  customization: DraftCustomization;
+  disabled?: boolean;
+  onTribalChange: (tribal: TribalMode) => void;
+  onCustomizationChange: (customization: DraftCustomization) => void;
+}) {
+  const { t } = useI18n();
+  return (
     <>
-      <div className="seg-row">
-        <BracketTargetPicker target={target} onChange={onTargetChange} />
+      <div className="seg">
         <TribalToggle tribal={tribal} disabled={disabled} onChange={onTribalChange} />
+        <SuggestToggle
+          label={t("draft.customization.planeswalkers")}
+          pressed={customization.planeswalkers}
+          disabled={disabled}
+          onChange={(planeswalkers) => onCustomizationChange({ ...customization, planeswalkers })}
+        />
+        <SuggestToggle
+          label={t("draft.customization.dungeons")}
+          pressed={customization.dungeons}
+          disabled={disabled}
+          onChange={(dungeons) => onCustomizationChange({ ...customization, dungeons })}
+        />
       </div>
-      {targetHint && <p className="hint">{targetHint}</p>}
       <TribePicker tribal={tribal} disabled={disabled} onChange={onTribalChange} />
     </>
   );
@@ -313,6 +344,7 @@ function DraftEntry({
     commanderName: string | null,
     target: BracketTarget,
     tribal: TribalMode,
+    customization: DraftCustomization,
   ) => Promise<void>;
   onCancel: () => void;
 }) {
@@ -324,6 +356,7 @@ function DraftEntry({
   const [pasteCommander, setPasteCommander] = useState<string>(seed?.commander ?? "");
   const [target, setTarget] = useState<BracketTarget>(DEFAULT_BRACKET_TARGET);
   const [tribal, setTribal] = useState<TribalMode>({ enabled: false, tribes: [] });
+  const [customization, setCustomization] = useState<DraftCustomization>(DEFAULT_CUSTOMIZATION);
   const [status, setStatus] = useState<EntryStatus>({ kind: "idle" });
   const [unresolved, setUnresolved] = useState<string[]>([]);
 
@@ -421,7 +454,7 @@ function DraftEntry({
     setStatus({ kind: "starting" });
     try {
       await getEngine().ready();
-      await onStart(resolvedNames, commanderName, target, tribal);
+      await onStart(resolvedNames, commanderName, target, tribal, customization);
     } catch (err) {
       setStatus({
         kind: "error",
@@ -495,11 +528,16 @@ function DraftEntry({
 
       <div className="field">
         <span className="field__label">{t("draft.entry.bracketLabel")}</span>
-        <DraftSteering
-          target={target}
+        <BracketTargetPicker target={target} onChange={setTarget} />
+      </div>
+
+      <div className="field">
+        <span className="field__label">{t("draft.customization.label")}</span>
+        <DraftCustomizationPicker
           tribal={tribal}
-          onTargetChange={setTarget}
+          customization={customization}
           onTribalChange={setTribal}
+          onCustomizationChange={setCustomization}
         />
       </div>
 
@@ -651,14 +689,17 @@ function DraftSummaryPanel({
   measuresLoading,
   roundBusy,
   tribal,
+  customization,
   onTargetChange,
   onTribalChange,
+  onCustomizationChange,
   onFillLands,
   onExit,
 }: {
   session: DraftSession;
   target: BracketTarget;
   tribal: TribalMode;
+  customization: DraftCustomization;
   totalCards: number;
   archetype: ClassifyDeckResult | null;
   bracket: BracketEstimate | null;
@@ -666,6 +707,7 @@ function DraftSummaryPanel({
   roundBusy: RoundBusy;
   onTargetChange: (target: BracketTarget) => void;
   onTribalChange: (tribal: TribalMode) => void;
+  onCustomizationChange: (customization: DraftCustomization) => void;
   onFillLands: () => void;
   onExit: () => void;
 }) {
@@ -709,13 +751,17 @@ function DraftSummaryPanel({
       </div>
       <div className="field" style={{ marginTop: "0.75rem" }}>
         <span className="field__label">{t("draft.summary.bracketTarget")}</span>
-        <DraftSteering
-          target={target}
+        <BracketTargetPicker target={target} onChange={onTargetChange} />
+        <p className="hint">{t("draft.summary.targetHint")}</p>
+      </div>
+      <div className="field" style={{ marginTop: "0.75rem" }}>
+        <span className="field__label">{t("draft.customization.label")}</span>
+        <DraftCustomizationPicker
           tribal={tribal}
+          customization={customization}
           disabled={roundBusy !== null}
-          targetHint={t("draft.summary.targetHint")}
-          onTargetChange={onTargetChange}
           onTribalChange={onTribalChange}
+          onCustomizationChange={onCustomizationChange}
         />
       </div>
       {balance && (
@@ -870,6 +916,9 @@ function DraftSessionView({
   const [roundError, setRoundError] = useState<string | null>(null);
   const [target, setTarget] = useState<BracketTarget>(session.target);
   const [tribal, setTribal] = useState<TribalMode>(session.tribal);
+  const [customization, setCustomization] = useState<DraftCustomization>(
+    session.customization,
+  );
   const [saveName, setSaveName] = useState("");
   const [copied, setCopied] = useState(false);
   const [preview, setPreview] = useState<Preview | null>(null);
@@ -935,6 +984,11 @@ function DraftSessionView({
     void runRoundAction("all", () => session.setTribal(next));
   }
 
+  function handleCustomizationChange(next: DraftCustomization) {
+    setCustomization(next);
+    void runRoundAction("all", () => session.setCustomization(next));
+  }
+
   async function handleCopy() {
     await navigator.clipboard.writeText(session.exportText());
     setCopied(true);
@@ -976,8 +1030,10 @@ function DraftSessionView({
             measuresLoading={measuresLoading}
             roundBusy={roundBusy}
             tribal={tribal}
+            customization={customization}
             onTargetChange={handleTargetChange}
             onTribalChange={handleTribalChange}
+            onCustomizationChange={handleCustomizationChange}
             onFillLands={handleFillLands}
             onExit={onExit}
           />
@@ -1036,12 +1092,13 @@ export function DraftView({
     commanderName: string | null,
     target: BracketTarget,
     tribal: TribalMode,
+    customization: DraftCustomization,
   ) {
     const session = new DraftSession({
       engine: engineDraftEngine,
       resolver: scryfallCardResolver,
     });
-    await session.start(names, commanderName, target, tribal);
+    await session.start(names, commanderName, target, tribal, customization);
     sessionRef.current = session;
     setStarted(true);
   }

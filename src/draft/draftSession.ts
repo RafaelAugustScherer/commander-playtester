@@ -14,6 +14,7 @@ import {
   type RankedCandidate,
 } from "./candidates";
 import { DEFAULT_BRACKET_TARGET, type BracketTarget } from "./bracket";
+import { DEFAULT_CUSTOMIZATION, type DraftCustomization } from "./customization";
 import { draftCandidateCard } from "./localCandidates";
 import {
   basicLandCount,
@@ -76,6 +77,7 @@ export class DraftSession {
    * cards that name them rank higher. The tribes are kept while it is off.
    */
   tribal: TribalMode = { enabled: false, tribes: [] };
+  customization: DraftCustomization = DEFAULT_CUSTOMIZATION;
   commanders: DecklistEntry[] = [];
   mainboard: DecklistEntry[] = [];
   round: RankedCandidate[] = [];
@@ -159,12 +161,14 @@ export class DraftSession {
       this.pool = await suggestCommanders(this.mainboardCards(), {
         engine: this.deps.engine,
         resolver: this.deps.resolver,
+        customization: this.customization,
         exclude: this.blacklist,
       });
     } else {
       const round = await suggestCandidates(deckNames, this.profile, {
         engine: this.deps.engine,
         resolver: this.deps.resolver,
+        customization: this.customization,
         target: this.target,
         exclude: this.blacklist,
       });
@@ -192,12 +196,14 @@ export class DraftSession {
         ? await suggestCommanders(this.mainboardCards(), {
             engine: this.deps.engine,
             resolver: this.deps.resolver,
+            customization: this.customization,
             exclude,
           })
         : (
             await suggestCandidates(deckNames, this.profile, {
               engine: this.deps.engine,
               resolver: this.deps.resolver,
+              customization: this.customization,
               target: this.target,
               exclude,
               slotTypes: slotType ? Array<DraftCardType>(ROUND_SIZE).fill(slotType) : undefined,
@@ -225,8 +231,10 @@ export class DraftSession {
     commanderName: string | null = null,
     target: BracketTarget = DEFAULT_BRACKET_TARGET,
     tribal: TribalMode = { enabled: false, tribes: [] },
+    customization: DraftCustomization = DEFAULT_CUSTOMIZATION,
   ): Promise<void> {
     this.tribal = normalizeTribal(tribal);
+    this.customization = customization;
     const uniqueNames = [...new Set(baseCardNames.map((n) => n.trim()).filter(Boolean))];
     if (uniqueNames.length < MIN_BASE_CARDS) {
       throw new DraftSessionError("too-few-base-cards");
@@ -400,6 +408,11 @@ export class DraftSession {
     if (this.phase !== "drafting" || this.activeTribes().join("|") === before) return;
     this.rebuildProfile();
     await this.openRound();
+  }
+
+  async setCustomization(customization: DraftCustomization): Promise<void> {
+    this.customization = customization;
+    if (this.phase === "drafting") await this.openRound();
   }
 
   /** Re-steer subsequent suggestion rounds toward a different bracket target. */

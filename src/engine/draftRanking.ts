@@ -17,6 +17,7 @@ import {
 } from "../draft/localCandidates";
 import type { ThemeProfile } from "../draft/themes";
 import { isUtilityLand } from "../draft/lands";
+import { isSuggestable } from "../draft/customization";
 import { cardTokens, isOfTribe, mentionsSubtype, tokenSearches } from "../draft/tokens";
 import {
   DRAFT_CARD_TYPES,
@@ -182,6 +183,7 @@ export function createDraftRanker(
     commanders: string[],
     mainboard: string[],
     colorCount: number,
+    planeswalkers: boolean,
   ): TypeBalance {
     const have = zeroCounts();
     let basicLands = 0;
@@ -195,7 +197,12 @@ export function createDraftRanker(
       commanders.map(signalsOf),
       [...new Set(mainboard)].map(signalsOf),
     );
-    const { counts, nonbasicLands } = targetMix(weights, colorCount, 100 - commanders.length);
+    const { counts, nonbasicLands } = targetMix(
+      weights,
+      colorCount,
+      100 - commanders.length,
+      planeswalkers,
+    );
     return { target: counts, nonbasicLandTarget: nonbasicLands, have, basicLands };
   }
 
@@ -348,9 +355,19 @@ export function createDraftRanker(
   function rankCardCandidates(input: RankCardCandidatesInput): RankCardCandidatesResult {
     const profile = themeProfile(input.profile);
     const excluded = new Set(input.exclude.map((name) => name.toLowerCase()));
-    const balance = deckBalance(input.commanders, input.mainboard, profile.colorIdentity.length);
+    const suggestable = (candidate: DraftCandidateData) =>
+      isSuggestable(candidate, input.customization);
+    const balance = deckBalance(
+      input.commanders,
+      input.mainboard,
+      profile.colorIdentity.length,
+      input.customization.planeswalkers,
+    );
     const typePools = new Map(
-      DRAFT_CARD_TYPES.map((type) => [type, typeCandidates(type, profile.colorIdentity)]),
+      DRAFT_CARD_TYPES.map((type) => [
+        type,
+        typeCandidates(type, profile.colorIdentity).filter(suggestable),
+      ]),
     );
     const eligible = DRAFT_CARD_TYPES.filter((type) =>
       typePools.get(type)?.some((candidate) => !excluded.has(candidate.name.toLowerCase())),
@@ -367,7 +384,7 @@ export function createDraftRanker(
       ...tribalCandidates(profile),
       ...slotPools,
     ]) {
-      pool.set(candidate.name.toLowerCase(), candidate);
+      if (suggestable(candidate)) pool.set(candidate.name.toLowerCase(), candidate);
     }
     const ranked = rankLocalCandidates([...pool.values()], profile, excluded, popularityBonus);
 

@@ -9,6 +9,7 @@
 import type { CardRole } from "../lib/types";
 import type { DraftCardType, TypeBalance } from "../draft/typeBalance";
 import type { BracketTarget } from "../draft/bracket";
+import type { DraftCustomization } from "../draft/customization";
 import * as engineWasm from "./vendor/engine_wasm.js";
 
 export interface SearchCardsQuery {
@@ -66,6 +67,7 @@ export interface RankCardCandidatesInput {
   mainboard: string[];
   profile: EngineThemeProfile;
   target: BracketTarget;
+  customization: DraftCustomization;
   exclude: string[];
   slotTypes?: DraftCardType[];
 }

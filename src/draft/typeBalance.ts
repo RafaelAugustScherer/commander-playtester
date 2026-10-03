@@ -248,21 +248,22 @@ export function targetMix(
   weights: TypeCounts,
   colorCount: number,
   deckSize: number,
+  planeswalkers: boolean,
 ): { counts: TypeCounts; nonbasicLands: number } {
   const lands = Math.round(
     BASE_LANDS + LAND_BONUS_MAX * signalStrength(weights.land, LAND_SIGNAL_SCALE),
   );
   const nonLandSlots = Math.max(0, deckSize - lands);
+  const types = planeswalkers
+    ? NON_LAND_TYPES
+    : NON_LAND_TYPES.filter((type) => type !== "planeswalker");
 
-  const baselineTotal = NON_LAND_TYPES.reduce(
-    (sum, type) => sum + BASELINE_NON_LAND[type],
-    0,
-  );
-  const focusTotal = NON_LAND_TYPES.reduce((sum, type) => sum + weights[type], 0);
-  const strongest = Math.max(...NON_LAND_TYPES.map((type) => weights[type]));
+  const baselineTotal = types.reduce((sum, type) => sum + BASELINE_NON_LAND[type], 0);
+  const focusTotal = types.reduce((sum, type) => sum + weights[type], 0);
+  const strongest = Math.max(...types.map((type) => weights[type]));
   const focus = focusTotal > 0 ? FOCUS_MAX * signalStrength(strongest, FOCUS_SIGNAL_SCALE) : 0;
 
-  const shares = NON_LAND_TYPES.map(
+  const shares = types.map(
     (type) =>
       (1 - focus) * (BASELINE_NON_LAND[type] / baselineTotal) +
       (focusTotal > 0 ? focus * (weights[type] / focusTotal) : 0),
@@ -271,7 +272,7 @@ export function targetMix(
 
   const counts = zeroCounts();
   counts.land = lands;
-  NON_LAND_TYPES.forEach((type, i) => {
+  types.forEach((type, i) => {
     counts[type] = nonLandCounts[i];
   });
 
