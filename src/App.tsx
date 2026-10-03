@@ -99,8 +99,8 @@ function DecksView({
           setEditing(null);
         }}
         onCancel={() => setEditing(null)}
-        onDraft={(names, commander) => {
-          setDraftSeed({ names, commander });
+        onDraft={(names, commander, partner) => {
+          setDraftSeed({ names, commander, partner });
           setEditing(null);
           setDrafting(true);
         }}
