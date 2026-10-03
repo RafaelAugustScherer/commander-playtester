@@ -12,6 +12,14 @@ depth live there. A purely-internal PR that touches no product or architecture m
 skip its version with a `Skip-Docs: <reason>` trailer instead. There are no
 per-domain changelogs; this file is the single timeline (`ADR-0007`).
 
+## [0.29.0] - 2026-10-03
+
+### Fixed
+
+- Passing on a card in **Quick draft** now shows the round's next suggestion instead of the
+  closest card of the same type, so the second and third cards are no longer hidden
+  (`domains/deck-draft/features/draft-a-deck.md`).
+
 ## [0.28.0] - 2026-10-03
 
 ### Changed

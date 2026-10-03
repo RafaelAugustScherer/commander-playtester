@@ -238,7 +238,9 @@ Example: Commander ranking produces a full round
 A **Quick draft** toggle, shown while drafting (the commander round included), shows the
 round's first card — the `slot type` the deck is shortest of — alone over a darkened
 screen. Taking it adds it to the deck, or picks it as commander in the commander round.
-Passing on it is a `refresh` of that slot, so the card joins the `blacklist`. On a touch
+Passing on it drops it from the round into the `blacklist`; the round's next card moves to
+the front, and the best-ranked unseen card of the passed card's `slot type` joins the back,
+so the author sees every card of the round before any replacement. On a touch
 screen the author swipes right to take and left to pass; on desktop two buttons below the
 card do the same. Closing it (X) returns to the three-card round as it stands.
 
@@ -253,7 +255,14 @@ Example: Swiping left passes on the card for good
   Given quick draft is open on a round whose first card is a creature
   When the author swipes left
   Then the card joins the blacklist and is never suggested again in this draft
-  And quick draft shows the closest unseen card of the same slot type
+  And quick draft shows the round's second card
+  And the best-ranked unseen creature joins the back of the round
+
+Example: Passing on every card walks the whole round
+  Given quick draft is open on a round of a creature, an instant and a sorcery
+  When the author swipes left three times
+  Then quick draft has shown the creature, then the instant, then the sorcery
+  And the round holds the best-ranked unseen creature, instant and sorcery
 
 Example: Closing quick draft keeps the round
   Given quick draft is open on a round showing three suggestions

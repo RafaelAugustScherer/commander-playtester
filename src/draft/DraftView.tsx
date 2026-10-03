@@ -1010,7 +1010,7 @@ function DraftSessionView({
           busy={roundBusy !== null}
           error={roundError}
           onAdd={() => (session.phase === "commander-selection" ? handlePick(0) : handleAdd(0))}
-          onSkip={() => handleRefresh(0)}
+          onSkip={() => runRoundAction("all", () => session.skipSlot(0))}
           onClose={() => setQuickDraft(false)}
         />
       )}
