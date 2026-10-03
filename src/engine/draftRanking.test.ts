@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { DEFAULT_CUSTOMIZATION } from "../draft/customization";
 import { createDraftRanker } from "./draftRanking";
 import type { CardFaceData, DraftQueryExports, SearchCardRow } from "./draftQueries";
 import { extractThemeProfile } from "../draft/themes";
@@ -132,6 +133,7 @@ describe("createDraftRanker theme pools", () => {
       mainboard: [],
       profile: hyldaProfile(),
       target: "focused",
+      customization: DEFAULT_CUSTOMIZATION,
       exclude: [HYLDA.name.toLowerCase()],
       slotTypes: ["creature"],
     });
@@ -161,6 +163,7 @@ describe("createDraftRanker tribal mode", () => {
       mainboard: [],
       profile,
       target: "focused",
+      customization: DEFAULT_CUSTOMIZATION,
       exclude: [HYLDA.name.toLowerCase()],
       slotTypes: ["creature", "creature"],
     });
@@ -193,10 +196,57 @@ describe("createDraftRanker land slots", () => {
       mainboard: [],
       profile: hyldaProfile(),
       target: "focused",
+      customization: DEFAULT_CUSTOMIZATION,
       exclude: [HYLDA.name.toLowerCase()],
       slotTypes: ["land", "land"],
     });
 
     expect(candidates.map((c) => c.name)).toEqual([ROGUES_PASSAGE.name]);
+  });
+});
+
+describe("createDraftRanker customization", () => {
+  const WALKER: FakeCard = {
+    name: "Gideon of the Tests",
+    supertypes: ["Legendary"],
+    coreTypes: ["Planeswalker"],
+    subtypes: ["Gideon"],
+    oracleText: "+1: Tap target creature an opponent controls.",
+    printings: 5,
+  };
+  const DELVER: FakeCard = {
+    name: "Dungeon Delver",
+    coreTypes: ["Creature"],
+    subtypes: ["Dwarf"],
+    oracleText: "When this creature enters, tap target creature and venture into the dungeon.",
+    printings: 5,
+  };
+
+  function rank(customization: { planeswalkers: boolean; dungeons: boolean }) {
+    const { queries, cardDataJson } = fakeEngine([HYLDA, TAPPER, WALKER, DELVER]);
+    return createDraftRanker(queries, cardDataJson).rankCardCandidates({
+      commanders: [HYLDA.name],
+      mainboard: [],
+      profile: hyldaProfile(),
+      target: "focused",
+      customization,
+      exclude: [HYLDA.name.toLowerCase()],
+      slotTypes: ["creature", "creature", "planeswalker"],
+    });
+  }
+
+  it("offers no planeswalkers or dungeon cards by default", () => {
+    const { candidates, balance } = rank(DEFAULT_CUSTOMIZATION);
+
+    expect(candidates.map((c) => c.name)).toEqual([TAPPER.name]);
+    expect(balance.target.planeswalker).toBe(0);
+  });
+
+  it("offers them once each is turned on", () => {
+    const { candidates } = rank({ planeswalkers: true, dungeons: true });
+
+    expect(candidates.map((c) => c.name).sort()).toEqual(
+      [DELVER.name, TAPPER.name, WALKER.name].sort(),
+    );
   });
 });

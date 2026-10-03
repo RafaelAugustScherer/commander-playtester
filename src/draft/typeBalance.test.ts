@@ -370,20 +370,20 @@ describe("targetMix", () => {
   it.each(weightCases)("sums to the deck size for %s", (_name, weights) => {
     for (const deckSize of [99, 98]) {
       for (const colorCount of [0, 1, 3, 5]) {
-        expect(sum(targetMix(weights, colorCount, deckSize).counts)).toBe(deckSize);
+        expect(sum(targetMix(weights, colorCount, deckSize, true).counts)).toBe(deckSize);
       }
     }
   });
 
   it("never produces a negative count", () => {
     for (const [, weights] of weightCases) {
-      const { counts: mix } = targetMix(weights, 2, 99);
+      const { counts: mix } = targetMix(weights, 2, 99, true);
       expect(DRAFT_CARD_TYPES.every((type) => mix[type] >= 0)).toBe(true);
     }
   });
 
   it("makes creatures the largest non-land type and keeps at least 33 lands with no signals", () => {
-    const { counts: mix } = targetMix(zeroCounts(), 2, 99);
+    const { counts: mix } = targetMix(zeroCounts(), 2, 99, true);
     const nonLand = DRAFT_CARD_TYPES.filter((type) => type !== "land");
 
     expect(mix.land).toBeGreaterThanOrEqual(33);
@@ -393,8 +393,8 @@ describe("targetMix", () => {
   });
 
   it("leans toward instants and sorceries over creatures when both are strongly signalled", () => {
-    const { counts: mix } = targetMix(counts({ instant: 12, sorcery: 12 }), 2, 99);
-    const baseline = targetMix(zeroCounts(), 2, 99).counts;
+    const { counts: mix } = targetMix(counts({ instant: 12, sorcery: 12 }), 2, 99, true);
+    const baseline = targetMix(zeroCounts(), 2, 99, true).counts;
 
     expect(mix.instant + mix.sorcery).toBeGreaterThan(mix.creature);
     expect(mix.instant).toBeGreaterThan(baseline.instant);
@@ -403,14 +403,14 @@ describe("targetMix", () => {
   });
 
   it("leans toward creatures when creatures are strongly signalled", () => {
-    const { counts: mix } = targetMix(counts({ creature: 20 }), 2, 99);
-    expect(mix.creature).toBeGreaterThan(targetMix(zeroCounts(), 2, 99).counts.creature);
+    const { counts: mix } = targetMix(counts({ creature: 20 }), 2, 99, true);
+    expect(mix.creature).toBeGreaterThan(targetMix(zeroCounts(), 2, 99, true).counts.creature);
   });
 
   it("plans more lands when lands are signalled, never fewer", () => {
-    const plain = targetMix(zeroCounts(), 2, 99).counts.land;
-    const light = targetMix(counts({ land: 2 }), 2, 99).counts.land;
-    const heavy = targetMix(counts({ land: 9 }), 2, 99).counts.land;
+    const plain = targetMix(zeroCounts(), 2, 99, true).counts.land;
+    const light = targetMix(counts({ land: 2 }), 2, 99, true).counts.land;
+    const heavy = targetMix(counts({ land: 9 }), 2, 99, true).counts.land;
 
     expect(heavy).toBeGreaterThan(plain);
     expect(light).toBeGreaterThanOrEqual(plain);
@@ -418,15 +418,15 @@ describe("targetMix", () => {
   });
 
   it("stops adding lands once the land signal saturates", () => {
-    const high = targetMix(counts({ land: 1000 }), 2, 99).counts.land;
-    const higher = targetMix(counts({ land: 100000 }), 2, 99).counts.land;
+    const high = targetMix(counts({ land: 1000 }), 2, 99, true).counts.land;
+    const higher = targetMix(counts({ land: 100000 }), 2, 99, true).counts.land;
     expect(higher).toBe(high);
   });
 
   it("plans more nonbasic lands as colours grow, never above the land total", () => {
-    const one = targetMix(zeroCounts(), 1, 99);
-    const three = targetMix(zeroCounts(), 3, 99);
-    const five = targetMix(zeroCounts(), 5, 99);
+    const one = targetMix(zeroCounts(), 1, 99, true);
+    const three = targetMix(zeroCounts(), 3, 99, true);
+    const five = targetMix(zeroCounts(), 5, 99, true);
 
     expect(three.nonbasicLands).toBeGreaterThan(one.nonbasicLands);
     expect(five.nonbasicLands).toBeGreaterThan(three.nonbasicLands);
@@ -437,11 +437,20 @@ describe("targetMix", () => {
   });
 
   it("treats colour counts beyond five like five", () => {
-    expect(targetMix(zeroCounts(), 9, 99).nonbasicLands).toBe(
-      targetMix(zeroCounts(), 5, 99).nonbasicLands,
+    expect(targetMix(zeroCounts(), 9, 99, true).nonbasicLands).toBe(
+      targetMix(zeroCounts(), 5, 99, true).nonbasicLands,
     );
   });
 });
+  it("gives the planeswalker share to the other types when planeswalkers are off", () => {
+    const withPlaneswalkers = targetMix(zeroCounts(), 2, 99, true).counts;
+    const without = targetMix(zeroCounts(), 2, 99, false).counts;
+
+    expect(withPlaneswalkers.planeswalker).toBeGreaterThan(0);
+    expect(without.planeswalker).toBe(0);
+    expect(sum(without)).toBe(99);
+  });
+
 
 describe("allocateSlots", () => {
   const ALL_TYPES = [...DRAFT_CARD_TYPES];

@@ -494,6 +494,28 @@ describe("DraftSession refresh blacklist", () => {
   });
 });
 
+describe("DraftSession customization", () => {
+  it("sends no planeswalkers and no dungeons to the engine by default", async () => {
+    const inputs: RankCardCandidatesInput[] = [];
+    await draftingSession(inputs);
+    expect(inputs[0].customization).toEqual({ planeswalkers: false, dungeons: false });
+  });
+
+  it("re-offers the round with the new choice when it changes while drafting", async () => {
+    const inputs: RankCardCandidatesInput[] = [];
+    const session = await draftingSession(inputs);
+    const before = inputs.length;
+
+    await session.setCustomization({ planeswalkers: true, dungeons: false });
+
+    expect(inputs).toHaveLength(before + 1);
+    expect(inputs[inputs.length - 1].customization).toEqual({
+      planeswalkers: true,
+      dungeons: false,
+    });
+  });
+});
+
 describe("DraftSession skip", () => {
   it("moves the next card of the round to the front and refills the back with the same slot type", async () => {
     const session = await draftingSession([]);

@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { DEFAULT_CUSTOMIZATION } from "./customization";
 import { suggestCandidates, suggestCommanders } from "./candidates";
 import type { DraftEngine, CardResolver, DraftDeckNames } from "./candidates";
 import { extractThemeProfile } from "./themes";
@@ -103,6 +104,7 @@ describe("suggestCandidates", () => {
     };
     const { candidates: results } = await suggestCandidates(deck, profile, {
       engine,
+      customization: DEFAULT_CUSTOMIZATION,
       resolver: {
         resolve: async (names) => {
           resolvedNames = names;
@@ -132,6 +134,7 @@ describe("suggestCandidates", () => {
     };
     const { candidates: results } = await suggestCandidates(deck, profile, {
       engine,
+      customization: DEFAULT_CUSTOMIZATION,
       resolver,
       target: "focused",
     });
@@ -154,6 +157,7 @@ describe("suggestCandidates", () => {
     };
     await suggestCandidates(deck, profile, {
       engine,
+      customization: DEFAULT_CUSTOMIZATION,
       resolver,
       target: "focused",
       slotTypes: ["instant", "land", "creature"],
@@ -171,7 +175,12 @@ describe("suggestCandidates", () => {
       },
       resolveCards: async () => [],
     };
-    await suggestCandidates(deck, profile, { engine, resolver, target: "focused" });
+    await suggestCandidates(deck, profile, {
+      engine,
+      resolver,
+      target: "focused",
+      customization: DEFAULT_CUSTOMIZATION,
+    });
     expect(rankedInputs[0].slotTypes).toBeUndefined();
   });
 
@@ -188,6 +197,7 @@ describe("suggestCandidates", () => {
     };
     const { candidates } = await suggestCandidates(deck, profile, {
       engine,
+      customization: DEFAULT_CUSTOMIZATION,
       resolver,
       target: "focused",
     });
@@ -207,6 +217,7 @@ describe("suggestCandidates", () => {
     };
     const round = await suggestCandidates(deck, profile, {
       engine,
+      customization: DEFAULT_CUSTOMIZATION,
       resolver,
       target: "focused",
     });
@@ -226,6 +237,7 @@ describe("suggestCandidates", () => {
     };
     const { candidates } = await suggestCandidates(deck, profile, {
       engine,
+      customization: DEFAULT_CUSTOMIZATION,
       resolver,
       target: "focused",
     });
@@ -258,6 +270,7 @@ describe("suggestCommanders", () => {
   it("offers candidates from the engine's legal commander pool", async () => {
     const results = await suggestCommanders(baseCards, {
       engine: makeEngine(),
+      customization: DEFAULT_CUSTOMIZATION,
       resolver,
     });
     expect(results.map((r) => r.card.name)).toContain("Eligible Elf Lord");
@@ -266,6 +279,7 @@ describe("suggestCommanders", () => {
   it("never offers one of the base cards as a commander candidate", async () => {
     const results = await suggestCommanders(baseCards, {
       engine: makeEngine(),
+      customization: DEFAULT_CUSTOMIZATION,
       resolver,
     });
     expect(results.map((r) => r.card.name)).not.toContain("Base Elf One");
@@ -287,6 +301,7 @@ describe("suggestCommanders", () => {
     };
     const results = await suggestCommanders(baseCards, {
       engine,
+      customization: DEFAULT_CUSTOMIZATION,
       resolver: {
         resolve: async (names) => {
           resolvedNames = names;
@@ -319,11 +334,47 @@ describe("suggestCommanders", () => {
     };
     const results = await suggestCommanders([...baseCards, blueBase], {
       engine,
+      customization: DEFAULT_CUSTOMIZATION,
       resolver: makeResolver([broad, exact]),
     });
     expect(results.map(({ card }) => card.name)).toEqual([
       "Exact Simic Elf",
       "Five Color Elf",
+    ]);
+  });
+  it("leaves out planeswalker and dungeon commanders unless they are turned on", async () => {
+    const pool = [
+      card({ name: "Plain Elf Lord", typeLine: "Legendary Creature — Elf" }),
+      card({ name: "Walker Commander", typeLine: "Legendary Planeswalker — Elf" }),
+      card({
+        name: "Dungeon Delver",
+        typeLine: "Legendary Creature — Elf",
+        oracleText: "When this creature enters, venture into the dungeon.",
+      }),
+    ];
+    const engine: DraftEngine = {
+      commanderCandidates: async () => pool.map(commanderData),
+      rankCardCandidates: async () => ranking([]),
+      resolveCards: async () => [],
+    };
+    const poolResolver = makeResolver([...baseCards, ...pool]);
+
+    const byDefault = await suggestCommanders(baseCards, {
+      engine,
+      customization: DEFAULT_CUSTOMIZATION,
+      resolver: poolResolver,
+    });
+    const allowed = await suggestCommanders(baseCards, {
+      engine,
+      customization: { planeswalkers: true, dungeons: true },
+      resolver: poolResolver,
+    });
+
+    expect(byDefault.map((r) => r.card.name)).toEqual(["Plain Elf Lord"]);
+    expect(allowed.map((r) => r.card.name).sort()).toEqual([
+      "Dungeon Delver",
+      "Plain Elf Lord",
+      "Walker Commander",
     ]);
   });
 });
@@ -362,6 +413,7 @@ describe("suggestCommanders color identity coverage", () => {
 
     const results = await suggestCommanders(baseCards, {
       engine: makeEngine([offColor, covering]),
+      customization: DEFAULT_CUSTOMIZATION,
       resolver,
     });
     const names = results.map((r) => r.card.name);
@@ -381,6 +433,7 @@ describe("suggestCommanders color identity coverage", () => {
 
     const results = await suggestCommanders(baseCards, {
       engine: makeEngine([partnerCommander]),
+      customization: DEFAULT_CUSTOMIZATION,
       resolver,
     });
     expect(results.map((r) => r.card.name)).toContain("Green Choose-a-Background Commander");
@@ -398,6 +451,7 @@ describe("suggestCommanders color identity coverage", () => {
 
     const results = await suggestCommanders(baseCards, {
       engine: makeEngine([offColorPartner]),
+      customization: DEFAULT_CUSTOMIZATION,
       resolver,
     });
     expect(results.map((r) => r.card.name)).not.toContain(
@@ -416,6 +470,7 @@ describe("suggestCommanders color identity coverage", () => {
 
     const results = await suggestCommanders(baseCards, {
       engine: makeEngine([plainGreenCommander]),
+      customization: DEFAULT_CUSTOMIZATION,
       resolver,
     });
     expect(results.map((r) => r.card.name)).not.toContain("Plain Green Commander");

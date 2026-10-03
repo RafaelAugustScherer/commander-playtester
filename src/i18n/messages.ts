@@ -907,6 +907,15 @@ export const messages = {
   "draft.summary.archetype": { pt: "Arquétipo: {name}", en: "Archetype: {name}" },
   "draft.summary.bracket": { pt: "Bracket: {tier}", en: "Bracket: {tier}" },
   "draft.summary.bracketTarget": { pt: "Bracket alvo", en: "Bracket target" },
+  "draft.customization.label": { pt: "Personalização", en: "Customization" },
+  "draft.customization.planeswalkers": {
+    pt: "Sugerir planeswalkers",
+    en: "Suggest planeswalkers",
+  },
+  "draft.customization.dungeons": {
+    pt: "Sugerir mecânicas de dungeons",
+    en: "Suggest dungeon mechanics",
+  },
   "draft.tribal.toggle": { pt: "Tribal", en: "Tribal" },
   "draft.tribal.label": { pt: "Tribos", en: "Tribes" },
   "draft.tribal.placeholder": {

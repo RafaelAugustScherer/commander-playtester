@@ -146,7 +146,7 @@ type is not enough: a plain Elf gets no bonus (`deck-draft/ADR-0006`).
 
 ## Tribal mode
 
-A switch beside the `bracket target` that, while on, makes every creature slot offer only
+A switch in the draft's `customization` section that, while on, makes every creature slot offer only
 creatures of the tribes the author picks (a Changeling counts as every tribe), and gives
 cards that name one of them or are Kindred of one a bonus in any slot. The author picks
 the tribes by hand; turning it off keeps them for later (`deck-draft/ADR-0006`).
@@ -155,6 +155,17 @@ the tribes by hand; turning it off keeps them for later (`deck-draft/ADR-0006`).
 - **Status:** draft
 - **Example:** Tribal mode on with Elf and Druid offers only Elves and Druids in creature
   slots, and favours Elvish Promenade in a sorcery slot.
+
+## Customization
+
+The draft's section below the `bracket target` for what the author wants offered: the
+`tribal mode` switch, plus **Suggest planeswalkers** and **Suggest dungeon mechanics**, both
+off by default. With a switch off, those cards are never offered, commander round included.
+
+- **Aliases:** personalização
+- **Status:** draft
+- **Example:** With both new switches off, an Atraxa draft is never offered a planeswalker
+  or a card that takes the initiative.
 
 ## Draft session
 

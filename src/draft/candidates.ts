@@ -9,6 +9,7 @@ import { fetchCardsCached } from "../lib/scryfallCache";
 import { extractThemeProfile, type ThemeProfile } from "./themes";
 import { scoreCandidate, type CandidateScore } from "./scoring";
 import type { BracketTarget } from "./bracket";
+import { isSuggestable, type DraftCustomization } from "./customization";
 import { draftCandidateCard } from "./localCandidates";
 import type { DraftCardType, TypeBalance } from "./typeBalance";
 
@@ -78,6 +79,7 @@ export interface SuggestCandidatesOptions {
   engine: DraftEngine;
   resolver: CardResolver;
   target: BracketTarget;
+  customization: DraftCustomization;
   /** Names to leave out beyond the deck's own cards (e.g. shown-this-round), lowercase or not. */
   exclude?: Set<string>;
   slotTypes?: DraftCardType[];
@@ -93,7 +95,7 @@ export async function suggestCandidates(
   profile: ThemeProfile,
   opts: SuggestCandidatesOptions,
 ): Promise<SuggestedRound> {
-  const { engine, resolver, target } = opts;
+  const { engine, resolver, target, customization } = opts;
   const excluded = new Set(
     [...deck.commanders, ...deck.mainboard, ...(opts.exclude ?? [])].map((n) =>
       n.toLowerCase(),
@@ -108,6 +110,7 @@ export async function suggestCandidates(
       creatureTypes: [...profile.creatureTypes],
     },
     target,
+    customization,
     exclude: [...excluded],
     slotTypes: opts.slotTypes,
   });
@@ -126,6 +129,7 @@ export async function suggestCandidates(
 export interface SuggestCommandersOptions {
   engine: DraftEngine;
   resolver: CardResolver;
+  customization: DraftCustomization;
   exclude?: Set<string>;
 }
 
@@ -168,7 +172,10 @@ export async function suggestCommanders(
   const ranked = (await engine.commanderCandidates())
     .map(draftCandidateCard)
     .filter(
-      (card) => !excluded.has(card.name.toLowerCase()) && coversBaseCards(card),
+      (card) =>
+        !excluded.has(card.name.toLowerCase()) &&
+        coversBaseCards(card) &&
+        isSuggestable(card, opts.customization),
     )
     .map((card) => {
       const score = scoreCandidate(card, profile);
