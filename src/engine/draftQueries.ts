@@ -60,6 +60,7 @@ export interface EngineThemeProfile {
   creatureTypes: Array<[string, number]>;
   creatureCount: number;
   tribes: string[];
+  manaAppetite: number;
 }
 
 export interface RankCardCandidatesInput {

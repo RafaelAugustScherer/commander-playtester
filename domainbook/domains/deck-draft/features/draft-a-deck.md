@@ -178,6 +178,43 @@ Example: An incidental tribe barely counts
   Then its tribal bonus is a third of an Elf lord's in a deck with five Elves in eight
 ```
 
+## Rule: Ramp rises with the deck's mana appetite
+
+Ramp is scored on its own, not through `theme token`s: a commander that adds mana does not
+make other mana cards fit its theme. What ramp is worth follows the deck's `mana appetite`
+— its average spend, counting each card's priciest activated ability and the commander
+three times. A deck whose appetite is low gets no ramp bonus; above that the bonus grows
+until the appetite is high. Cheap ramp gets the whole bonus, three-mana ramp half and
+four-mana ramp none. Ramp whose mana grows with a tribe the deck has gets more. The bonus
+fades as the deck's ramp count nears ten (`deck-draft/ADR-0009`).
+
+Only lasting ramp counts: a mana ability on a permanent, an extra land drop each turn, or
+a land put onto the battlefield, even by a sorcery. Treasure-only cards and one-shot spells
+that only make Treasure get no ramp bonus; Treasure decks still find them through the
+`treasure` token.
+
+```gherkin
+Example: An expensive commander is offered cheap ramp
+  Given a draft whose commander is "Voja, Jaws of the Conclave"
+  When sorceries are ranked
+  Then "Rampant Growth", "Farseek" and "Nature's Lore" lead them
+
+Example: Ramp that grows with the tribe outranks plain ramp
+  Given an Elf deck with a four-mana commander
+  When "Priest of Titania" and "Elvish Mystic" are scored
+  Then "Priest of Titania" gets the larger ramp bonus
+
+Example: A cheap deck gets no ramp bonus
+  Given a deck whose commander and cards cost two mana or less
+  When "Sol Ring" is scored
+  Then it gets no ramp bonus
+
+Example: Incidental Treasure is not ramp
+  Given a deck with a high mana appetite
+  When an artifact that only creates Treasure tokens is scored
+  Then it gets no ramp bonus
+```
+
 ## Rule: Tribal mode keeps creature slots on the chosen tribes
 
 In the `customization` section below the bracket target, a **Tribal** switch turns on

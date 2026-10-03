@@ -12,6 +12,20 @@ depth live there. A purely-internal PR that touches no product or architecture m
 skip its version with a `Skip-Docs: <reason>` trailer instead. There are no
 per-domain changelogs; this file is the single timeline (`ADR-0007`).
 
+## [0.33.0] - 2026-10-03
+
+### Changed
+
+- Draft suggestions score ramp by the deck's mana appetite (commander cost, curve and
+  costly activated abilities): cheap, lasting ramp rises in expensive decks, and ramp that
+  grows with the deck's tribe rises most (`deck-draft/ADR-0009`).
+
+### Fixed
+
+- Ramp is recognised in more wordings: "add one mana", "add an amount of", tapping other
+  creatures for mana, and searches for a basic land type such as Forest
+  (`domains/deck-draft/features/draft-a-deck.md`).
+
 ## [0.32.0] - 2026-10-03
 
 ### Changed

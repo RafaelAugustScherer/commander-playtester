@@ -22,6 +22,25 @@ describe("classifyRoles", () => {
     expect(roles).toContain("ramp");
   });
 
+  it.each([
+    ["{T}: Add one mana of any color in your commander's color identity.", "Artifact", 2],
+    ["{T}: Add an amount of {G} equal to this creature's power.", "Creature — Elf Druid", 3],
+    ["{T}, Tap an untapped creature you control: Add one mana of any color.", "Creature — Elf", 1],
+  ])("flags a mana producer worded %j as ramp", (oracleText, typeLine, manaValue) => {
+    expect(classifyRoles({ typeLine, oracleText, manaValue, producedMana: [] })).toContain("ramp");
+  });
+
+  it("flags a search for a basic land type as ramp", () => {
+    const roles = classifyRoles({
+      typeLine: "Sorcery",
+      oracleText:
+        "Search your library for a Forest card, put that card onto the battlefield, then shuffle.",
+      manaValue: 2,
+      producedMana: [],
+    });
+    expect(roles).toContain("ramp");
+  });
+
   it("flags a land-fetch spell as ramp", () => {
     const roles = classifyRoles({
       typeLine: "Sorcery",

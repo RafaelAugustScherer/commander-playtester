@@ -34,7 +34,9 @@ function isRamp(
   // Mana rocks / dorks: a non-land permanent that taps for mana.
   const producesMana = input.producedMana.length > 0;
   const tapsForMana =
-    /\{t\}[^.]*add \{/.test(text) || /add \{[wubrgc]/.test(text);
+    /\{t\}[^.]*\badd\b/.test(text) ||
+    /\badd \{[wubrgc]/.test(text) ||
+    /\badd (?:one|two|three|x|an amount of)\b/.test(text);
   const isCheapPermanent =
     /Artifact|Creature|Enchantment/.test(input.typeLine) &&
     input.manaValue <= 4;
@@ -42,7 +44,10 @@ function isRamp(
   if (isCheapPermanent && (producesMana || tapsForMana)) return true;
 
   // Land ramp: "search your library for a ... land ... put ... onto the battlefield".
-  if (/search your library for .*land/.test(text) && /battlefield/.test(text)) {
+  if (
+    /search your library for .*(?:land|forest|plains|island|swamp|mountain)/.test(text) &&
+    /battlefield/.test(text)
+  ) {
     return true;
   }
 

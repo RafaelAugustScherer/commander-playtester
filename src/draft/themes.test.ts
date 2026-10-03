@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { extractThemeProfile, COMMANDER_WEIGHT, REWARD_WEIGHT } from "./themes";
+import { activationMana, extractThemeProfile, COMMANDER_WEIGHT, REWARD_WEIGHT } from "./themes";
 import type { Card } from "../lib/types";
 
 function card(overrides: Partial<Card> = {}): Card {
@@ -100,5 +100,37 @@ describe("extractThemeProfile", () => {
     expect(profile.tokenWeights.size).toBe(0);
     expect(profile.curve.every((n) => n === 0)).toBe(true);
     expect(profile.colorIdentity).toEqual([]);
+  });
+
+  describe("mana appetite", () => {
+    it("averages nonland mana values with the commander counted COMMANDER_WEIGHT times", () => {
+      const commander = card({ manaValue: 6 });
+      const others = [card({ manaValue: 2 }), card({ manaValue: 0, typeLine: "Land" })];
+      const profile = extractThemeProfile([commander], others);
+      expect(profile.manaAppetite).toBe((6 * COMMANDER_WEIGHT + 2) / (COMMANDER_WEIGHT + 1));
+    });
+
+    it("counts a card's priciest activated ability when it costs more than the card", () => {
+      const sink = card({ manaValue: 2, oracleText: "{5}{G}{G}: Creatures you control get +2/+2." });
+      expect(extractThemeProfile([], [sink]).manaAppetite).toBe(7);
+    });
+
+    it("is 0 for a deck without nonland cards", () => {
+      expect(extractThemeProfile([], []).manaAppetite).toBe(0);
+    });
+  });
+});
+
+describe("activationMana", () => {
+  it.each([
+    ["{2}{G}, {T}: Add {G}{G}.", 3],
+    ["{X}{R}: Deal X damage to any target.", 4],
+    ["{G/W}{G/W}: Untap it.", 2],
+    ["{T}: Add {G}.", 0],
+    ["+1: Draw a card.", 0],
+    ["Flying", 0],
+    ["When this enters, choose one: draw a card; or gain 3 life.", 0],
+  ])("reads %j as %d", (line, mana) => {
+    expect(activationMana(line)).toBe(mana);
   });
 });

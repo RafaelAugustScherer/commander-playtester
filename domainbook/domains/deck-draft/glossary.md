@@ -92,12 +92,23 @@ The self-built ranking of a candidate card against the cards already in the deck
 sum of the `theme token`s it shares (with `commander weighting` applied, and each token
 strengthened when a repeatable or every-opponent clause carries it,
 `deck-draft/ADR-0008`), plus fit for
-the deck's role gaps and mana curve, plus a `tribal payoff` bonus, plus the `bracket
+the deck's role gaps and mana curve, plus a ramp bonus set by its `mana appetite`
+(`deck-draft/ADR-0009`), plus a `tribal payoff` bonus, plus the `bracket
 target` tilt, plus a small tilt toward more-played cards by reprint count
 (`deck-draft/ADR-0002`). The engine supplies
 no such score; this context owns it (`deck-draft/ADR-0001`).
 
 - **Status:** draft
+
+## Mana appetite
+
+How much mana a deck wants to spend: the average, over its nonland cards, of the higher of
+each card's mana value and its priciest activated ability, with the commander counted three
+times. It sets how much a ramp card is worth in the `synergy score` (`deck-draft/ADR-0009`).
+
+- **Status:** draft
+- **Example:** Lathril (4) with Elvish Warmaster, whose pump costs seven, and a two-drop
+  has an appetite of 4.2.
 
 ## Theme token
 

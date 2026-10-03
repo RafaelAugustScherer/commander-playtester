@@ -1,5 +1,6 @@
 import type { Card } from "../lib/types";
 import type { ThemeProfile } from "./themes";
+import { rulesLines } from "./lands";
 import { cardTokens, namedTribes, servesTribe, tokenStrengths } from "./tokens";
 
 const CURVE_FIT_WEIGHT = 2;
@@ -10,12 +11,24 @@ const TRIBAL_PAYOFF_WEIGHT = 6;
 const TRIBAL_SATURATION = 3;
 // Tribal mode: what a card that names or is Kindred of a selected tribe gets.
 const SELECTED_TRIBE_WEIGHT = 5;
+export const RAMP_WEIGHT = 25;
+export const RAMP_APPETITE_THRESHOLD = 2.5;
+const RAMP_APPETITE_SPAN = 2;
+const RAMP_TOO_SLOW_MV = 4;
+const RAMP_CHEAP_MV = 2;
+const RAMP_TARGET = 10;
+const TRIBAL_RAMP_STRENGTH = 1.5;
+const ONE_SHOT_SPELL = /\b(?:Instant|Sorcery)\b/;
+const LAND_TO_BATTLEFIELD = /\bsearch your library for\b[^.]*\bonto the battlefield\b/i;
+const MANA_ABILITY = /\badd (?:\{[WUBRGC]|one mana|two mana|three mana|x mana|an amount of)/i;
+const EXTRA_LAND = /\bplay (?:an|two|three) additional lands?\b/i;
 
 export interface CandidateScore {
   total: number;
   themeScore: number;
   curveScore: number;
   roleScore: number;
+  rampScore: number;
   tribalScore: number;
   /** Tokens the candidate shares with the deck's profile, for rationale chips. */
   matchedTokens: string[];
@@ -24,20 +37,23 @@ export interface CandidateScore {
 /**
  * Score a candidate's fit against a deck's `ThemeProfile`: shared theme
  * tokens, plus a term for filling thin spots in the mana curve, plus a term
- * for filling role gaps, plus a term for rewarding a tribe the deck already
- * has. Pure and deterministic.
+ * for filling role gaps, plus a term for ramp the deck's mana appetite calls
+ * for, plus a term for rewarding a tribe the deck already has. Pure and
+ * deterministic.
  */
 export function scoreCandidate(card: Card, profile: ThemeProfile): CandidateScore {
   const { themeScore, matchedTokens } = themeFit(card, profile);
   const curveScore = curveFit(card, profile);
   const roleScore = roleGapFit(card, profile);
+  const rampScore = rampFit(card, profile);
   const tribalScore = tribalPayoffFit(card, profile);
 
   return {
-    total: themeScore + curveScore + roleScore + tribalScore,
+    total: themeScore + curveScore + roleScore + rampScore + tribalScore,
     themeScore,
     curveScore,
     roleScore,
+    rampScore,
     tribalScore,
     matchedTokens,
   };
@@ -72,10 +88,38 @@ function curveFit(card: Card, profile: ThemeProfile): number {
 function roleGapFit(card: Card, profile: ThemeProfile): number {
   let roleScore = 0;
   for (const role of card.roles) {
-    if (role === "other") continue;
+    if (role === "other" || role === "ramp") continue;
     roleScore += ROLE_GAP_WEIGHT / (profile.roleCounts[role] + 1);
   }
   return roleScore;
+}
+
+export function rampFit(card: Card, profile: ThemeProfile): number {
+  if (!isLastingRamp(card)) return 0;
+  const need = clamp01((profile.manaAppetite - RAMP_APPETITE_THRESHOLD) / RAMP_APPETITE_SPAN);
+  const speed = clamp01(
+    (RAMP_TOO_SLOW_MV - card.manaValue) / (RAMP_TOO_SLOW_MV - RAMP_CHEAP_MV),
+  );
+  const tribal = namedTribes(card).some((tribe) => hasTribe(profile, tribe))
+    ? TRIBAL_RAMP_STRENGTH
+    : 1;
+  const room = clamp01(1 - profile.roleCounts.ramp / RAMP_TARGET);
+  return RAMP_WEIGHT * need * speed * tribal * room;
+}
+
+function isLastingRamp(card: Card): boolean {
+  if (!card.roles.includes("ramp")) return false;
+  if (LAND_TO_BATTLEFIELD.test(card.oracleText)) return true;
+  if (ONE_SHOT_SPELL.test(card.typeLine)) return false;
+  return rulesLines(card).some((line) => MANA_ABILITY.test(line) || EXTRA_LAND.test(line));
+}
+
+function hasTribe(profile: ThemeProfile, tribe: string): boolean {
+  return profile.tribes.includes(tribe) || (profile.creatureTypes.get(tribe) ?? 0) > 0;
+}
+
+function clamp01(value: number): number {
+  return Math.max(0, Math.min(1, value));
 }
 
 /**
