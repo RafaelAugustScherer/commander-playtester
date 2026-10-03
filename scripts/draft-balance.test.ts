@@ -9,6 +9,7 @@ import { candidateData, createDraftRanker, type DraftRanker } from "../src/engin
 import { DraftSession } from "../src/draft/draftSession";
 import type { CardResolver, DraftEngine } from "../src/draft/candidates";
 import { draftCandidateCard } from "../src/draft/localCandidates";
+import type { DraftCustomization } from "../src/draft/customization";
 import {
   DRAFT_CARD_TYPES,
   primaryType,
@@ -25,6 +26,7 @@ const CARD_GZ = resolve(ROOT, "public/engine/card-data.json.gz");
 
 const ENABLED = process.env.DRAFT_BALANCE === "1";
 const ONLY = process.env.DRAFT_BALANCE_ONLY?.split("|");
+const EVERYTHING_SUGGESTED: DraftCustomization = { planeswalkers: true, dungeons: true };
 const SEED_CARDS = ["Sol Ring", "Arcane Signet"];
 
 type Row = [string, number, number, number, number, number, number, number];
@@ -136,7 +138,13 @@ describe.skipIf(!ENABLED)("draft type balance against EDHREC average decks", () 
 
   async function draftDeck(commander: string): Promise<{ deck: TypeCounts; onTribe: number }> {
     const session = new DraftSession({ engine, resolver });
-    await session.start([commander, ...SEED_CARDS], commander, "focused");
+    await session.start(
+      [commander, ...SEED_CARDS],
+      commander,
+      "focused",
+      undefined,
+      EVERYTHING_SUGGESTED,
+    );
     const random = seededRandom(commander);
     for (let round = 0; round < 120; round++) {
       const balance = session.balance!;
@@ -197,12 +205,13 @@ describe.skipIf(!ENABLED)("draft type balance against EDHREC average decks", () 
       const [name] = row;
       const reference = counts(row);
       const identity = cardRows.get(name.toLowerCase())?.color_identity ?? [];
-      const baseline = targetMix(zeroCounts(), identity.length, 99).counts;
+      const baseline = targetMix(zeroCounts(), identity.length, 99, true).counts;
       const start = ranker.rankCardCandidates({
         commanders: [name],
         mainboard: [],
         profile: { tokenWeights: [], curve: [], roleCounts: { land: 0, ramp: 0, draw: 0, removal: 0, other: 0 }, colorIdentity: identity, creatureTypes: [], creatureCount: 0, tribes: [] },
         target: "focused",
+        customization: EVERYTHING_SUGGESTED,
         exclude: [name.toLowerCase()],
       });
       const { deck, onTribe } = await draftDeck(name);

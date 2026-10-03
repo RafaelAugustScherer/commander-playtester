@@ -12,6 +12,18 @@ depth live there. A purely-internal PR that touches no product or architecture m
 skip its version with a `Skip-Docs: <reason>` trailer instead. There are no
 per-domain changelogs; this file is the single timeline (`ADR-0007`).
 
+## [0.31.0] - 2026-10-03
+
+### Fixed
+
+- Draft suggestions now read more ways of tapping creatures ("tap target artifact,
+  creature, or land", "tapped creature target opponent controls", "becomes tapped"
+  payoffs), so Opposition, Borrowing 100,000 Arrows and Verity Circle fit a tap commander
+  (`domains/deck-draft/features/draft-a-deck.md`).
+- Each mechanic's suggestion pool keeps its most-played cards within the deck's colours,
+  instead of losing on-colour fits to popular cards of other colours
+  (`domains/deck-draft/features/draft-a-deck.md`).
+
 ## [0.30.0] - 2026-10-03
 
 ### Added

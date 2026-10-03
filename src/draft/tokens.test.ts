@@ -112,6 +112,10 @@ describe("mechanic tokens", () => {
     ["tap creature", "Tap all creatures your opponents control."],
     ["tap creature", "Creatures your opponents control enter tapped."],
     ["tap creature", HYLDA_TEXT],
+    ["tap creature", "Tap an untapped creature you control: Tap target artifact, creature, or land."],
+    ["tap creature", "Tap target artifact or creature."],
+    ["tap creature", "Draw a card for each tapped creature target opponent controls."],
+    ["tap creature", "Whenever a creature an opponent controls becomes tapped, you may draw a card."],
     ["etb", "Whenever another creature you control enters, scry 1."],
     ["etb", "Exile target creature you control, then return that card to the battlefield."],
     ["dies", "Whenever another nontoken creature you control dies, each opponent loses 1 life."],
@@ -138,6 +142,13 @@ describe("mechanic tokens", () => {
   it("does not count tapping your own creature as a cost", () => {
     const tokens = cardTokens(
       card({ oracleText: "Tap an untapped creature you control: Add one mana of any color." }),
+    );
+    expect(tokens).not.toContain("tap creature");
+  });
+
+  it("does not take tapping a list of your own permanents for tapping opponents' creatures", () => {
+    const tokens = themeTokens(
+      card({ oracleText: "Tap target artifact or creature you control: Add {C}." }),
     );
     expect(tokens).not.toContain("tap creature");
   });

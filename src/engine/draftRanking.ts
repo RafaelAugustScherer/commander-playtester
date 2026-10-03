@@ -209,8 +209,9 @@ export function createDraftRanker(
   // A curated oracle-text token searches its own words, then keeps only the
   // rows its pattern really matches, so the slice is the most-played fits
   // rather than every card that happens to say "tap" (deck-draft/ADR-0005).
-  function textCandidates(token: string): DraftCandidateData[] {
-    let candidates = themeCache.get(token);
+  function textCandidates(token: string, identity: string[]): DraftCandidateData[] {
+    const key = `${token}|${[...identity].sort().join("")}`;
+    let candidates = themeCache.get(key);
     if (!candidates) {
       const searches = tokenSearches(token);
       const seen = new Set<string>();
@@ -220,7 +221,11 @@ export function createDraftRanker(
           const name = card.name.toLowerCase();
           if (seen.has(name)) return false;
           seen.add(name);
-          return card.legalities?.commander === "legal" && wholeCardNames.has(name);
+          return (
+            card.legalities?.commander === "legal" &&
+            wholeCardNames.has(name) &&
+            card.color_identity.every((color) => identity.includes(color))
+          );
         })
         .sort((a, b) => popularityBonus(b.name) - popularityBonus(a.name));
       candidates = [];
@@ -231,7 +236,7 @@ export function createDraftRanker(
         if (searches && !cardTokens(draftCandidateCard(candidate)).has(token)) continue;
         candidates.push(candidate);
       }
-      themeCache.set(token, candidates);
+      themeCache.set(key, candidates);
     }
     return candidates;
   }
@@ -275,7 +280,7 @@ export function createDraftRanker(
         subtypeTypes.has(token) && rulesTexts.some((text) => mentionsSubtype(text, token))
           ? subtypeCandidates(token, profile.colorIdentity)
           : [];
-      for (const candidate of [...textCandidates(token), ...tribal]) {
+      for (const candidate of [...textCandidates(token, profile.colorIdentity), ...tribal]) {
         candidates.set(candidate.name.toLowerCase(), candidate);
       }
     }
@@ -289,9 +294,9 @@ export function createDraftRanker(
     return [
       ...profile.tribes.flatMap((tribe) => [
         ...subtypeCandidates(tribe, profile.colorIdentity),
-        ...textCandidates(tribe),
+        ...textCandidates(tribe, profile.colorIdentity),
       ]),
-      ...textCandidates("changeling"),
+      ...textCandidates("changeling", profile.colorIdentity),
     ];
   }
 

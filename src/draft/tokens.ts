@@ -93,8 +93,10 @@ export const ORACLE_TEXT_PATTERNS: OracleTextPattern[] = [
     pattern: [
       /\btap (?:an untapped|(?:another )?target|all|each) (?:\w+ )?(?:creatures?|permanents?)\b(?! you control)/i,
       /\btap (?:up to \w+|any number of) (?:other )?target (?:\w+ )?(?:creatures?|permanents?)\b/i,
-      /\btapped creatures? (?:your opponents|an opponent|defending player) controls?\b/i,
+      /\btap (?:another )?target (?:[\w-]+(?:,| or) )+(?:or )?(?:creatures?|permanents?)\b(?! you control)/i,
+      /\btapped creatures? (?:your opponents|an opponent|target opponent|defending player) controls?\b/i,
       /\bcreatures? (?:your opponents|an opponent) controls? enters? (?:the battlefield )?tapped\b/i,
+      /\bcreatures? (?:your opponents|an opponent) controls? becomes? tapped\b/i,
       /\bdoesn't untap during (?:its|their) controller's untap step\b/i,
     ],
     search: ["tap"],
