@@ -10,9 +10,13 @@ import type {
 } from "./draftQueries";
 import { frontFace } from "../lib/cardName";
 import { bracketTilt } from "../draft/bracket";
-import { rankLocalCandidates, type LocallyRankedCandidate } from "../draft/localCandidates";
+import {
+  draftCandidateCard,
+  rankLocalCandidates,
+  type LocallyRankedCandidate,
+} from "../draft/localCandidates";
 import type { ThemeProfile } from "../draft/themes";
-import { mentionsSubtype } from "../draft/tokens";
+import { cardTokens, mentionsSubtype, tokenSearches } from "../draft/tokens";
 import {
   DRAFT_CARD_TYPES,
   allocateSlots,
@@ -192,22 +196,31 @@ export function createDraftRanker(
     return { target: counts, nonbasicLandTarget: nonbasicLands, have, basicLands };
   }
 
+  // A curated oracle-text token searches its own words, then keeps only the
+  // rows its pattern really matches, so the slice is the most-played fits
+  // rather than every card that happens to say "tap" (deck-draft/ADR-0005).
   function textCandidates(token: string): DraftCandidateData[] {
     let candidates = themeCache.get(token);
     if (!candidates) {
-      candidates = queries
-        .search_cards_js({ text: token, limit: TOKEN_MATCH_SCAN })
-        .results.filter(
-          (card) =>
-            card.legalities?.commander === "legal" &&
-            wholeCardNames.has(card.name.toLowerCase()),
-        )
-        .sort((a, b) => popularityBonus(b.name) - popularityBonus(a.name))
-        .slice(0, THEME_CANDIDATES_PER_TOKEN)
-        .flatMap((card) => {
-          const candidate = candidateData(queries, card);
-          return candidate ? [candidate] : [];
-        });
+      const searches = tokenSearches(token);
+      const seen = new Set<string>();
+      const rows = (searches ?? [token])
+        .flatMap((text) => queries.search_cards_js({ text, limit: TOKEN_MATCH_SCAN }).results)
+        .filter((card) => {
+          const name = card.name.toLowerCase();
+          if (seen.has(name)) return false;
+          seen.add(name);
+          return card.legalities?.commander === "legal" && wholeCardNames.has(name);
+        })
+        .sort((a, b) => popularityBonus(b.name) - popularityBonus(a.name));
+      candidates = [];
+      for (const row of rows) {
+        if (candidates.length >= THEME_CANDIDATES_PER_TOKEN) break;
+        const candidate = candidateData(queries, row);
+        if (!candidate) continue;
+        if (searches && !cardTokens(draftCandidateCard(candidate)).has(token)) continue;
+        candidates.push(candidate);
+      }
       themeCache.set(token, candidates);
     }
     return candidates;

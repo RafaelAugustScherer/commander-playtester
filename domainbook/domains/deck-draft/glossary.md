@@ -98,9 +98,11 @@ no such score; this context owns it (`deck-draft/ADR-0001`).
 ## Theme token
 
 A signal pulled from a card that the score matches on: a creature subtype (a tribe like
-Goblin), a keyword, or a salient oracle-text phrase (`+1/+1 counter`, `sacrifice`,
-`create ... token`, `landfall`). The set of tokens the heuristic recognises sets its
-ceiling.
+Goblin, from the type line or named in the rules text), a keyword, or a salient
+oracle-text phrase (`+1/+1 counter`, `sacrifice`, `tap creature`, `etb`). The set of tokens
+the heuristic recognises sets its ceiling. A card that only *enables* a token — an enters
+trigger for `etb`, a legendary type line for `legendary` — fits it without adding it to the
+deck's theme (`deck-draft/ADR-0005`).
 
 - **Aliases:** theme signal
 - **Status:** draft
@@ -109,10 +111,13 @@ ceiling.
 
 The rule that `theme token`s coming from the `commander card` count for more than those
 from the other 99 when scoring a candidate, so the commander leads the deck's direction.
+What the commander rewards — the mechanic its "whenever …" trigger conditions name and the
+tribes its text names — counts for more again (`deck-draft/ADR-0005`).
 
 - **Status:** draft
 - **Example:** With an Elf commander, Elf-tribal candidates outrank cards that only match
-  a non-commander theme of equal strength.
+  a non-commander theme of equal strength. Hylda of the Icy Crown's `tap creature` outweighs
+  the `create token` her trigger only pays out.
 
 ## Bracket target
 
