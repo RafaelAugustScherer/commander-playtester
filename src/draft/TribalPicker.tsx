@@ -83,7 +83,7 @@ export function TribePicker({
   }
 
   return (
-    <div className="field" style={{ marginTop: "0.5rem" }}>
+    <div className="field">
       <span className="field__label">{t("draft.tribal.label")}</span>
       {tribal.tribes.length > 0 && (
         <div className="chips" style={{ marginTop: 0, marginBottom: "0.5rem" }}>

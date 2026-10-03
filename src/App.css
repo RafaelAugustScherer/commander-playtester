@@ -317,10 +317,22 @@ body.xpscroll-dragging {
   opacity: 0.6;
 }
 .xp-checkbox__list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(max(240px, calc((100% - 2rem) / 2)), 1fr));
+  gap: 0.5rem 2rem;
+  justify-items: start;
+  align-items: start;
+}
+.xp-checkbox__group {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 0.5rem;
+  justify-self: stretch;
+}
+.xp-checkbox__group > .field {
+  align-self: stretch;
+  margin-bottom: 0;
 }
 .xp-settings__text {
   display: flex;

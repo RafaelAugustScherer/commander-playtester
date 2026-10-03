@@ -21,7 +21,8 @@ per-domain changelogs; this file is the single timeline (`ADR-0007`).
 
 ### Changed
 
-- The draft's customization options are checkboxes, in the style of the settings menu.
+- The draft's customization options are checkboxes, in the style of the settings menu, in
+  two columns when there is room; Tribal comes last, with its tribe field right below it.
 
 ## [0.33.0] - 2026-10-03
 

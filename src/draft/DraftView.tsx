@@ -166,7 +166,6 @@ function DraftCustomizationPicker({
   return (
     <>
       <div className="xp-checkbox__list">
-        <TribalToggle tribal={tribal} disabled={disabled} onChange={onTribalChange} />
         <XpCheckbox
           label={t("draft.customization.planeswalkers")}
           checked={customization.planeswalkers}
@@ -185,8 +184,11 @@ function DraftCustomizationPicker({
           disabled={disabled}
           onChange={(ramp) => onCustomizationChange({ ...customization, ramp })}
         />
+        <div className="xp-checkbox__group">
+          <TribalToggle tribal={tribal} disabled={disabled} onChange={onTribalChange} />
+          <TribePicker tribal={tribal} disabled={disabled} onChange={onTribalChange} />
+        </div>
       </div>
-      <TribePicker tribal={tribal} disabled={disabled} onChange={onTribalChange} />
     </>
   );
 }
