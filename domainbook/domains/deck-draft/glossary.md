@@ -29,11 +29,22 @@ the round and begins the next.
 
 Replacing a single suggested card in the current round with the next best candidate that
 has not been shown this round — of the same `slot type`, and kept as close as possible to
-the card it replaces, so the slot holds its flavour.
+the card it replaces, so the slot holds its flavour. The replaced card joins the
+`blacklist`.
 
 - **Status:** draft
 - **Example:** Refreshing a suggested board wipe offers a different board wipe before an
   unrelated card.
+
+## Blacklist
+
+The cards refreshed away during a draft. None of them is suggested again in that draft, in
+commander rounds or regular ones. The draft keeps it out of view, and it ends with the
+draft.
+
+- **Status:** draft
+- **Example:** Refreshing away Cyclonic Rift keeps it out of every later round of that
+  draft.
 
 ## Type balance
 

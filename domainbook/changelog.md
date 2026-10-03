@@ -12,6 +12,13 @@ depth live there. A purely-internal PR that touches no product or architecture m
 skip its version with a `Skip-Docs: <reason>` trailer instead. There are no
 per-domain changelogs; this file is the single timeline (`ADR-0007`).
 
+## [0.24.0] - 2026-10-03
+
+### Changed
+
+- A card refreshed away in a draft joins a hidden **blacklist** and is never
+  suggested again in that draft (`domains/deck-draft/features/draft-a-deck.md`).
+
 ## [0.23.0] - 2026-10-03
 
 ### Added

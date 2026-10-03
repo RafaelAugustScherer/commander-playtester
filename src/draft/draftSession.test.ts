@@ -316,26 +316,26 @@ describe("DraftSession", () => {
 
 const DRAFT_BASE_NAMES = ["Elvish Champion", "Timberwatch Elf", "Elvish Archer"];
 
+const MIXED_POOL: Card[] = [
+  card({ name: "Fierce Empath", typeLine: "Creature — Elf" }),
+  card({ name: "Opt", typeLine: "Instant" }),
+  card({ name: "Giant Growth", typeLine: "Instant" }),
+  card({ name: "Brainstorm", typeLine: "Instant" }),
+  card({ name: "Rampant Growth", typeLine: "Sorcery" }),
+  card({ name: "Llanowar Elves", typeLine: "Creature — Elf Druid" }),
+  card({ name: "Heritage Druid", typeLine: "Creature — Elf Druid" }),
+];
+
+async function draftingSession(inputs: RankCardCandidatesInput[]): Promise<DraftSession> {
+  const session = new DraftSession({
+    engine: makeEngine({ pool: MIXED_POOL, inputs }),
+    resolver: makeResolver(MIXED_POOL),
+  });
+  await session.start(DRAFT_BASE_NAMES, "Elvish Champion");
+  return session;
+}
+
 describe("DraftSession type-aware refresh", () => {
-  const mixedPool: Card[] = [
-    card({ name: "Fierce Empath", typeLine: "Creature — Elf" }),
-    card({ name: "Opt", typeLine: "Instant" }),
-    card({ name: "Giant Growth", typeLine: "Instant" }),
-    card({ name: "Brainstorm", typeLine: "Instant" }),
-    card({ name: "Rampant Growth", typeLine: "Sorcery" }),
-    card({ name: "Llanowar Elves", typeLine: "Creature — Elf Druid" }),
-    card({ name: "Heritage Druid", typeLine: "Creature — Elf Druid" }),
-  ];
-
-  async function draftingSession(inputs: RankCardCandidatesInput[]): Promise<DraftSession> {
-    const session = new DraftSession({
-      engine: makeEngine({ pool: mixedPool, inputs }),
-      resolver: makeResolver(mixedPool),
-    });
-    await session.start(DRAFT_BASE_NAMES, "Elvish Champion");
-    return session;
-  }
-
   it("carries the engine's slot type onto each round candidate", async () => {
     const session = await draftingSession([]);
     expect(session.round.map((c) => [c.card.name, c.slotType])).toEqual([
@@ -399,6 +399,49 @@ describe("DraftSession type-aware refresh", () => {
     const names = session.round.map((c) => c.card.name);
     expect(new Set(names).size).toBe(names.length);
     expect(session.round.map((c) => c.slotType)).toEqual(["creature", "instant", "instant"]);
+  });
+});
+
+describe("DraftSession refresh blacklist", () => {
+  it("never offers a refreshed-away card again in later rounds", async () => {
+    const inputs: RankCardCandidatesInput[] = [];
+    const session = await draftingSession(inputs);
+
+    await session.refreshSlot(0);
+    await session.refreshSlot(1);
+    const laterRounds: string[] = [];
+    for (let i = 0; i < 2; i++) {
+      await session.addCard(0);
+      laterRounds.push(...session.round.map((c) => c.card.name));
+    }
+
+    expect(laterRounds).not.toContain("Fierce Empath");
+    expect(laterRounds).not.toContain("Opt");
+    expect(inputs[inputs.length - 1].exclude).toEqual(
+      expect.arrayContaining(["fierce empath", "opt"]),
+    );
+  });
+
+  it("does not blacklist a card that no candidate could replace", async () => {
+    const inputs: RankCardCandidatesInput[] = [];
+    const session = await draftingSession(inputs);
+    await session.refreshSlot(0);
+    await session.refreshSlot(1);
+    await session.refreshSlot(1);
+    expect(session.round[1].card.name).toBe("Brainstorm");
+
+    await session.addCard(0);
+
+    expect(inputs[inputs.length - 1].exclude).not.toContain("brainstorm");
+  });
+
+  it("keeps a commander refreshed away out of the drafting rounds", async () => {
+    const session = makeSession();
+    await session.start(BASE_NAMES, null);
+    await session.refreshSlot(1);
+    await session.pickCommander("Elvish Champion");
+
+    expect(session.round.map((c) => c.card.name)).not.toContain("Marwyn, the Nurturer");
   });
 });
 

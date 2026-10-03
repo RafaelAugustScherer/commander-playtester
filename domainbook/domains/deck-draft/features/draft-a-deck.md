@@ -123,8 +123,9 @@ Each `suggestion round` shows exactly three cards whenever at least three legal 
 exist in the card database. Candidates are narrowed, scored, bracket-adjusted, and ranked
 locally before only the three selected cards are fetched for display. Any one can be refreshed
 on its own, replaced by the closest remaining candidate of the same `slot type` that has not
-appeared in this round. Adding a card ends the round. The next ranking rebuilds its profile
-from the commander and every card selected so far.
+appeared in this round. The replaced card joins the `blacklist` and is never suggested again
+in this draft; the blacklist is not shown. Adding a card ends the round. The next ranking
+rebuilds its profile from the commander and every card selected so far.
 
 ```gherkin
 Example: Refresh swaps one slot for a close, unseen card
@@ -134,12 +135,17 @@ Example: Refresh swaps one slot for a close, unseen card
   And the new card has the same slot type
   And no card shown earlier this round reappears
 
+Example: A refreshed-away card never comes back
+  Given the author refreshed a suggestion away
+  When later rounds are offered, commander rounds included
+  Then that card is not suggested again in this draft
+
 Example: Adding a card starts a fresh round
   Given a round showing three suggestions
   When the author adds one of them to the deck
   Then a new round is offered
   And its suggestions are scored against the updated deck
-  And a card is free to appear again in this new round
+  And a card shown but not refreshed away is free to appear again
 
 Example: Commander ranking produces a full round
   Given at least three legal commanders exist in the card database
