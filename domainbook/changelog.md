@@ -12,6 +12,14 @@ depth live there. A purely-internal PR that touches no product or architecture m
 skip its version with a `Skip-Docs: <reason>` trailer instead. There are no
 per-domain changelogs; this file is the single timeline (`ADR-0007`).
 
+## [0.28.0] - 2026-10-03
+
+### Changed
+
+- **Fill basic lands** now completes every missing land, and rounds stop offering lands
+  once the target is met; one-colour decks are offered a few utility lands only, never
+  colour fixers like Command Tower (`deck-draft/ADR-0007`).
+
 ## [0.27.0] - 2026-10-03
 
 ### Added

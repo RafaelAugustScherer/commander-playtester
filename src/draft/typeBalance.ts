@@ -52,7 +52,9 @@ const FOCUS_SIGNAL_SCALE = 4;
 const DECK_SIGNAL_CAP = 6;
 const STRONG_SIGNAL = 3;
 const MEDIUM_SIGNAL = 1;
-const NONBASIC_LAND_SHARE_BY_COLORS = [0.75, 0.25, 0.45, 0.6, 0.65, 0.7];
+// Share of the land target drafted as nonbasic lands, by colour count. One
+// colour keeps a few utility lands; the rest are basics (`deck-draft/ADR-0007`).
+const NONBASIC_LAND_SHARE_BY_COLORS = [0.75, 0.15, 0.45, 0.6, 0.65, 0.7];
 
 const NONCREATURE_SPELL_TYPES: DraftCardType[] = [
   "instant",
@@ -285,6 +287,9 @@ export function allocateSlots(
   count: number,
   eligible: readonly DraftCardType[],
 ): DraftCardType[] {
+  // Once the lands reach their target (basics filled), rounds stop offering lands.
+  const landFull = balance.have.land >= balance.target.land;
+  eligible = landFull ? eligible.filter((type) => type !== "land") : eligible;
   if (eligible.length === 0) return [];
   const slotTarget = { ...balance.target, land: balance.nonbasicLandTarget };
   const drafted = { ...balance.have, land: balance.have.land - balance.basicLands };
@@ -314,11 +319,15 @@ export function allocateSlots(
   return slots;
 }
 
+/**
+ * How many basic lands the fill adds: every land still missing from the target
+ * once the nonbasic lands already drafted are counted, never past the deck's
+ * open slots (`deck-draft/ADR-0007`).
+ */
 export function basicLandCount(balance: TypeBalance, openSlots: number): number {
   const nonbasicLands = balance.have.land - balance.basicLands;
-  const planned =
-    balance.target.land - Math.max(nonbasicLands, balance.nonbasicLandTarget);
-  return Math.max(0, Math.min(planned, openSlots));
+  const missing = balance.target.land - nonbasicLands;
+  return Math.max(0, Math.min(missing, openSlots));
 }
 
 export function basicLandSplit(

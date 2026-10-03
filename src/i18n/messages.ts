@@ -938,8 +938,8 @@ export const messages = {
   "draft.balance.chip": { pt: "{type} {have}/{target}", en: "{type} {have}/{target}" },
   "draft.balance.fillLands": { pt: "Completar terrenos básicos", en: "Fill basic lands" },
   "draft.balance.fillLandsHint": {
-    pt: "Completa os terrenos até a meta, deixando espaço para os terrenos não básicos que ainda serão sugeridos. Pode ser clicado de novo para recalcular.",
-    en: "Tops lands up to the target, leaving room for the nonbasic lands still to be suggested. Press again to recalculate.",
+    pt: "Completa com básicos todos os terrenos que faltam até a meta; depois disso, as rodadas param de sugerir terrenos. Pode ser clicado de novo para recalcular.",
+    en: "Fills every land still missing up to the target with basics; after that, rounds stop suggesting lands. Press again to recalculate.",
   },
   "draft.slot.land": { pt: "Vaga de terreno", en: "Land slot" },
   "draft.slot.creature": { pt: "Vaga de criatura", en: "Creature slot" },

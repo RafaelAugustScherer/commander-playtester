@@ -169,3 +169,34 @@ describe("createDraftRanker tribal mode", () => {
   });
 });
 
+
+describe("createDraftRanker land slots", () => {
+  const COMMAND_TOWER: FakeCard = {
+    name: "Command Tower",
+    coreTypes: ["Land"],
+    oracleText: "{T}: Add one mana of any color in your commander's color identity.",
+    printings: 40,
+  };
+  const ROGUES_PASSAGE: FakeCard = {
+    name: "Rogue's Passage",
+    coreTypes: ["Land"],
+    oracleText: "{T}: Add {C}.\n{4}, {T}: Target creature can't be blocked this turn.",
+    printings: 2,
+  };
+
+  it("offers a one-colour deck utility lands, not colour fixers", () => {
+    const { queries, cardDataJson } = fakeEngine([HYLDA, COMMAND_TOWER, ROGUES_PASSAGE]);
+    const ranker = createDraftRanker(queries, cardDataJson);
+
+    const { candidates } = ranker.rankCardCandidates({
+      commanders: [HYLDA.name],
+      mainboard: [],
+      profile: hyldaProfile(),
+      target: "focused",
+      exclude: [HYLDA.name.toLowerCase()],
+      slotTypes: ["land", "land"],
+    });
+
+    expect(candidates.map((c) => c.name)).toEqual([ROGUES_PASSAGE.name]);
+  });
+});

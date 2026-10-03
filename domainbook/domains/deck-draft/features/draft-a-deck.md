@@ -295,17 +295,27 @@ Example: A type the deck is short of takes the next slot
 ## Rule: Basic lands are filled in one step
 
 Rounds suggest only nonbasic lands, up to a share of the land target that grows with the
-number of colours. **Fill basic lands** adds the rest as basics — enough to reach the land
-target with the planned nonbasic lands still to come, never past 100 cards — split across
-the commander's colours in proportion to the deck's cards. A colourless deck gets Wastes.
-Pressing it again replaces the earlier basics instead of adding more. Basics are the only
-cards a draft holds more than one copy of.
+number of colours. A one-colour deck has nothing to fix, so its few land slots offer only
+lands that do something besides make or find mana — Rogue's Passage, Bojuka Bog — never
+Command Tower or Evolving Wilds (`deck-draft/ADR-0007`). **Fill basic lands** fills every
+land still missing from the target with basics, counting the nonbasic lands already
+drafted and never going past 100 cards, split across the commander's colours in proportion
+to the deck's cards. Once the lands reach their target, rounds stop offering land slots. A
+colourless deck gets Wastes. Pressing it again replaces the earlier basics instead of adding
+more. Basics are the only cards a draft holds more than one copy of.
 
 ```gherkin
 Example: Filling basics completes the land count
-  Given a two-colour draft whose land target is 35 with 16 nonbasic lands planned
+  Given a two-colour draft whose land target is 35 with 6 nonbasic lands drafted
   When the author fills basic lands
-  Then 19 basic lands are added, split by the deck's two colours
+  Then 29 basic lands are added, split by the deck's two colours
+  And later rounds offer no land slots
+
+Example: A one-colour deck is offered utility lands only
+  Given a draft whose commander is "Krenko, Mob Boss"
+  When a round offers a land slot
+  Then the land does something besides make or find mana, like "Rogue's Passage"
+  And "Command Tower" is never offered
 
 Example: Filling twice does not stack
   Given a draft that has already filled basic lands
