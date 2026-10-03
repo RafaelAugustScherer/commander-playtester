@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { RAMP_WEIGHT } from "./rampScore";
 import { scoreCandidate } from "./scoring";
 import { extractThemeProfile } from "./themes";
 import type { Card } from "../lib/types";
@@ -67,19 +68,19 @@ describe("scoreCandidate", () => {
 
   it("favors a candidate filling a role the deck is short on", () => {
     const others = [
-      card({ roles: ["ramp"] }),
-      card({ roles: ["ramp"] }),
-      card({ roles: ["ramp"] }),
+      card({ roles: ["removal"] }),
+      card({ roles: ["removal"] }),
+      card({ roles: ["removal"] }),
     ];
     const profile = extractThemeProfile([], others);
 
     const drawCandidate = card({ roles: ["draw"] });
-    const rampCandidate = card({ roles: ["ramp"] });
+    const removalCandidate = card({ roles: ["removal"] });
 
     const drawScore = scoreCandidate(drawCandidate, profile);
-    const rampScore = scoreCandidate(rampCandidate, profile);
+    const removalScore = scoreCandidate(removalCandidate, profile);
 
-    expect(drawScore.roleScore).toBeGreaterThan(rampScore.roleScore);
+    expect(drawScore.roleScore).toBeGreaterThan(removalScore.roleScore);
   });
 
   it("gives no role-gap credit for the catch-all 'other' role", () => {
@@ -144,6 +145,119 @@ describe("scoreCandidate", () => {
       expect(scoreCandidate(kindred, on).tribalScore).toBeGreaterThan(0);
       expect(scoreCandidate(lord, on).tribalScore).toBeGreaterThan(0);
       expect(scoreCandidate(vanilla, on).tribalScore).toBe(0);
+    });
+  });
+
+  describe("ramp", () => {
+    const tapForG = "{T}: Add {G}.";
+    const dork = card({ name: "Dork", manaValue: 1, roles: ["ramp"], oracleText: tapForG });
+    const rampScoreIn = (
+      commanderMv: number,
+      candidate = dork,
+      others: Card[] = [],
+      colorIdentity = ["G"],
+    ) =>
+      scoreCandidate(
+        candidate,
+        extractThemeProfile(
+          [card({ name: "Commander", manaValue: commanderMv, colorIdentity })],
+          others,
+        ),
+      ).rampScore;
+
+    it("gives nothing while the deck's mana appetite is low", () => {
+      expect(rampScoreIn(2)).toBe(0);
+    });
+
+    it("grows with the commander's mana value up to RAMP_WEIGHT", () => {
+      expect(rampScoreIn(4)).toBeGreaterThan(rampScoreIn(3));
+      expect(rampScoreIn(7)).toBe(RAMP_WEIGHT);
+    });
+
+    it("favors cheap ramp and gives slow ramp nothing", () => {
+      const slow = card({ name: "Slow", manaValue: 3, roles: ["ramp"], oracleText: tapForG });
+      const big = card({ name: "Big", manaValue: 4, roles: ["ramp"], oracleText: tapForG });
+      expect(rampScoreIn(7, slow)).toBeLessThan(rampScoreIn(7));
+      expect(rampScoreIn(7, big)).toBe(0);
+    });
+
+    it("counts a spell that puts a land onto the battlefield but not one-shot or Treasure-only ramp", () => {
+      const landSearch = card({
+        name: "Land Search",
+        typeLine: "Sorcery",
+        roles: ["ramp"],
+        oracleText:
+          "Search your library for a basic land card, put that card onto the battlefield tapped, then shuffle.",
+      });
+      const ritualTreasure = card({
+        name: "One Shot",
+        typeLine: "Instant",
+        roles: ["ramp"],
+        oracleText: "Draw a card, then create a Treasure token.",
+      });
+      const treasureOnly = card({
+        name: "Treasure Maker",
+        typeLine: "Artifact",
+        roles: ["ramp"],
+        oracleText:
+          "Whenever you draw your second card each turn, create a Treasure token. (It's an artifact with \"{T}, Sacrifice this artifact: Add one mana of any color.\")",
+      });
+      expect(rampScoreIn(7, landSearch)).toBe(RAMP_WEIGHT);
+      expect(rampScoreIn(7, ritualTreasure)).toBe(0);
+      expect(rampScoreIn(7, treasureOnly)).toBe(0);
+    });
+
+    it("favors ramp that scales with a tribe the deck has", () => {
+      const priest = card({
+        name: "Priest",
+        manaValue: 1,
+        roles: ["ramp"],
+        oracleText: "{T}: Add {G} for each Elf on the battlefield.",
+      });
+      const elves = [card({ name: "Elf", typeLine: "Creature — Elf" })];
+      expect(rampScoreIn(5, priest, elves)).toBeGreaterThan(rampScoreIn(5, dork, elves));
+    });
+
+    it("grows the tribe bonus with the tribe, only for a tribe its mana names", () => {
+      const priest = card({
+        name: "Priest",
+        manaValue: 1,
+        roles: ["ramp"],
+        oracleText: "{T}: Add {G} for each Elf on the battlefield.",
+      });
+      const elfMention = card({
+        name: "Mention",
+        manaValue: 1,
+        roles: ["ramp"],
+        oracleText: "Other Elves you control get +1/+1.\n{T}: Add {G}.",
+      });
+      const elves = (n: number) =>
+        Array.from({ length: n }, (_, i) => card({ name: `Elf ${i}`, manaValue: 5, typeLine: "Creature — Elf" }));
+      expect(rampScoreIn(5, priest, elves(6))).toBeGreaterThan(rampScoreIn(5, priest, elves(1)));
+      expect(rampScoreIn(5, elfMention, elves(6))).toBe(rampScoreIn(5, dork, elves(6)));
+    });
+
+    it("follows the deck's ramp pace instead of its raw ramp count", () => {
+      const ramp = (n: number) =>
+        Array.from({ length: n }, (_, i) => card({ name: `Ramp ${i}`, roles: ["ramp"], oracleText: tapForG }));
+      const spells = (n: number) =>
+        Array.from({ length: n }, (_, i) => card({ name: `Spell ${i}`, manaValue: 7 }));
+      expect(rampScoreIn(7, dork, ramp(3))).toBe(0);
+      expect(rampScoreIn(7, dork, [...ramp(5), ...spells(20)])).toBeGreaterThan(0);
+      expect(rampScoreIn(7, dork, [...ramp(5), ...spells(20)])).toBeLessThan(
+        rampScoreIn(7, dork, spells(20)),
+      );
+    });
+
+    it("gives creature ramp a quarter in a deck without green, and other ramp all of it", () => {
+      const rock = card({ name: "Rock", typeLine: "Artifact", roles: ["ramp"], oracleText: tapForG });
+      expect(rampScoreIn(7, dork, [], ["B"])).toBe(RAMP_WEIGHT / 4);
+      expect(rampScoreIn(7, rock, [], ["B"])).toBe(RAMP_WEIGHT);
+    });
+
+    it("leaves ramp out of the role-gap term", () => {
+      const profile = extractThemeProfile([card({ name: "Commander", manaValue: 7 })], []);
+      expect(scoreCandidate(dork, profile).roleScore).toBe(0);
     });
   });
 });

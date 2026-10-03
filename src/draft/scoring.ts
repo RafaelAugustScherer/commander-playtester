@@ -1,13 +1,12 @@
 import type { Card } from "../lib/types";
-import type { ThemeProfile } from "./themes";
+import { rampFit } from "./rampScore";
+import { TRIBAL_SATURATION, type ThemeProfile } from "./themes";
 import { cardTokens, namedTribes, servesTribe, tokenStrengths } from "./tokens";
 
 const CURVE_FIT_WEIGHT = 2;
 const ROLE_GAP_WEIGHT = 2;
-// The tribal payoff bonus at full strength (`deck-draft/ADR-0006`), and how
-// many creatures of a type it takes to get most of the way there.
+// The tribal payoff bonus at full strength (`deck-draft/ADR-0006`).
 const TRIBAL_PAYOFF_WEIGHT = 6;
-const TRIBAL_SATURATION = 3;
 // Tribal mode: what a card that names or is Kindred of a selected tribe gets.
 const SELECTED_TRIBE_WEIGHT = 5;
 
@@ -16,6 +15,7 @@ export interface CandidateScore {
   themeScore: number;
   curveScore: number;
   roleScore: number;
+  rampScore: number;
   tribalScore: number;
   /** Tokens the candidate shares with the deck's profile, for rationale chips. */
   matchedTokens: string[];
@@ -24,20 +24,23 @@ export interface CandidateScore {
 /**
  * Score a candidate's fit against a deck's `ThemeProfile`: shared theme
  * tokens, plus a term for filling thin spots in the mana curve, plus a term
- * for filling role gaps, plus a term for rewarding a tribe the deck already
- * has. Pure and deterministic.
+ * for filling role gaps, plus a term for ramp the deck's mana appetite calls
+ * for, plus a term for rewarding a tribe the deck already has. Pure and
+ * deterministic.
  */
 export function scoreCandidate(card: Card, profile: ThemeProfile): CandidateScore {
   const { themeScore, matchedTokens } = themeFit(card, profile);
   const curveScore = curveFit(card, profile);
   const roleScore = roleGapFit(card, profile);
+  const rampScore = rampFit(card, profile);
   const tribalScore = tribalPayoffFit(card, profile);
 
   return {
-    total: themeScore + curveScore + roleScore + tribalScore,
+    total: themeScore + curveScore + roleScore + rampScore + tribalScore,
     themeScore,
     curveScore,
     roleScore,
+    rampScore,
     tribalScore,
     matchedTokens,
   };
@@ -72,7 +75,7 @@ function curveFit(card: Card, profile: ThemeProfile): number {
 function roleGapFit(card: Card, profile: ThemeProfile): number {
   let roleScore = 0;
   for (const role of card.roles) {
-    if (role === "other") continue;
+    if (role === "other" || role === "ramp") continue;
     roleScore += ROLE_GAP_WEIGHT / (profile.roleCounts[role] + 1);
   }
   return roleScore;

@@ -1,4 +1,5 @@
-import type { Card, CardRole } from "../lib/types";
+import { isLastingRamp, manaSpent } from "../lib/ramp";
+import { isLand, type Card, type CardRole } from "../lib/types";
 import { creatureTypesOf, themeTokens, rewardedTokens } from "./tokens";
 
 /** How many times a commander's tokens count against the same token from the 99. */
@@ -11,6 +12,9 @@ export const COMMANDER_WEIGHT = 3;
  * creatures (`deck-draft/ADR-0005`).
  */
 export const REWARD_WEIGHT = 5;
+
+/** How many creatures of a type it takes to get most of the way to a tribe's full bonus. */
+export const TRIBAL_SATURATION = 3;
 
 /** Number of mana-value buckets in a curve histogram (0..6, plus a 7+ bucket). */
 const CURVE_BUCKETS = 8;
@@ -27,6 +31,9 @@ export interface ThemeProfile {
   creatureCount: number;
   /** The tribes the author selected in tribal mode, lowercase; empty when off. */
   tribes: string[];
+  manaAppetite: number;
+  nonlandCount: number;
+  rampCount: number;
 }
 
 /**
@@ -53,15 +60,31 @@ export function extractThemeProfile(
 
   const creatureTypes = new Map<string, number>();
   let creatureCount = 0;
+  let appetiteSum = 0;
+  let appetiteWeight = 0;
+  let nonlandCount = 0;
+  let rampCount = 0;
 
   for (const card of commanders) {
     addTokenWeights(tokenWeights, themeTokens(card), COMMANDER_WEIGHT);
     addTokenWeights(tokenWeights, rewardedTokens(card), REWARD_WEIGHT);
     addCurveAndRoles(curve, roleCounts, card);
+    if (!isLand(card)) {
+      appetiteSum += COMMANDER_WEIGHT * manaSpent(card);
+      appetiteWeight += COMMANDER_WEIGHT;
+    }
   }
   for (const card of others) {
     addTokenWeights(tokenWeights, themeTokens(card), 1);
     addCurveAndRoles(curve, roleCounts, card);
+    if (isLand(card)) continue;
+    nonlandCount++;
+    if (isLastingRamp(card)) {
+      rampCount++;
+    } else {
+      appetiteSum += manaSpent(card);
+      appetiteWeight++;
+    }
   }
   for (const card of [...commanders, ...others]) {
     if (!/\bCreature\b/.test(card.typeLine)) continue;
@@ -79,6 +102,9 @@ export function extractThemeProfile(
     creatureTypes,
     creatureCount,
     tribes: [...new Set(tribes.map((tribe) => tribe.toLowerCase()))],
+    manaAppetite: appetiteWeight > 0 ? appetiteSum / appetiteWeight : 0,
+    nonlandCount,
+    rampCount,
   };
 }
 

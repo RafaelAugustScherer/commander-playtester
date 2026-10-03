@@ -1,5 +1,6 @@
 import type { Card, CardRole } from "./types";
 import { isLand } from "./types";
+import { rampKind } from "./ramp";
 
 /**
  * Infer card roles from type line + oracle text. These are deliberately
@@ -19,7 +20,7 @@ export function classifyRoles(input: {
   const land = /\bLand\b/.test(typeLine);
   if (land) roles.push("land");
 
-  if (!land && isRamp(input, text)) roles.push("ramp");
+  if (!land && isRamp(input)) roles.push("ramp");
   if (isDraw(text)) roles.push("draw");
   if (isRemoval(text)) roles.push("removal");
 
@@ -27,30 +28,18 @@ export function classifyRoles(input: {
   return roles;
 }
 
-function isRamp(
-  input: { typeLine: string; manaValue: number; producedMana: string[] },
-  text: string,
-): boolean {
-  // Mana rocks / dorks: a non-land permanent that taps for mana.
-  const producesMana = input.producedMana.length > 0;
-  const tapsForMana =
-    /\{t\}[^.]*add \{/.test(text) || /add \{[wubrgc]/.test(text);
+function isRamp(input: {
+  typeLine: string;
+  oracleText: string;
+  manaValue: number;
+  producedMana: string[];
+}): boolean {
+  const kind = rampKind(input);
   const isCheapPermanent =
-    /Artifact|Creature|Enchantment/.test(input.typeLine) &&
-    input.manaValue <= 4;
-
-  if (isCheapPermanent && (producesMana || tapsForMana)) return true;
-
-  // Land ramp: "search your library for a ... land ... put ... onto the battlefield".
-  if (/search your library for .*land/.test(text) && /battlefield/.test(text)) {
-    return true;
-  }
-
-  // Treasure / extra-land effects.
-  if (/create .*treasure token/.test(text)) return true;
-  if (/play an additional land/.test(text)) return true;
-
-  return false;
+    /Artifact|Creature|Enchantment/.test(input.typeLine) && input.manaValue <= 4;
+  if (kind === null) return isCheapPermanent && input.producedMana.length > 0;
+  if (kind === "mana") return isCheapPermanent;
+  return true;
 }
 
 function isDraw(text: string): boolean {

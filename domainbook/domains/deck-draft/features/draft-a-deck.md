@@ -178,6 +178,60 @@ Example: An incidental tribe barely counts
   Then its tribal bonus is a third of an Elf lord's in a deck with five Elves in eight
 ```
 
+## Rule: Ramp rises with the deck's mana appetite and keeps pace with the draft
+
+Ramp is scored on its own, not through `theme token`s: a commander that adds mana does not
+make other mana cards fit its theme. What ramp is worth follows the deck's `mana appetite`
+— its average spend, counting each card's priciest activated ability and the commander
+three times, and leaving the deck's ramp out. A deck whose appetite is low gets no ramp
+bonus; above that the bonus grows until the appetite is high. Cheap ramp gets the whole
+bonus, three-mana ramp half and four-mana ramp none. Ramp whose mana ability names a tribe
+the deck has ("Add {G} for each Elf") gets more, growing with the tribe. In a deck without green, creature ramp gets a quarter: those decks ramp
+with artifacts (`deck-draft/ADR-0009`).
+
+The bonus keeps pace with the draft instead of front-loading: the deck should hold about
+ten ramp cards by its sixty-third nonland card, in proportion along the way. Behind that
+pace ramp gets the whole bonus; ahead of it the bonus fades, and two cards ahead it is gone.
+
+Only lasting ramp counts, both for the bonus and for the pace: a mana ability on a
+permanent that makes more mana than it costs, an extra land drop each turn, or a land put
+onto the battlefield, even by a sorcery. Treasure-only cards, one-shot spells and filters
+that turn one mana into another get no ramp bonus; Treasure decks still find Treasure
+makers through the `treasure` token.
+
+```gherkin
+Example: An expensive commander is offered cheap ramp
+  Given a draft whose commander is "Voja, Jaws of the Conclave"
+  When sorceries are ranked
+  Then "Rampant Growth", "Farseek" and "Nature's Lore" lead them
+
+Example: Ramp is spread across the draft
+  Given an Elf draft under "Lathril, Blade of the Elves" taking the first offer each round
+  When forty rounds are drafted
+  Then ramp is taken in early, middle and late rounds rather than only the first ones
+
+Example: Ramp that grows with the tribe outranks plain ramp
+  Given an Elf deck with a four-mana commander
+  When "Priest of Titania" and "Elvish Mystic" are scored
+  Then "Priest of Titania" gets the larger ramp bonus
+
+Example: A deck without green ramps with artifacts
+  Given a draft whose commander is "K'rrik, Son of Yawgmoth"
+  When creatures and artifacts are ranked
+  Then "Sol Ring", "Arcane Signet" and "Mind Stone" are among the top artifacts
+  And colourless mana creatures such as "Palladium Myr" do not lead the creatures
+
+Example: A cheap deck gets no ramp bonus
+  Given a deck whose commander and cards cost two mana or less
+  When "Sol Ring" is scored
+  Then it gets no ramp bonus
+
+Example: Incidental Treasure and mana filters are not ramp
+  Given a deck with a high mana appetite
+  When an artifact that only creates Treasure tokens and "Prophetic Prism" are scored
+  Then neither gets a ramp bonus
+```
+
 ## Rule: Tribal mode keeps creature slots on the chosen tribes
 
 In the `customization` section below the bracket target, a **Tribal** switch turns on

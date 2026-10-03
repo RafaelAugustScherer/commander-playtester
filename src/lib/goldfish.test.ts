@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { goldfish, analyzeComposition, DEFAULT_CONFIG } from "./goldfish";
+import { classifyRoles } from "./roles";
 import type { Card, ResolvedDeck } from "./types";
 
 function land(): Card {
@@ -46,6 +47,28 @@ describe("analyzeComposition", () => {
     expect(c.ramp).toBe(10);
     // Curve only counts nonland cards.
     expect(c.curve.reduce((a, b) => a + b, 0)).toBe(99 - 38);
+  });
+
+  it("counts as ramp the wordings classifyRoles reads, and not mana filters", () => {
+    const classified = (oracleText: string, typeLine: string): Card => {
+      const base = { typeLine, oracleText, manaValue: 2, producedMana: [] };
+      return {
+        ...base,
+        name: oracleText,
+        colors: [],
+        colorIdentity: [],
+        roles: classifyRoles(base),
+      };
+    };
+    const deck = makeDeck(38, 0);
+    deck.library.splice(
+      0,
+      3,
+      classified("Search your library for a Forest card, put that card onto the battlefield, then shuffle.", "Sorcery"),
+      classified("Whenever enchanted land is tapped for mana, its controller adds an additional {G}.", "Enchantment — Aura"),
+      classified("{1}, {T}: Add one mana of any color.", "Artifact"),
+    );
+    expect(analyzeComposition(deck).ramp).toBe(2);
   });
 });
 

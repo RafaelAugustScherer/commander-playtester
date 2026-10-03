@@ -101,4 +101,30 @@ describe("extractThemeProfile", () => {
     expect(profile.curve.every((n) => n === 0)).toBe(true);
     expect(profile.colorIdentity).toEqual([]);
   });
+
+  describe("mana appetite", () => {
+    it("averages nonland mana values with the commander counted COMMANDER_WEIGHT times", () => {
+      const commander = card({ manaValue: 6 });
+      const others = [card({ manaValue: 2 }), card({ manaValue: 0, typeLine: "Land" })];
+      const profile = extractThemeProfile([commander], others);
+      expect(profile.manaAppetite).toBe((6 * COMMANDER_WEIGHT + 2) / (COMMANDER_WEIGHT + 1));
+    });
+
+    it("counts a card's priciest activated ability when it costs more than the card", () => {
+      const sink = card({ manaValue: 2, oracleText: "{5}{G}{G}: Creatures you control get +2/+2." });
+      expect(extractThemeProfile([], [sink]).manaAppetite).toBe(7);
+    });
+
+    it("leaves lasting ramp out and counts it apart", () => {
+      const rock = card({ manaValue: 1, roles: ["ramp"], oracleText: "{T}: Add {C}{C}." });
+      const profile = extractThemeProfile([], [rock, card({ manaValue: 4 })]);
+      expect(profile.manaAppetite).toBe(4);
+      expect(profile.rampCount).toBe(1);
+      expect(profile.nonlandCount).toBe(2);
+    });
+
+    it("is 0 for a deck without nonland cards", () => {
+      expect(extractThemeProfile([], []).manaAppetite).toBe(0);
+    });
+  });
 });

@@ -116,8 +116,11 @@ Everything that is not a land is a **nonland**. The land/nonland split drives th
 ## Ramp
 
 A card that adds mana or extra lands beyond the one-land-per-turn baseline —
-"acceleration". One of the composition roles the goldfishing engine classifies
-from a card's text, alongside `removal` and card draw.
+"acceleration": a cheap permanent whose mana ability makes more mana than it costs, a
+search that puts a land onto the battlefield, an extra land drop, or a Treasure maker.
+One of the composition roles the goldfishing engine classifies from a card's text,
+alongside `removal` and card draw. The deck draft scores only lasting ramp — not
+Treasure or one-shot spells (`deck-draft/ADR-0009`).
 
 - **Status:** validated
 

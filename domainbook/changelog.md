@@ -12,6 +12,22 @@ depth live there. A purely-internal PR that touches no product or architecture m
 skip its version with a `Skip-Docs: <reason>` trailer instead. There are no
 per-domain changelogs; this file is the single timeline (`ADR-0007`).
 
+## [0.33.0] - 2026-10-03
+
+### Changed
+
+- Draft suggestions score ramp by the deck's mana appetite (commander cost, curve and
+  costly activated abilities): cheap, lasting ramp rises in expensive decks, ramp that grows
+  with the deck's tribe rises most, decks without green ramp with artifacts rather than
+  creatures, and ramp is offered at a steady pace through the draft (`deck-draft/ADR-0009`).
+
+### Fixed
+
+- Ramp is recognised in more wordings, in goldfishing and the draft alike: "add one mana",
+  "add an amount of", ramp Auras ("adds an additional {G}"), two extra land drops, and
+  searches for a basic land type such as Forest. Mana filters such as Prophetic Prism are
+  no longer counted as ramp (`domains/analysis/index.md`).
+
 ## [0.32.0] - 2026-10-03
 
 ### Changed
