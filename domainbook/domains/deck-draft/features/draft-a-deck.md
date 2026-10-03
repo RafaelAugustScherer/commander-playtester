@@ -116,11 +116,21 @@ and other counters, and legendaries. Some cards only *enable* a mechanic — a c
 an enters trigger for a blink deck, a legendary creature for a legends deck. They fit that
 theme without making one: drafting them does not pull the deck toward it.
 
+Tapping creatures includes tapping one from a list of permanent types ("tap target
+artifact, creature, or land"), counting an opponent's tapped creatures, and rewarding an
+opponent's creature becoming tapped. Each mechanic's pool keeps its most-played cards
+within the deck's colour identity, so cards of other colours never crowd out a fit.
+
 ```gherkin
 Example: A tap commander is offered cards that tap creatures
   Given a draft whose commander is "Hylda of the Icy Crown"
   When rounds are suggested
   Then most non-land suggestions tap creatures, such as "Cryptic Command" or "Sleep"
+
+Example: Tapping from a list or counting tapped creatures is tapping
+  Given a draft whose commander is "Hylda of the Icy Crown"
+  When "Opposition" and "Borrowing 100,000 Arrows" are scored
+  Then both fit her tap mechanic
 
 Example: A tribe the commander names is a reward
   Given a draft whose commander is "Kaalia of the Vast"

@@ -12,6 +12,7 @@ interface FakeCard {
   subtypes?: string[];
   oracleText: string;
   printings: number;
+  colorIdentity?: string[];
 }
 
 const HYLDA: FakeCard = {
@@ -62,7 +63,7 @@ function fakeEngine(cards: FakeCard[]) {
     name: card.name,
     oracle_id: card.name,
     mana_value: 2,
-    color_identity: ["W"],
+    color_identity: card.colorIdentity ?? ["W"],
     legalities: { commander: "legal" },
   });
   const queries: DraftQueryExports = {
@@ -141,6 +142,40 @@ describe("createDraftRanker theme pools", () => {
     expect(searchedTexts).toContain("tap");
     expect(searchedTexts).not.toContain("tap creature");
     expect(candidates.map((c) => c.name)).toEqual([TAPPER.name]);
+  });
+});
+
+describe("createDraftRanker theme pools by colour", () => {
+  const OFF_COLOUR_TAPPERS: FakeCard[] = Array.from({ length: 300 }, (_, i) => ({
+    name: `Goblin Tapper ${i}`,
+    coreTypes: ["Creature"],
+    subtypes: ["Goblin"],
+    oracleText: "When this creature enters, tap target creature an opponent controls.",
+    printings: 20,
+    colorIdentity: ["R"],
+  }));
+  const RARE_TAPPER: FakeCard = { ...TAPPER, name: "Rare Frost Warden", printings: 1 };
+
+  it("keeps a little-printed on-colour fit that popular off-colour matches would crowd out", () => {
+    const { queries, cardDataJson } = fakeEngine([
+      HYLDA,
+      RARE_TAPPER,
+      ...OFF_COLOUR_TAPPERS,
+      ...FILLERS,
+    ]);
+    const ranker = createDraftRanker(queries, cardDataJson);
+
+    const { candidates } = ranker.rankCardCandidates({
+      commanders: [HYLDA.name],
+      mainboard: [],
+      profile: hyldaProfile(),
+      target: "focused",
+      customization: DEFAULT_CUSTOMIZATION,
+      exclude: [HYLDA.name.toLowerCase()],
+      slotTypes: ["creature"],
+    });
+
+    expect(candidates.map((c) => c.name)).toEqual([RARE_TAPPER.name]);
   });
 });
 
