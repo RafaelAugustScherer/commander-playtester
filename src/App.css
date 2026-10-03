@@ -276,7 +276,7 @@ body.xpscroll-dragging {
   background: var(--accent-2);
   color: var(--accent-ink);
 }
-.xp-settings__check {
+.xp-check {
   flex: 0 0 auto;
   box-sizing: border-box;
   position: relative;
@@ -290,7 +290,7 @@ body.xpscroll-dragging {
     inset -2px -2px 0 #dfdfdf,
     inset 2px 2px 0 #0a0a0a;
 }
-.xp-settings__item[aria-checked="true"] .xp-settings__check::after {
+[aria-checked="true"] > .xp-check::after {
   content: "";
   position: absolute;
   left: 6px;
@@ -300,6 +300,27 @@ body.xpscroll-dragging {
   border: solid #000;
   border-width: 0 2px 2px 0;
   transform: rotate(45deg);
+}
+.xp-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0;
+  background: none;
+  border: none;
+  color: var(--text);
+  font-weight: 700;
+  cursor: pointer;
+}
+.xp-checkbox:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+.xp-checkbox__list {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
 }
 .xp-settings__text {
   display: flex;

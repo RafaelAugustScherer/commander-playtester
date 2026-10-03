@@ -234,7 +234,7 @@ Example: Incidental Treasure and mana filters are not ramp
 
 ## Rule: Tribal mode keeps creature slots on the chosen tribes
 
-In the `customization` section below the bracket target, a **Tribal** switch turns on
+In the `customization` section below the bracket target, a **Tribal** checkbox turns on
 `tribal mode`. While it is on, the
 author picks one or more creature types by hand, typing to get suggestions from the full
 list of creature types. Every creature slot then offers only creatures of those types — a
@@ -263,7 +263,7 @@ Example: Turning tribal mode off keeps the tribes
 
 ## Rule: Planeswalkers and dungeon cards are offered only when asked for
 
-The `customization` section also holds two switches, both off by default: **Suggest
+The `customization` section also holds two checkboxes, both off by default: **Suggest
 planeswalkers** and **Suggest dungeon mechanics**. While the first is off, no planeswalker
 is offered — not as a commander, not in any slot — and the `type balance` gives the
 planeswalker share to the other types, so no slot asks for one. While the second is off,
@@ -288,6 +288,28 @@ Example: Dungeon cards stay out by default
   Given a draft with dungeon mechanics off
   When rounds are suggested
   Then no card that ventures into the dungeon or takes the initiative is offered
+```
+
+## Rule: Ramp is offered unless turned off
+
+A **Suggest ramp** checkbox in `customization` is on by default. While it is off, no
+lasting ramp is offered — not as a commander, not in any slot, even when it fits the theme.
+Lasting ramp is what the ramp score reads (`deck-draft/ADR-0009`): a mana ability that
+makes more mana than it costs, an extra land drop each turn, or a land put onto the
+battlefield. Treasure makers and one-shot mana spells are still offered. Turning it on or
+off while drafting re-offers the current round at once.
+
+```gherkin
+Example: Ramp is offered by default
+  Given a draft whose commander is "Lathril, Blade of the Elves"
+  When rounds are suggested
+  Then mana Elves such as "Llanowar Elves" can be offered
+
+Example: Turning ramp off leaves it out
+  Given a draft with "Suggest ramp" on
+  When the author turns it off
+  Then no card with a lasting mana ability or land search is offered
+  And the current round is re-offered
 ```
 
 ## Rule: Among comparable fits, more-played cards rank higher

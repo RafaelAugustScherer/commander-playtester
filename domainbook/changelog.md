@@ -12,6 +12,17 @@ depth live there. A purely-internal PR that touches no product or architecture m
 skip its version with a `Skip-Docs: <reason>` trailer instead. There are no
 per-domain changelogs; this file is the single timeline (`ADR-0007`).
 
+## [0.34.0] - 2026-10-03
+
+### Added
+
+- A **Suggest ramp** option in the draft's customization, on by default; turned off, no
+  lasting ramp is offered (`deck-draft/features/draft-a-deck.md`).
+
+### Changed
+
+- The draft's customization options are checkboxes, in the style of the settings menu.
+
 ## [0.33.0] - 2026-10-03
 
 ### Changed

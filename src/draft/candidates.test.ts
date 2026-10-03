@@ -366,7 +366,7 @@ describe("suggestCommanders", () => {
     });
     const allowed = await suggestCommanders(baseCards, {
       engine,
-      customization: { planeswalkers: true, dungeons: true },
+      customization: { planeswalkers: true, dungeons: true, ramp: true },
       resolver: poolResolver,
     });
 

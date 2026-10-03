@@ -46,13 +46,23 @@ describe("isSuggestable", () => {
     const dungeon = creature("Venture into the dungeon.");
 
     expect(
-      isSuggestable(walker, { planeswalkers: true, dungeons: false }),
+      isSuggestable(walker, { planeswalkers: true, dungeons: false, ramp: true }),
     ).toBe(true);
     expect(
-      isSuggestable(dungeon, { planeswalkers: true, dungeons: false }),
+      isSuggestable(dungeon, { planeswalkers: true, dungeons: false, ramp: true }),
     ).toBe(false);
     expect(
-      isSuggestable(dungeon, { planeswalkers: false, dungeons: true }),
+      isSuggestable(dungeon, { planeswalkers: false, dungeons: true, ramp: true }),
     ).toBe(true);
+  });
+
+  it("offers lasting ramp by default and leaves it out once turned off", () => {
+    const dork = creature("{T}: Add {G}.");
+    const treasure = creature("When this creature enters, create a Treasure token.");
+    const noRamp = { ...DEFAULT_CUSTOMIZATION, ramp: false };
+
+    expect(isSuggestable(dork, DEFAULT_CUSTOMIZATION)).toBe(true);
+    expect(isSuggestable(dork, noRamp)).toBe(false);
+    expect(isSuggestable(treasure, noRamp)).toBe(true);
   });
 });
