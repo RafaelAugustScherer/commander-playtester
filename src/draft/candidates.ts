@@ -105,6 +105,7 @@ export async function suggestCandidates(
     profile: {
       ...profile,
       tokenWeights: [...profile.tokenWeights],
+      creatureTypes: [...profile.creatureTypes],
     },
     target,
     exclude: [...excluded],

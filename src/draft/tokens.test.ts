@@ -1,6 +1,9 @@
 import { describe, it, expect } from "vitest";
 import {
   cardTokens,
+  creatureTypesOf,
+  isOfTribe,
+  servesTribe,
   mentionsSubtype,
   themeTokens,
   tokenSearches,
@@ -248,5 +251,27 @@ describe("mentionsSubtype", () => {
     expect(
       mentionsSubtype("Instant and sorcery spells you cast cost {1} less to cast.", "wizard"),
     ).toBe(false);
+  });
+});
+
+describe("tribe membership", () => {
+  it("reads the creature types of creature faces only", () => {
+    expect(creatureTypesOf(card({ typeLine: "Creature — Elf Druid" }))).toEqual(["elf", "druid"]);
+    expect(creatureTypesOf(card({ typeLine: "Kindred Instant — Elf" }))).toEqual([]);
+  });
+
+  it("counts a creature of a tribe, and a Changeling as every tribe", () => {
+    expect(isOfTribe(card({ typeLine: "Creature — Elf" }), ["elf"])).toBe(true);
+    expect(isOfTribe(card({ typeLine: "Creature — Bear" }), ["elf"])).toBe(false);
+    expect(
+      isOfTribe(card({ typeLine: "Creature — Shapeshifter", oracleText: "Changeling" }), ["elf"]),
+    ).toBe(true);
+    expect(isOfTribe(card({ typeLine: "Kindred Instant — Elf" }), ["elf"])).toBe(false);
+  });
+
+  it("serves a tribe by naming it or being Kindred of it", () => {
+    expect(servesTribe(card({ oracleText: "Elves you control get +1/+1." }), ["elf"])).toBe(true);
+    expect(servesTribe(card({ typeLine: "Kindred Sorcery — Elf" }), ["elf"])).toBe(true);
+    expect(servesTribe(card({ typeLine: "Creature — Elf" }), ["elf"])).toBe(false);
   });
 });

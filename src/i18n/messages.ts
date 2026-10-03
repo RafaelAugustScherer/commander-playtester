@@ -907,6 +907,21 @@ export const messages = {
   "draft.summary.archetype": { pt: "Arquétipo: {name}", en: "Archetype: {name}" },
   "draft.summary.bracket": { pt: "Bracket: {tier}", en: "Bracket: {tier}" },
   "draft.summary.bracketTarget": { pt: "Bracket alvo", en: "Bracket target" },
+  "draft.tribal.toggle": { pt: "Tribal", en: "Tribal" },
+  "draft.tribal.label": { pt: "Tribos", en: "Tribes" },
+  "draft.tribal.placeholder": {
+    pt: "Adicionar tribo (ex.: Elf)",
+    en: "Add a tribe (e.g. Elf)",
+  },
+  "draft.tribal.remove": { pt: "Remover {name}", en: "Remove {name}" },
+  "draft.tribal.hint": {
+    pt: "Criaturas sugeridas serão só das tribos escolhidas; outras cartas que citam as tribos ganham prioridade.",
+    en: "Suggested creatures come only from the chosen tribes; other cards that name them rank higher.",
+  },
+  "draft.tribal.empty": {
+    pt: "Escolha ao menos uma tribo para o modo Tribal filtrar as sugestões.",
+    en: "Pick at least one tribe for tribal mode to filter suggestions.",
+  },
   "draft.summary.targetHint": {
     pt: "Vale a partir da próxima rodada de sugestões.",
     en: "Applies starting with the next round of suggestions.",

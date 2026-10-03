@@ -12,6 +12,20 @@ depth live there. A purely-internal PR that touches no product or architecture m
 skip its version with a `Skip-Docs: <reason>` trailer instead. There are no
 per-domain changelogs; this file is the single timeline (`ADR-0007`).
 
+## [0.27.0] - 2026-10-03
+
+### Added
+
+- A **Tribal** switch beside the bracket buttons keeps a draft's creature slots on the
+  tribes the author picks, and favours cards that name them elsewhere
+  (`domains/deck-draft/features/draft-a-deck.md`, `deck-draft/ADR-0006`).
+
+### Changed
+
+- Lords and other cards that name a tribe score more as that tribe grows in the deck
+  (`deck-draft/ADR-0006`).
+- The draft's bracket target offers only Focused, Optimized and cEDH (`deck-draft/ADR-0006`).
+
 ## [0.26.0] - 2026-10-03
 
 ### Changed

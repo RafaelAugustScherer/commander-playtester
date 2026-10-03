@@ -98,4 +98,52 @@ describe("scoreCandidate", () => {
     const blank = card({ typeLine: "", oracleText: "" });
     expect(() => scoreCandidate(blank, profile)).not.toThrow();
   });
+
+  describe("tribal payoffs", () => {
+    const elf = (name: string) => card({ name, typeLine: "Creature — Elf" });
+    const lord = card({
+      name: "Elf Lord",
+      typeLine: "Creature — Elf",
+      oracleText: "Other Elves you control get +1/+1.",
+    });
+    const vanilla = card({ name: "Plain Elf", typeLine: "Creature — Elf" });
+
+    it("ranks a card naming a tribe above one that only is of it", () => {
+      const profile = extractThemeProfile([], [elf("A"), elf("B"), elf("C")]);
+      expect(scoreCandidate(vanilla, profile).tribalScore).toBe(0);
+      expect(scoreCandidate(lord, profile).tribalScore).toBeGreaterThan(0);
+    });
+
+    it("grows with the tribe's numbers and saturates", () => {
+      const scoreWith = (n: number) =>
+        scoreCandidate(
+          lord,
+          extractThemeProfile([], Array.from({ length: n }, (_, i) => elf(`Elf ${i}`))),
+        ).tribalScore;
+      const gains = [scoreWith(2) - scoreWith(1), scoreWith(10) - scoreWith(9)];
+      expect(scoreWith(10)).toBeGreaterThan(scoreWith(3));
+      expect(gains[1]).toBeLessThan(gains[0]);
+    });
+
+    it("weighs a tribe by its share of the deck's creatures", () => {
+      const bears = Array.from({ length: 20 }, (_, i) => card({ name: `Bear ${i}` }));
+      const elves = [elf("A"), elf("B"), elf("C")];
+      const focused = scoreCandidate(lord, extractThemeProfile([], elves)).tribalScore;
+      const diluted = scoreCandidate(
+        lord,
+        extractThemeProfile([], [...elves, ...bears]),
+      ).tribalScore;
+      expect(diluted).toBeLessThan(focused);
+    });
+
+    it("adds a bonus in tribal mode for cards that name or are Kindred of a chosen tribe", () => {
+      const kindred = card({ name: "Elf Spell", typeLine: "Kindred Instant — Elf" });
+      const off = extractThemeProfile([], []);
+      const on = extractThemeProfile([], [], ["Elf"]);
+      expect(scoreCandidate(kindred, off).tribalScore).toBe(0);
+      expect(scoreCandidate(kindred, on).tribalScore).toBeGreaterThan(0);
+      expect(scoreCandidate(lord, on).tribalScore).toBeGreaterThan(0);
+      expect(scoreCandidate(vanilla, on).tribalScore).toBe(0);
+    });
+  });
 });

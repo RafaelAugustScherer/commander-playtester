@@ -16,7 +16,7 @@ import {
   type LocallyRankedCandidate,
 } from "../draft/localCandidates";
 import type { ThemeProfile } from "../draft/themes";
-import { cardTokens, mentionsSubtype, tokenSearches } from "../draft/tokens";
+import { cardTokens, isOfTribe, mentionsSubtype, tokenSearches } from "../draft/tokens";
 import {
   DRAFT_CARD_TYPES,
   allocateSlots,
@@ -94,7 +94,9 @@ function isDraftableAs(typeLine: string, type: DraftCardType): boolean {
 function themeProfile(profile: EngineThemeProfile): ThemeProfile {
   return {
     ...profile,
+    tribes: profile.tribes ?? [],
     tokenWeights: new Map(profile.tokenWeights),
+    creatureTypes: new Map(profile.creatureTypes),
   };
 }
 
@@ -272,6 +274,19 @@ export function createDraftRanker(
     return [...candidates.values()];
   }
 
+  // Tribal mode: every selected tribe's most-printed members, the cards that
+  // name it, and the Changelings, whatever the theme tokens say.
+  function tribalCandidates(profile: ThemeProfile): DraftCandidateData[] {
+    if (profile.tribes.length === 0) return [];
+    return [
+      ...profile.tribes.flatMap((tribe) => [
+        ...subtypeCandidates(tribe, profile.colorIdentity),
+        ...textCandidates(tribe),
+      ]),
+      ...textCandidates("changeling"),
+    ];
+  }
+
   function typeCandidates(type: DraftCardType, identity: string[]): DraftCandidateData[] {
     const key = `${type}|${[...identity].sort().join("")}`;
     const cached = typeCache.get(key);
@@ -303,10 +318,13 @@ export function createDraftRanker(
     input: RankCardCandidatesInput,
   ): RankedCardName | null {
     const identity = input.profile.colorIdentity;
+    const tribes = input.profile.tribes ?? [];
     const shortlist = ranked
       .filter(
         ({ card }) =>
-          !taken.has(card.name.toLowerCase()) && isDraftableAs(card.typeLine, slotType),
+          !taken.has(card.name.toLowerCase()) &&
+          isDraftableAs(card.typeLine, slotType) &&
+          (slotType !== "creature" || tribes.length === 0 || isOfTribe(card, tribes)),
       )
       .map((candidate) => ({ card: candidate.card, fit: slotFit(candidate, slotType, identity) }))
       .sort((a, b) => b.fit - a.fit)
@@ -341,7 +359,11 @@ export function createDraftRanker(
     );
     const pool = new Map<string, DraftCandidateData>();
     const slotPools = [...new Set(slotTypes)].flatMap((type) => typePools.get(type) ?? []);
-    for (const candidate of [...themeCandidates(profile, rulesTexts), ...slotPools]) {
+    for (const candidate of [
+      ...themeCandidates(profile, rulesTexts),
+      ...tribalCandidates(profile),
+      ...slotPools,
+    ]) {
       pool.set(candidate.name.toLowerCase(), candidate);
     }
     const ranked = rankLocalCandidates([...pool.values()], profile, excluded, popularityBonus);

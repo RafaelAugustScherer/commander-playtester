@@ -9,6 +9,8 @@ interface CardNameInputProps {
   placeholder?: string;
   id?: string;
   disabled?: boolean;
+  /** Called with a picked suggestion instead of `onChange`, when given. */
+  onSelect?: (value: string) => void;
   /** Mark the field as holding an unusable value (unknown or illegal card). */
   invalid?: boolean;
   className?: string;
@@ -31,6 +33,7 @@ export function CardNameInput({
   disabled,
   invalid,
   className,
+  onSelect,
 }: CardNameInputProps) {
   const listId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
@@ -81,7 +84,7 @@ export function CardNameInput({
   }, [active, open]);
 
   function select(name: string) {
-    onChange(name);
+    (onSelect ?? onChange)(name);
     setOpen(false);
     setItems([]);
   }

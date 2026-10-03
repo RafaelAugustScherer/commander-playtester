@@ -89,8 +89,9 @@ deck's colours. Running it again replaces the earlier basics.
 
 The self-built ranking of a candidate card against the cards already in the deck — the
 sum of the `theme token`s it shares (with `commander weighting` applied), plus fit for
-the deck's role gaps and mana curve, plus the `bracket target` tilt, plus a small tilt
-toward more-played cards by reprint count (`deck-draft/ADR-0002`). The engine supplies
+the deck's role gaps and mana curve, plus a `tribal payoff` bonus, plus the `bracket
+target` tilt, plus a small tilt toward more-played cards by reprint count
+(`deck-draft/ADR-0002`). The engine supplies
 no such score; this context owns it (`deck-draft/ADR-0001`).
 
 - **Status:** draft
@@ -121,16 +122,43 @@ tribes its text names — counts for more again (`deck-draft/ADR-0005`).
 
 ## Bracket target
 
-The power level (Exhibition, Core, Upgraded/Focused, Optimized, cEDH) the user aims the
-draft at, defaulting to Focused. It steers the ranking through the engine's
+The power level (Focused, Optimized or cEDH) the user aims the draft at, defaulting to
+Focused. The engine's lower tiers (Exhibition, Core) still show in its estimate but are not
+offered as targets (`deck-draft/ADR-0006`). It steers the ranking through the engine's
 `estimate_bracket_for_deck`; a card that would push the deck past the target is penalised.
 
 - **Aliases:** target bracket
 - **Status:** draft
 
+## Tribal payoff
+
+A card whose rules text names a creature type the deck already has ("Other Elves you
+control get +1/+1"). It scores a bonus that grows with that tribe's share of the deck's
+creatures and levels off as their number grows, so five Elves in eight creatures lift an
+Elf lord far more than five incidental Humans in thirty lift a Human lord. Being of the
+type is not enough: a plain Elf gets no bonus (`deck-draft/ADR-0006`).
+
+- **Aliases:** lord, tribal lord
+- **Status:** draft
+- **Example:** With ten Elves drafted, an Elf lord scores about one and a half times a
+  plain Elf.
+
+## Tribal mode
+
+A switch beside the `bracket target` that, while on, makes every creature slot offer only
+creatures of the tribes the author picks (a Changeling counts as every tribe), and gives
+cards that name one of them or are Kindred of one a bonus in any slot. The author picks
+the tribes by hand; turning it off keeps them for later (`deck-draft/ADR-0006`).
+
+- **Aliases:** tribal
+- **Status:** draft
+- **Example:** Tribal mode on with Elf and Druid offers only Elves and Druids in creature
+  slots, and favours Elvish Promenade in a sorcery slot.
+
 ## Draft session
 
-The in-progress draft state: the `base cards`, the chosen `bracket target`, the deck so
+The in-progress draft state: the `base cards`, the chosen `bracket target` and `tribal
+mode`, the deck so
 far, and the current `suggestion round`. It is not a saved `deck` until the user saves or
 copies it out.
 

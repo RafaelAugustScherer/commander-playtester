@@ -666,6 +666,13 @@ th {
   cursor: pointer;
 }
 
+.seg-row {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
 .seg__btn--active {
   color: var(--text);
   background: var(--face);
