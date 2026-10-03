@@ -78,9 +78,9 @@ cards by the most when the round opens. A `refresh` keeps it.
 
 ## Basic-land fill
 
-The one-step action that tops the deck up with basic lands — up to the `type balance`'s
-land target, leaving room for the nonbasic lands still to be suggested — split by the
-deck's colours. Running it again replaces the earlier basics.
+The one-step action that fills every land still missing from the `type balance`'s land
+target with basic lands, split by the deck's colours. After it, rounds offer no more land
+slots. Running it again replaces the earlier basics (`deck-draft/ADR-0007`).
 
 - **Aliases:** fill basic lands
 - **Status:** draft

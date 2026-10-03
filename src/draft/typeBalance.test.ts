@@ -501,16 +501,26 @@ describe("allocateSlots", () => {
   it("does not count basic lands as drafted lands", () => {
     const base = balanceOf();
     const withBasics = balanceOf({
-      have: { ...haveAtTarget(base), land: 36 },
-      basicLands: 36,
+      have: { ...haveAtTarget(base), land: 20 },
+      basicLands: 20,
     });
     const withNonbasics = balanceOf({
-      have: { ...haveAtTarget(base), land: 36 },
+      have: { ...haveAtTarget(base), land: 20 },
       basicLands: 0,
     });
 
     expect(allocateSlots(withBasics, 1, ALL_TYPES)).toEqual(["land"]);
     expect(allocateSlots(withNonbasics, 1, ALL_TYPES)).not.toContain("land");
+  });
+
+  it("stops offering lands once the land target is filled", () => {
+    const base = balanceOf();
+    const filled = balanceOf({
+      have: { ...haveAtTarget(base, { creature: 0 }), land: base.target.land },
+      basicLands: base.target.land,
+    });
+
+    expect(allocateSlots(filled, 3, ALL_TYPES)).not.toContain("land");
   });
 
   it("repeats a type when it trails its target by more than one card", () => {
@@ -538,15 +548,15 @@ describe("basicLandCount", () => {
     };
   }
 
-  it("plans the land target minus the nonbasic land target when no nonbasics are drafted yet", () => {
-    expect(basicLandCount(balanceOf(), 90)).toBe(24);
+  it("fills every land missing from the target", () => {
+    expect(basicLandCount(balanceOf(), 90)).toBe(36);
   });
 
-  it("subtracts drafted nonbasic lands once they exceed the nonbasic target", () => {
+  it("leaves room for the nonbasic lands already drafted", () => {
     expect(basicLandCount(balanceOf({ have: counts({ land: 15 }) }), 90)).toBe(21);
   });
 
-  it("does not subtract basics already in the deck from the plan", () => {
+  it("replaces the basics already in the deck rather than adding to them", () => {
     const balance = balanceOf({ have: counts({ land: 20 }), basicLands: 8 });
     expect(basicLandCount(balance, 90)).toBe(24);
   });

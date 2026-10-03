@@ -542,14 +542,14 @@ describe("DraftSession basic lands", () => {
     expect(names).toHaveLength(5);
   });
 
-  it("adds basics matching the planned count for the deck's single colour", async () => {
+  it("fills every missing land with basics of the deck's single colour", async () => {
     const balance = fixedBalance();
     const session = await monoGreenSession(balance);
     const planned = basicLandCount(balance, 100 - session.cardCount());
 
     await session.fillBasicLands();
 
-    expect(planned).toBe(24);
+    expect(planned).toBe(36);
     expect(session.mainboard).toContainEqual({ quantity: planned, name: "Forest" });
     expect(session.cardCount()).toBe(3 + planned);
   });
@@ -588,23 +588,23 @@ describe("DraftSession basic lands", () => {
     await session.fillBasicLands();
 
     expect(session.mainboard.filter((e) => ["Forest", "Island"].includes(e.name))).toEqual([
-      { quantity: 17, name: "Forest" },
-      { quantity: 7, name: "Island" },
+      { quantity: 25, name: "Forest" },
+      { quantity: 11, name: "Island" },
     ]);
   });
 
   it("replaces earlier basics on a re-run instead of stacking them", async () => {
     const session = await monoGreenSession(fixedBalance());
     await session.fillBasicLands();
-    expect(quantityOf(session, "Forest")).toBe(24);
+    expect(quantityOf(session, "Forest")).toBe(36);
 
     session.balance = { ...fixedBalance(), target: { ...fixedBalance().target, land: 30 } };
     await session.fillBasicLands();
 
     expect(session.mainboard.filter((e) => e.name === "Forest")).toEqual([
-      { quantity: 18, name: "Forest" },
+      { quantity: 30, name: "Forest" },
     ]);
-    expect(session.cardCount()).toBe(3 + 18);
+    expect(session.cardCount()).toBe(3 + 30);
   });
 
   it("removes a hand-added basic before adding the planned ones", async () => {
@@ -613,7 +613,7 @@ describe("DraftSession basic lands", () => {
 
     await session.fillBasicLands();
 
-    expect(quantityOf(session, "Forest")).toBe(24);
+    expect(quantityOf(session, "Forest")).toBe(36);
     expect(session.mainboard.filter((e) => e.name.toLowerCase() === "forest")).toHaveLength(1);
   });
 
@@ -624,8 +624,8 @@ describe("DraftSession basic lands", () => {
     await session.fillBasicLands();
 
     const lastInput = inputs[inputs.length - 1];
-    expect(lastInput.mainboard.filter((n) => n === "Forest")).toHaveLength(24);
-    expect(lastInput.mainboard).toHaveLength(2 + 24);
+    expect(lastInput.mainboard.filter((n) => n === "Forest")).toHaveLength(36);
+    expect(lastInput.mainboard).toHaveLength(2 + 36);
   });
 
   it("throws not-in-drafting during commander selection", async () => {

@@ -16,6 +16,7 @@ import {
   type LocallyRankedCandidate,
 } from "../draft/localCandidates";
 import type { ThemeProfile } from "../draft/themes";
+import { isUtilityLand } from "../draft/lands";
 import { cardTokens, isOfTribe, mentionsSubtype, tokenSearches } from "../draft/tokens";
 import {
   DRAFT_CARD_TYPES,
@@ -324,7 +325,9 @@ export function createDraftRanker(
         ({ card }) =>
           !taken.has(card.name.toLowerCase()) &&
           isDraftableAs(card.typeLine, slotType) &&
-          (slotType !== "creature" || tribes.length === 0 || isOfTribe(card, tribes)),
+          (slotType !== "creature" || tribes.length === 0 || isOfTribe(card, tribes)) &&
+          // A one-colour deck has nothing to fix: only lands that do something else.
+          (slotType !== "land" || identity.length > 1 || isUtilityLand(card)),
       )
       .map((candidate) => ({ card: candidate.card, fit: slotFit(candidate, slotType, identity) }))
       .sort((a, b) => b.fit - a.fit)

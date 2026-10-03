@@ -77,7 +77,9 @@ whole card pool by heart.
 - Each round's three slots go to the card types the deck is shortest of against a
   commander-set `type balance`, and each slot's pool adds the most-printed cards of its
   type, so a spellslinger is offered spells and an enchantress enchantments. Basic lands
-  come from one **Fill basic lands** step rather than from rounds (`deck-draft/ADR-0003`).
+  come from one **Fill basic lands** step that completes the land count, rather than from
+  rounds; a one-colour deck is offered only a few utility lands (`deck-draft/ADR-0003`,
+  `deck-draft/ADR-0007`).
 - A `bracket target` (Focused by default, or Optimized or cEDH) steers the ranking through
   the engine's bracket estimate; a card that would push the deck past the target is
   penalised, not hidden — the user stays in control (`ADR-0009`, `deck-draft/ADR-0006`).
