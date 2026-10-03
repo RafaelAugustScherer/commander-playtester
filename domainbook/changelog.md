@@ -12,6 +12,13 @@ depth live there. A purely-internal PR that touches no product or architecture m
 skip its version with a `Skip-Docs: <reason>` trailer instead. There are no
 per-domain changelogs; this file is the single timeline (`ADR-0007`).
 
+## [0.34.1] - 2026-10-03
+
+### Fixed
+
+- The draft no longer suggests a two-sided card (such as Depose // Deploy) that is already in
+  the deck, refreshed away, or shown this round (`deck-draft/features/draft-a-deck.md`).
+
 ## [0.34.0] - 2026-10-03
 
 ### Added

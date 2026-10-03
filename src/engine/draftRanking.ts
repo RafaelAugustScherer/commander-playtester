@@ -359,7 +359,7 @@ export function createDraftRanker(
 
   function rankCardCandidates(input: RankCardCandidatesInput): RankCardCandidatesResult {
     const profile = themeProfile(input.profile);
-    const excluded = new Set(input.exclude.map((name) => name.toLowerCase()));
+    const excluded = new Set(input.exclude.map((name) => frontFace(name).toLowerCase()));
     const suggestable = (candidate: DraftCandidateData) =>
       isSuggestable(candidate, input.customization);
     const balance = deckBalance(

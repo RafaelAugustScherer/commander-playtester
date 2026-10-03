@@ -145,6 +145,25 @@ describe("createDraftRanker theme pools", () => {
   });
 });
 
+describe("createDraftRanker exclusion", () => {
+  it("leaves out a two-sided card the deck stores under its full name", () => {
+    const { queries, cardDataJson } = fakeEngine([HYLDA, TAPPER, ...FILLERS]);
+    const ranker = createDraftRanker(queries, cardDataJson);
+
+    const { candidates } = ranker.rankCardCandidates({
+      commanders: [HYLDA.name],
+      mainboard: [`${TAPPER.name} // Frost Wake`],
+      profile: hyldaProfile(),
+      target: "focused",
+      customization: DEFAULT_CUSTOMIZATION,
+      exclude: [HYLDA.name, `${TAPPER.name} // Frost Wake`].map((n) => n.toLowerCase()),
+      slotTypes: ["creature"],
+    });
+
+    expect(candidates.map((c) => c.name)).not.toContain(TAPPER.name);
+  });
+});
+
 describe("createDraftRanker theme pools by colour", () => {
   const OFF_COLOUR_TAPPERS: FakeCard[] = Array.from({ length: 300 }, (_, i) => ({
     name: `Goblin Tapper ${i}`,
