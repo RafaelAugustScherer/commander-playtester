@@ -83,6 +83,18 @@ import {
 } from "./decisions/combatDamage";
 import { parseDieKeepPrompt, type DieKeepPrompt } from "./decisions/dieKeep";
 import { parseRipplePrompt, type RipplePrompt } from "./decisions/ripple";
+import {
+  parseLibraryOrderPrompt,
+  type LibraryOrderPrompt,
+} from "./decisions/libraryOrder";
+import {
+  parseEmpowerJacePrompt,
+  type EmpowerJacePrompt,
+} from "./decisions/empowerJace";
+import {
+  parseCostReductionOrderPrompt,
+  type CostReductionOrderPrompt,
+} from "./decisions/costReductionOrder";
 
 export interface MatchResult {
   matchIndex: number;
@@ -374,6 +386,18 @@ export interface DriverCallbacks {
   requestHumanRipple?: (
     env: GameStateEnvelope,
     prompt: RipplePrompt,
+  ) => Promise<HumanChoice>;
+  requestHumanLibraryOrder?: (
+    env: GameStateEnvelope,
+    prompt: LibraryOrderPrompt,
+  ) => Promise<HumanChoice>;
+  requestHumanEmpowerJace?: (
+    env: GameStateEnvelope,
+    prompt: EmpowerJacePrompt,
+  ) => Promise<HumanChoice>;
+  requestHumanCostReductionOrder?: (
+    env: GameStateEnvelope,
+    prompt: CostReductionOrderPrompt,
   ) => Promise<HumanChoice>;
 }
 
@@ -756,6 +780,24 @@ export class MatchRunner {
       () => humanRequest(env, cb.requestHumanDieKeep, parseDieKeepPrompt(wf)),
       () =>
         humanRequest(env, cb.requestHumanRipple, parseRipplePrompt(wf, state)),
+      () =>
+        humanRequest(
+          env,
+          cb.requestHumanLibraryOrder,
+          parseLibraryOrderPrompt(wf, state),
+        ),
+      () =>
+        humanRequest(
+          env,
+          cb.requestHumanEmpowerJace,
+          parseEmpowerJacePrompt(wf, state),
+        ),
+      () =>
+        humanRequest(
+          env,
+          cb.requestHumanCostReductionOrder,
+          parseCostReductionOrderPrompt(wf),
+        ),
     ];
     for (const resolve of resolvers) {
       const req = resolve();

@@ -12,6 +12,23 @@ depth live there. A purely-internal PR that touches no product or architecture m
 skip its version with a `Skip-Docs: <reason>` trailer instead. There are no
 per-domain changelogs; this file is the single timeline (`ADR-0007`).
 
+## [0.22.0] - 2026-10-02
+
+### Changed
+
+- Re-pinned the vendored phase-rs engine from v0.86.0 to v0.100.0
+  (`ADR-0006`, `docs/engine-upgrade.md`).
+
+### Added
+
+- You now **order the cards a reveal-until effect bottoms**, and **split a
+  dig's leftovers between the top and bottom** of your library, instead of the
+  AI (`domains/simulation/features/order-revealed-and-split-library-cards.md`).
+- You now choose **which Jace token to empower**
+  (`domains/simulation/features/choose-a-jace-to-empower.md`).
+- You now choose **the total you pay when cost reductions compete**
+  (`domains/simulation/features/choose-a-cost-reduction-order.md`).
+
 ## [0.21.0] - 2026-09-17
 
 ### Added
