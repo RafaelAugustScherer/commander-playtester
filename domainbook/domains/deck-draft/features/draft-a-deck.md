@@ -133,6 +133,54 @@ Example: An enabler fits a theme without making one
   Then later rounds are not pulled toward blink cards
 ```
 
+## Rule: A tribe's lords rise with the tribe
+
+A card whose rules text names a creature type — a lord or another `tribal payoff` — scores
+more the larger that tribe's share of the deck's creatures, levelling off as the tribe
+grows. Being of the type alone adds nothing beyond its `theme token`, so a lord outranks a
+plain member of the tribe, and a handful of incidental Humans in a large creature base
+barely lifts a Human lord (`deck-draft/ADR-0006`).
+
+```gherkin
+Example: A lord outranks a plain member of a tribe the deck is built on
+  Given a deck with ten Elves among its creatures
+  When an Elf lord and a plain Elf are scored
+  Then the lord scores about one and a half times the plain Elf
+
+Example: An incidental tribe barely counts
+  Given a deck with six Humans among thirty creatures
+  When a Human lord is scored
+  Then its tribal bonus is a third of an Elf lord's in a deck with five Elves in eight
+```
+
+## Rule: Tribal mode keeps creature slots on the chosen tribes
+
+Beside the bracket buttons, a **Tribal** switch turns on `tribal mode`. While it is on, the
+author picks one or more creature types by hand, typing to get suggestions from the full
+list of creature types. Every creature slot then offers only creatures of those types — a
+Changeling counts as every type — and the pool reaches each tribe's most-printed members
+and the cards that name it. Other slots stay open, but cards that name a chosen tribe or
+are Kindred of it rank higher there. Changing the tribes while drafting re-offers the
+current round at once; with no tribe picked, nothing is filtered (`deck-draft/ADR-0006`).
+
+```gherkin
+Example: Creature slots offer only the chosen tribes
+  Given a draft with tribal mode on and Elf chosen
+  When a round with creature slots is suggested
+  Then every creature offered is an Elf or a Changeling
+
+Example: Other slots favour cards for the tribe
+  Given a draft with tribal mode on and Elf chosen
+  When a sorcery slot is suggested
+  Then a card that names Elves or is a Kindred Elf ranks above an equal card that does not
+
+Example: Turning tribal mode off keeps the tribes
+  Given a draft with tribal mode on and Elf chosen
+  When the author turns tribal mode off
+  Then creature slots are open again
+  And turning it back on restores Elf
+```
+
 ## Rule: Among comparable fits, more-played cards rank higher
 
 When two candidates fit the theme about equally, the one that is more played wins. The
@@ -268,8 +316,8 @@ Example: Filling twice does not stack
 ## Rule: Suggestions stay legal and follow the bracket target
 
 Every suggested card is within the commander's `color identity` and legal in Commander. A
-selectable `bracket target` (default Focused) steers the ranking; a card that would push
-the deck past the target is pushed down, not hidden.
+selectable `bracket target` — Focused (the default), Optimized or cEDH — steers the
+ranking; a card that would push the deck past the target is pushed down, not hidden.
 
 ```gherkin
 Example: Out-of-identity cards are never offered

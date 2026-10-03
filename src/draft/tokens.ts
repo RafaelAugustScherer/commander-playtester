@@ -302,6 +302,42 @@ export function rewardedTokens(card: Card): Set<string> {
   return tokens;
 }
 
+/** The creature types on a card's creature faces, lowercased. */
+export function creatureTypesOf(card: Card): string[] {
+  const faces = card.typeLine.split("//").filter((face) => /\bCreature\b/.test(face));
+  return [...new Set(faces.flatMap(subtypesFromTypeLine))];
+}
+
+/**
+ * Whether a card is a creature of one of `tribes` (lowercase) — a Changeling
+ * is every creature type, so it belongs to any tribe.
+ */
+export function isOfTribe(card: Card, tribes: readonly string[]): boolean {
+  if (!/\bCreature\b/.test(card.typeLine)) return false;
+  if (/\bchangeling\b/i.test(card.oracleText)) return true;
+  return creatureTypesOf(card).some((type) => tribes.includes(type));
+}
+
+/**
+ * Whether a card's rules text names one of `tribes`, or it is a Kindred card
+ * of one ("Kindred Instant — Elf").
+ */
+export function servesTribe(card: Card, tribes: readonly string[]): boolean {
+  if (namedTribes(card).some((type) => tribes.includes(type))) return true;
+  return (
+    !/\bCreature\b/.test(card.typeLine) &&
+    subtypesFromTypeLine(card.typeLine).some((type) => tribes.includes(type))
+  );
+}
+
+/**
+ * The creature types a card's rules text names as a tribe — the lords and
+ * payoffs a tribal deck wants (`deck-draft/ADR-0006`).
+ */
+export function namedTribes(card: Card): string[] {
+  return namedCreatureTypes(card.oracleText, card.name);
+}
+
 /**
  * The free-text searches that reach a curated oracle-text token's matches, or
  * null when `token` is not one (a subtype, searched as itself).

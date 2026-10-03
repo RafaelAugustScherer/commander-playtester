@@ -115,7 +115,11 @@ function hyldaProfile() {
     colorIdentity: ["W"],
   });
   const profile = extractThemeProfile([commander], []);
-  return { ...profile, tokenWeights: [...profile.tokenWeights] };
+  return {
+    ...profile,
+    tokenWeights: [...profile.tokenWeights],
+    creatureTypes: [...profile.creatureTypes],
+  };
 }
 
 describe("createDraftRanker theme pools", () => {
@@ -137,3 +141,31 @@ describe("createDraftRanker theme pools", () => {
     expect(candidates.map((c) => c.name)).toEqual([TAPPER.name]);
   });
 });
+
+describe("createDraftRanker tribal mode", () => {
+  const ELF: FakeCard = {
+    name: "Quiet Elf",
+    coreTypes: ["Creature"],
+    subtypes: ["Elf"],
+    oracleText: "",
+    printings: 1,
+  };
+
+  it("offers only creatures of the chosen tribes in a creature slot", () => {
+    const { queries, cardDataJson } = fakeEngine([HYLDA, TAPPER, ELF, ...FILLERS]);
+    const ranker = createDraftRanker(queries, cardDataJson);
+    const profile = { ...hyldaProfile(), tribes: ["elf"] };
+
+    const { candidates } = ranker.rankCardCandidates({
+      commanders: [HYLDA.name],
+      mainboard: [],
+      profile,
+      target: "focused",
+      exclude: [HYLDA.name.toLowerCase()],
+      slotTypes: ["creature", "creature"],
+    });
+
+    expect(candidates.map((c) => c.name)).toEqual([ELF.name]);
+  });
+});
+

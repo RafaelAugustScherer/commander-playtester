@@ -56,6 +56,9 @@ export interface EngineThemeProfile {
   curve: number[];
   roleCounts: Record<CardRole, number>;
   colorIdentity: string[];
+  creatureTypes: Array<[string, number]>;
+  creatureCount: number;
+  tribes: string[];
 }
 
 export interface RankCardCandidatesInput {

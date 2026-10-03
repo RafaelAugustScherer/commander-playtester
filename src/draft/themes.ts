@@ -1,5 +1,5 @@
 import type { Card, CardRole } from "../lib/types";
-import { themeTokens, rewardedTokens } from "./tokens";
+import { creatureTypesOf, themeTokens, rewardedTokens } from "./tokens";
 
 /** How many times a commander's tokens count against the same token from the 99. */
 export const COMMANDER_WEIGHT = 3;
@@ -21,17 +21,25 @@ export interface ThemeProfile {
   curve: number[];
   roleCounts: Record<CardRole, number>;
   colorIdentity: string[];
+  /** Creatures in the deck by creature type, commanders included. */
+  creatureTypes: Map<string, number>;
+  /** Creatures in the deck, commanders included. */
+  creatureCount: number;
+  /** The tribes the author selected in tribal mode, lowercase; empty when off. */
+  tribes: string[];
 }
 
 /**
  * Summarize a deck so far into the profile candidates get scored against:
  * weighted theme tokens (`commander weighting` applied, and more again for
  * what a commander rewards), the mana curve, role
- * counts, and the commanders' color identity.
+ * counts, the commanders' color identity, the deck's creatures by type, and the
+ * tribes selected in tribal mode.
  */
 export function extractThemeProfile(
   commanders: Card[],
   others: Card[],
+  tribes: readonly string[] = [],
 ): ThemeProfile {
   const tokenWeights = new Map<string, number>();
   const curve = new Array(CURVE_BUCKETS).fill(0);
@@ -43,6 +51,9 @@ export function extractThemeProfile(
     other: 0,
   };
 
+  const creatureTypes = new Map<string, number>();
+  let creatureCount = 0;
+
   for (const card of commanders) {
     addTokenWeights(tokenWeights, themeTokens(card), COMMANDER_WEIGHT);
     addTokenWeights(tokenWeights, rewardedTokens(card), REWARD_WEIGHT);
@@ -52,12 +63,22 @@ export function extractThemeProfile(
     addTokenWeights(tokenWeights, themeTokens(card), 1);
     addCurveAndRoles(curve, roleCounts, card);
   }
+  for (const card of [...commanders, ...others]) {
+    if (!/\bCreature\b/.test(card.typeLine)) continue;
+    creatureCount++;
+    for (const type of creatureTypesOf(card)) {
+      creatureTypes.set(type, (creatureTypes.get(type) ?? 0) + 1);
+    }
+  }
 
   return {
     tokenWeights,
     curve,
     roleCounts,
     colorIdentity: colorIdentityOf(commanders),
+    creatureTypes,
+    creatureCount,
+    tribes: [...new Set(tribes.map((tribe) => tribe.toLowerCase()))],
   };
 }
 

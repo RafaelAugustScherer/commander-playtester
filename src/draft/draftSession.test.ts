@@ -335,6 +335,55 @@ async function draftingSession(inputs: RankCardCandidatesInput[]): Promise<Draft
   return session;
 }
 
+describe("DraftSession tribal mode", () => {
+  const COMMANDER = "Marwyn, the Nurturer";
+  const BASE = [COMMANDER, "Timberwatch Elf", "Elvish Archer"];
+
+  it("starts with tribal mode off and no tribes in the profile", async () => {
+    const inputs: RankCardCandidatesInput[] = [];
+    const session = new DraftSession({ engine: makeEngine({ inputs }), resolver: makeResolver() });
+    await session.start(BASE, COMMANDER);
+    expect(session.tribal).toEqual({ enabled: false, tribes: [] });
+    expect(inputs[0].profile.tribes).toEqual([]);
+  });
+
+  it("sends the tribes chosen at the start, lowercased and deduplicated", async () => {
+    const inputs: RankCardCandidatesInput[] = [];
+    const session = new DraftSession({ engine: makeEngine({ inputs }), resolver: makeResolver() });
+    await session.start(BASE, COMMANDER, "focused", {
+      enabled: true,
+      tribes: ["Elf", "elf", " Druid "],
+    });
+    expect(inputs[0].profile.tribes).toEqual(["elf", "druid"]);
+  });
+
+  it("re-offers the round at once when the tribes change", async () => {
+    const inputs: RankCardCandidatesInput[] = [];
+    const session = new DraftSession({ engine: makeEngine({ inputs }), resolver: makeResolver() });
+    await session.start(BASE, COMMANDER);
+    await session.setTribal({ enabled: true, tribes: ["Elf"] });
+    expect(inputs).toHaveLength(2);
+    expect(inputs[1].profile.tribes).toEqual(["elf"]);
+  });
+
+  it("keeps the tribes but stops steering by them while off", async () => {
+    const inputs: RankCardCandidatesInput[] = [];
+    const session = new DraftSession({ engine: makeEngine({ inputs }), resolver: makeResolver() });
+    await session.start(BASE, COMMANDER, "focused", { enabled: true, tribes: ["elf"] });
+    await session.setTribal({ enabled: false, tribes: ["elf"] });
+    expect(session.tribal.tribes).toEqual(["elf"]);
+    expect(inputs[inputs.length - 1].profile.tribes).toEqual([]);
+  });
+
+  it("does not re-offer the round when the tribes it steers by are unchanged", async () => {
+    const inputs: RankCardCandidatesInput[] = [];
+    const session = new DraftSession({ engine: makeEngine({ inputs }), resolver: makeResolver() });
+    await session.start(BASE, COMMANDER);
+    await session.setTribal({ enabled: true, tribes: [] });
+    expect(inputs).toHaveLength(1);
+  });
+});
+
 describe("DraftSession type-aware refresh", () => {
   it("carries the engine's slot type onto each round candidate", async () => {
     const session = await draftingSession([]);

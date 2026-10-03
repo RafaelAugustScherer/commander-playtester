@@ -21,30 +21,18 @@ const TIER_ORDER: EngineBracketTier[] = [
 ];
 
 /**
- * The user-facing bracket target set (glossary: "Exhibition, Core,
- * Upgraded/Focused, Optimized, cEDH"). "Focused" is the label shown to the
- * user for the engine's `upgraded` tier and is the default.
+ * The user-facing bracket target set: Focused, Optimized and cEDH. "Focused"
+ * is the label shown to the user for the engine's `upgraded` tier and is the
+ * default. The lower tiers are not offered as targets: a draft below Focused
+ * has nothing to hold back (`deck-draft/ADR-0006`).
  */
-export type BracketTarget =
-  | "exhibition"
-  | "core"
-  | "focused"
-  | "optimized"
-  | "cedh";
+export type BracketTarget = "focused" | "optimized" | "cedh";
 
-export const BRACKET_TARGETS: BracketTarget[] = [
-  "exhibition",
-  "core",
-  "focused",
-  "optimized",
-  "cedh",
-];
+export const BRACKET_TARGETS: BracketTarget[] = ["focused", "optimized", "cedh"];
 
 export const DEFAULT_BRACKET_TARGET: BracketTarget = "focused";
 
 const TARGET_TO_TIER: Record<BracketTarget, EngineBracketTier> = {
-  exhibition: "exhibition",
-  core: "core",
   focused: "upgraded",
   optimized: "optimized",
   cedh: "cedh",

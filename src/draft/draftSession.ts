@@ -40,6 +40,17 @@ export class DraftSessionError extends Error {
   }
 }
 
+export interface TribalMode {
+  enabled: boolean;
+  /** Creature types, lowercase. */
+  tribes: string[];
+}
+
+function normalizeTribal({ enabled, tribes }: TribalMode): TribalMode {
+  const unique = new Set(tribes.map((tribe) => tribe.trim().toLowerCase()).filter(Boolean));
+  return { enabled, tribes: [...unique] };
+}
+
 const MIN_BASE_CARDS = 3;
 const ROUND_SIZE = 3;
 
@@ -60,6 +71,11 @@ export class DraftSession {
   /** The Background paired with `commander` via "Choose a Background", if any. */
   background: Card | null = null;
   target: BracketTarget = DEFAULT_BRACKET_TARGET;
+  /**
+   * Tribal mode: when on, creature slots offer only creatures of `tribes` and
+   * cards that name them rank higher. The tribes are kept while it is off.
+   */
+  tribal: TribalMode = { enabled: false, tribes: [] };
   commanders: DecklistEntry[] = [];
   mainboard: DecklistEntry[] = [];
   round: RankedCandidate[] = [];
@@ -79,6 +95,19 @@ export class DraftSession {
     return this.mainboard
       .map((entry) => this.resolved.get(entry.name.toLowerCase()))
       .filter((c): c is Card => c !== undefined);
+  }
+
+  /** The tribes tribal mode steers by: none while it is off. */
+  private activeTribes(): string[] {
+    return this.tribal.enabled ? this.tribal.tribes : [];
+  }
+
+  private rebuildProfile(): void {
+    this.profile = extractThemeProfile(
+      this.commanderCards(),
+      this.mainboardCards(),
+      this.activeTribes(),
+    );
   }
 
   /** `commander` plus `background`, when paired — for `extractThemeProfile`. */
@@ -195,7 +224,9 @@ export class DraftSession {
     baseCardNames: string[],
     commanderName: string | null = null,
     target: BracketTarget = DEFAULT_BRACKET_TARGET,
+    tribal: TribalMode = { enabled: false, tribes: [] },
   ): Promise<void> {
+    this.tribal = normalizeTribal(tribal);
     const uniqueNames = [...new Set(baseCardNames.map((n) => n.trim()).filter(Boolean))];
     if (uniqueNames.length < MIN_BASE_CARDS) {
       throw new DraftSessionError("too-few-base-cards");
@@ -227,7 +258,11 @@ export class DraftSession {
         : [{ quantity: 1, name: commanderCard.name }];
       this.mainboard = mainboardCards.map((c) => ({ quantity: 1, name: c.name }));
       this.phase = "drafting";
-      this.profile = extractThemeProfile(this.commanderCards(), mainboardCards);
+      this.profile = extractThemeProfile(
+        this.commanderCards(),
+        mainboardCards,
+        this.activeTribes(),
+      );
       await this.openRound();
     } else {
       this.commander = null;
@@ -275,7 +310,7 @@ export class DraftSession {
       this.commanders = [{ quantity: 1, name: card.name }];
     }
     this.phase = "drafting";
-    this.profile = extractThemeProfile(this.commanderCards(), this.mainboardCards());
+    this.rebuildProfile();
     await this.openRound();
   }
 
@@ -320,7 +355,7 @@ export class DraftSession {
     }
     const card = this.round[index].card;
     this.addToMainboard(card);
-    this.profile = extractThemeProfile(this.commanderCards(), this.mainboardCards());
+    this.rebuildProfile();
     await this.openRound();
   }
 
@@ -336,6 +371,19 @@ export class DraftSession {
     this.mainboard.push(
       ...basicLandSplit(count, this.profile.colorIdentity, this.colorWeights()),
     );
+    await this.openRound();
+  }
+
+  /**
+   * Turn tribal mode on or off, or change its tribes. While drafting, a change
+   * to the tribes it steers by re-offers the current round at once, so its
+   * creatures follow them.
+   */
+  async setTribal(tribal: TribalMode): Promise<void> {
+    const before = this.activeTribes().join("|");
+    this.tribal = normalizeTribal(tribal);
+    if (this.phase !== "drafting" || this.activeTribes().join("|") === before) return;
+    this.rebuildProfile();
     await this.openRound();
   }
 

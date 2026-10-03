@@ -78,9 +78,12 @@ whole card pool by heart.
   commander-set `type balance`, and each slot's pool adds the most-printed cards of its
   type, so a spellslinger is offered spells and an enchantress enchantments. Basic lands
   come from one **Fill basic lands** step rather than from rounds (`deck-draft/ADR-0003`).
-- A `bracket target` (default Focused) steers the ranking through the engine's bracket
-  estimate; a card that would push the deck past the target is penalised, not hidden —
-  the user stays in control (`ADR-0009`).
+- A `bracket target` (Focused by default, or Optimized or cEDH) steers the ranking through
+  the engine's bracket estimate; a card that would push the deck past the target is
+  penalised, not hidden — the user stays in control (`ADR-0009`, `deck-draft/ADR-0006`).
+- Lords and other `tribal payoff`s rise with their tribe's share of the deck; `tribal mode`
+  goes further and keeps creature slots on tribes the author picks by hand
+  (`deck-draft/ADR-0006`).
 - The draft never scrapes or browses a field of decks. It proposes single cards for the
   one deck the user is building — carrying forward `ADR-0004`'s stance while reversing
   its "the app never curates or suggests" corollary (`ADR-0009`).

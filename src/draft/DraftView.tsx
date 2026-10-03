@@ -9,11 +9,12 @@ import type {
   CardValidation,
   ClassifyDeckResult,
 } from "../engine/draftQueries";
-import { DraftSession } from "./draftSession";
+import { DraftSession, type TribalMode } from "./draftSession";
 import { engineDraftEngine, scryfallCardResolver } from "./candidates";
 import { BRACKET_TARGETS, DEFAULT_BRACKET_TARGET, type BracketTarget } from "./bracket";
 import { DraftCandidateCard } from "./DraftCandidateCard";
 import { QuickDraft, QuickDraftToggle } from "./QuickDraft";
+import { TribalToggle, TribePicker } from "./TribalPicker";
 import { DRAFT_CARD_TYPES, type DraftCardType } from "./typeBalance";
 import { CardNameInput } from "../components/CardNameInput";
 import { SearchableSelect } from "../components/SearchableSelect";
@@ -91,8 +92,6 @@ function parsePastedNames(text: string): string[] {
 }
 
 const BRACKET_TARGET_LABEL: Record<BracketTarget, MsgKey> = {
-  exhibition: "draft.bracket.exhibition",
-  core: "draft.bracket.core",
   focused: "draft.bracket.focused",
   optimized: "draft.bracket.optimized",
   cedh: "draft.bracket.cedh",
@@ -145,6 +144,35 @@ function BracketTargetPicker({
         </button>
       ))}
     </div>
+  );
+}
+
+/** The bracket target picker with the tribal toggle beside it, and the tribes when on. */
+function DraftSteering({
+  target,
+  tribal,
+  disabled,
+  targetHint,
+  onTargetChange,
+  onTribalChange,
+}: {
+  target: BracketTarget;
+  tribal: TribalMode;
+  disabled?: boolean;
+  /** Shown under the bracket buttons, above the tribes. */
+  targetHint?: string;
+  onTargetChange: (target: BracketTarget) => void;
+  onTribalChange: (tribal: TribalMode) => void;
+}) {
+  return (
+    <>
+      <div className="seg-row">
+        <BracketTargetPicker target={target} onChange={onTargetChange} />
+        <TribalToggle tribal={tribal} disabled={disabled} onChange={onTribalChange} />
+      </div>
+      {targetHint && <p className="hint">{targetHint}</p>}
+      <TribePicker tribal={tribal} disabled={disabled} onChange={onTribalChange} />
+    </>
   );
 }
 
@@ -284,6 +312,7 @@ function DraftEntry({
     names: string[],
     commanderName: string | null,
     target: BracketTarget,
+    tribal: TribalMode,
   ) => Promise<void>;
   onCancel: () => void;
 }) {
@@ -294,6 +323,7 @@ function DraftEntry({
   const [pasteText, setPasteText] = useState<string>(seed ? seed.names.join("\n") : "");
   const [pasteCommander, setPasteCommander] = useState<string>(seed?.commander ?? "");
   const [target, setTarget] = useState<BracketTarget>(DEFAULT_BRACKET_TARGET);
+  const [tribal, setTribal] = useState<TribalMode>({ enabled: false, tribes: [] });
   const [status, setStatus] = useState<EntryStatus>({ kind: "idle" });
   const [unresolved, setUnresolved] = useState<string[]>([]);
 
@@ -391,7 +421,7 @@ function DraftEntry({
     setStatus({ kind: "starting" });
     try {
       await getEngine().ready();
-      await onStart(resolvedNames, commanderName, target);
+      await onStart(resolvedNames, commanderName, target, tribal);
     } catch (err) {
       setStatus({
         kind: "error",
@@ -465,7 +495,12 @@ function DraftEntry({
 
       <div className="field">
         <span className="field__label">{t("draft.entry.bracketLabel")}</span>
-        <BracketTargetPicker target={target} onChange={setTarget} />
+        <DraftSteering
+          target={target}
+          tribal={tribal}
+          onTargetChange={setTarget}
+          onTribalChange={setTribal}
+        />
       </div>
 
       {notFoundNames.length > 0 && (
@@ -615,18 +650,22 @@ function DraftSummaryPanel({
   bracket,
   measuresLoading,
   roundBusy,
+  tribal,
   onTargetChange,
+  onTribalChange,
   onFillLands,
   onExit,
 }: {
   session: DraftSession;
   target: BracketTarget;
+  tribal: TribalMode;
   totalCards: number;
   archetype: ClassifyDeckResult | null;
   bracket: BracketEstimate | null;
   measuresLoading: boolean;
   roundBusy: RoundBusy;
   onTargetChange: (target: BracketTarget) => void;
+  onTribalChange: (tribal: TribalMode) => void;
   onFillLands: () => void;
   onExit: () => void;
 }) {
@@ -670,8 +709,14 @@ function DraftSummaryPanel({
       </div>
       <div className="field" style={{ marginTop: "0.75rem" }}>
         <span className="field__label">{t("draft.summary.bracketTarget")}</span>
-        <BracketTargetPicker target={target} onChange={onTargetChange} />
-        <p className="hint">{t("draft.summary.targetHint")}</p>
+        <DraftSteering
+          target={target}
+          tribal={tribal}
+          disabled={roundBusy !== null}
+          targetHint={t("draft.summary.targetHint")}
+          onTargetChange={onTargetChange}
+          onTribalChange={onTribalChange}
+        />
       </div>
       {balance && (
         <div className="field" style={{ marginTop: "0.75rem" }}>
@@ -824,6 +869,7 @@ function DraftSessionView({
   const [roundBusy, setRoundBusy] = useState<RoundBusy>(null);
   const [roundError, setRoundError] = useState<string | null>(null);
   const [target, setTarget] = useState<BracketTarget>(session.target);
+  const [tribal, setTribal] = useState<TribalMode>(session.tribal);
   const [saveName, setSaveName] = useState("");
   const [copied, setCopied] = useState(false);
   const [preview, setPreview] = useState<Preview | null>(null);
@@ -884,6 +930,11 @@ function DraftSessionView({
     session.setBracketTarget(next);
   }
 
+  function handleTribalChange(next: TribalMode) {
+    setTribal(next);
+    void runRoundAction("all", () => session.setTribal(next));
+  }
+
   async function handleCopy() {
     await navigator.clipboard.writeText(session.exportText());
     setCopied(true);
@@ -924,7 +975,9 @@ function DraftSessionView({
             bracket={bracket}
             measuresLoading={measuresLoading}
             roundBusy={roundBusy}
+            tribal={tribal}
             onTargetChange={handleTargetChange}
+            onTribalChange={handleTribalChange}
             onFillLands={handleFillLands}
             onExit={onExit}
           />
@@ -982,12 +1035,13 @@ export function DraftView({
     names: string[],
     commanderName: string | null,
     target: BracketTarget,
+    tribal: TribalMode,
   ) {
     const session = new DraftSession({
       engine: engineDraftEngine,
       resolver: scryfallCardResolver,
     });
-    await session.start(names, commanderName, target);
+    await session.start(names, commanderName, target, tribal);
     sessionRef.current = session;
     setStarted(true);
   }

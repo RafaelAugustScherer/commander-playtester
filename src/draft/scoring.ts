@@ -1,15 +1,22 @@
 import type { Card } from "../lib/types";
 import type { ThemeProfile } from "./themes";
-import { cardTokens } from "./tokens";
+import { cardTokens, namedTribes, servesTribe } from "./tokens";
 
 const CURVE_FIT_WEIGHT = 2;
 const ROLE_GAP_WEIGHT = 2;
+// The tribal payoff bonus at full strength (`deck-draft/ADR-0006`), and how
+// many creatures of a type it takes to get most of the way there.
+const TRIBAL_PAYOFF_WEIGHT = 6;
+const TRIBAL_SATURATION = 3;
+// Tribal mode: what a card that names or is Kindred of a selected tribe gets.
+const SELECTED_TRIBE_WEIGHT = 5;
 
 export interface CandidateScore {
   total: number;
   themeScore: number;
   curveScore: number;
   roleScore: number;
+  tribalScore: number;
   /** Tokens the candidate shares with the deck's profile, for rationale chips. */
   matchedTokens: string[];
 }
@@ -17,18 +24,21 @@ export interface CandidateScore {
 /**
  * Score a candidate's fit against a deck's `ThemeProfile`: shared theme
  * tokens, plus a term for filling thin spots in the mana curve, plus a term
- * for filling role gaps. Pure and deterministic.
+ * for filling role gaps, plus a term for rewarding a tribe the deck already
+ * has. Pure and deterministic.
  */
 export function scoreCandidate(card: Card, profile: ThemeProfile): CandidateScore {
   const { themeScore, matchedTokens } = themeFit(card, profile);
   const curveScore = curveFit(card, profile);
   const roleScore = roleGapFit(card, profile);
+  const tribalScore = tribalPayoffFit(card, profile);
 
   return {
-    total: themeScore + curveScore + roleScore,
+    total: themeScore + curveScore + roleScore + tribalScore,
     themeScore,
     curveScore,
     roleScore,
+    tribalScore,
     matchedTokens,
   };
 }
@@ -65,4 +75,27 @@ function roleGapFit(card: Card, profile: ThemeProfile): number {
     roleScore += ROLE_GAP_WEIGHT / (profile.roleCounts[role] + 1);
   }
   return roleScore;
+}
+
+/**
+ * A bonus for each tribe the card's rules text names, growing with that tribe's
+ * share of the deck's creatures and saturating as their number grows: five
+ * Elves in eight creatures make an Elf lord worth far more than five incidental
+ * Humans in thirty make a Human lord. In tribal mode, a card that names or is
+ * Kindred of a selected tribe gets `SELECTED_TRIBE_WEIGHT` on top.
+ */
+function tribalPayoffFit(card: Card, profile: ThemeProfile): number {
+  let tribalScore = 0;
+  if (profile.creatureCount > 0) {
+    for (const tribe of namedTribes(card)) {
+      const count = profile.creatureTypes.get(tribe) ?? 0;
+      const share = count / profile.creatureCount;
+      tribalScore +=
+        TRIBAL_PAYOFF_WEIGHT * share * (1 - Math.exp(-count / TRIBAL_SATURATION));
+    }
+  }
+  if (profile.tribes.length > 0 && servesTribe(card, profile.tribes)) {
+    tribalScore += SELECTED_TRIBE_WEIGHT;
+  }
+  return tribalScore;
 }
