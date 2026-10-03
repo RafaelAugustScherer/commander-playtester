@@ -142,6 +142,15 @@ fetches survive CDN pruning.
   against the new glue exports. If any changed, update `engine_wasm.d.ts` and the call sites.
 - **State shapes.** If `types.ts` fields drifted, the smoke's shape check (step 8) will
   flag it; update `types.ts` accordingly.
+- **Draft surface.** The deck draft reads introspected, undocumented shapes:
+  `search_cards_js`'s `type_line` (card types and subtypes) and `legal_format` filters, and
+  the parsed abilities in `get_card_face_data` (`SpellCast` triggers with `valid_target`,
+  `ModifyCost` statics with `spell_filter`, `type_filters` with `controller`). Text and type
+  searches also return secondary-face rows (an adventure's spell half) that the unfiltered
+  scan lacks, so the draft keeps only names the unfiltered scan returns. `npm run
+  draft-balance` (step 8) fails its direction checks if any of them moved, and its Elf and
+  Goblin counts drop if `type_line` stops reading subtypes (`deck-draft/ADR-0003`,
+  `deck-draft/ADR-0004`).
 - **New player decisions (from step 2).** For each new decision that can be aimed at the
   **human** seat, implement the manual-play interaction using the established pattern
   (below). AI-only decisions need nothing — the AI already drives them.
@@ -170,6 +179,7 @@ npm run lint
 npm test
 npm run duplication
 npm run engine-smoke      # boots the new WASM, runs a full match to GameOver
+npm run draft-balance     # drafts 18 reference decks, checks each commander's type lean
 npx domainbook check --range origin/main..HEAD
 ```
 

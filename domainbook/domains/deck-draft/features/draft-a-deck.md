@@ -122,15 +122,16 @@ Example: A staple outranks a vanilla card of equal theme fit
 Each `suggestion round` shows exactly three cards whenever at least three legal candidates
 exist in the card database. Candidates are narrowed, scored, bracket-adjusted, and ranked
 locally before only the three selected cards are fetched for display. Any one can be refreshed
-on its own, replaced by the closest remaining candidate that has not appeared in this round.
-Adding a card ends the round. The next ranking rebuilds its profile from the commander and
-every card selected so far.
+on its own, replaced by the closest remaining candidate of the same `slot type` that has not
+appeared in this round. Adding a card ends the round. The next ranking rebuilds its profile
+from the commander and every card selected so far.
 
 ```gherkin
 Example: Refresh swaps one slot for a close, unseen card
   Given a round showing three suggestions
   When the author refreshes the middle card
   Then that slot shows a different card close to the one it replaced
+  And the new card has the same slot type
   And no card shown earlier this round reappears
 
 Example: Adding a card starts a fresh round
@@ -144,6 +145,58 @@ Example: Commander ranking produces a full round
   Given at least three legal commanders exist in the card database
   When the commander-selection round is suggested
   Then it shows exactly three legal commanders
+```
+
+## Rule: Each round offers the card types the deck is short of
+
+The draft keeps a `type balance`: a target count of lands, creatures, instants, sorceries,
+artifacts, enchantments and planeswalkers for the whole deck, set by the commander. A
+commander whose text asks for a type — "whenever you cast an instant or sorcery spell",
+"enchantment spells you cast", "Elves you control" — moves part of the deck toward that
+type; one that asks for nothing keeps the across-deck baseline (`deck-draft/ADR-0003`).
+
+Each of a round's three slots gets a `slot type`: the type that trails its share of the
+cards drafted so far by the most, counting each card by one type (Land, then Creature,
+then the rest). The slot then offers the best-fitting card of that type. A type far behind
+can take two or three slots; the user still picks any of the three, and the next round
+re-balances around that pick. The summary shows each type's count against its target.
+
+```gherkin
+Example: A spellslinger commander is offered spells
+  Given a draft whose commander is "Mizzix of the Izmagnus"
+  When the deck is drafted to completion
+  Then instants and sorceries together outnumber creatures
+
+Example: An enchantress commander is offered enchantments
+  Given a draft whose commander is "Sythis, Harvest's Hand"
+  When rounds are suggested
+  Then enchantments are offered more than any other non-land, non-creature type
+
+Example: A type the deck is short of takes the next slot
+  Given a deck whose instants trail their target share by the most
+  When a round is suggested
+  Then its first slot is an instant slot
+```
+
+## Rule: Basic lands are filled in one step
+
+Rounds suggest only nonbasic lands, up to a share of the land target that grows with the
+number of colours. **Fill basic lands** adds the rest as basics — enough to reach the land
+target with the planned nonbasic lands still to come, never past 100 cards — split across
+the commander's colours in proportion to the deck's cards. A colourless deck gets Wastes.
+Pressing it again replaces the earlier basics instead of adding more. Basics are the only
+cards a draft holds more than one copy of.
+
+```gherkin
+Example: Filling basics completes the land count
+  Given a two-colour draft whose land target is 35 with 16 nonbasic lands planned
+  When the author fills basic lands
+  Then 19 basic lands are added, split by the deck's two colours
+
+Example: Filling twice does not stack
+  Given a draft that has already filled basic lands
+  When the author adds more cards and fills basic lands again
+  Then the earlier basics are replaced by a new split
 ```
 
 ## Rule: Suggestions stay legal and follow the bracket target

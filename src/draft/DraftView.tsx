@@ -13,6 +13,7 @@ import { DraftSession } from "./draftSession";
 import { engineDraftEngine, scryfallCardResolver } from "./candidates";
 import { BRACKET_TARGETS, DEFAULT_BRACKET_TARGET, type BracketTarget } from "./bracket";
 import { DraftCandidateCard } from "./DraftCandidateCard";
+import { DRAFT_CARD_TYPES, type DraftCardType } from "./typeBalance";
 import { CardNameInput } from "../components/CardNameInput";
 import { SearchableSelect } from "../components/SearchableSelect";
 import { CardPreview, type Preview } from "../board/CardPreview";
@@ -102,6 +103,16 @@ const ENGINE_TIER_LABEL: Record<string, MsgKey> = {
   upgraded: "draft.bracket.focused",
   optimized: "draft.bracket.optimized",
   cedh: "draft.bracket.cedh",
+};
+
+const BALANCE_TYPE_LABEL: Record<DraftCardType, MsgKey> = {
+  land: "draft.balance.type.land",
+  creature: "draft.balance.type.creature",
+  instant: "draft.balance.type.instant",
+  sorcery: "draft.balance.type.sorcery",
+  artifact: "draft.balance.type.artifact",
+  enchantment: "draft.balance.type.enchantment",
+  planeswalker: "draft.balance.type.planeswalker",
 };
 
 type EntryStatus =
@@ -509,7 +520,7 @@ function useDeckMeasures(session: DraftSession, deckVersion: number) {
   useEffect(() => {
     let cancelled = false;
     const commanderNames = session.commanders.map((e) => frontFace(e.name));
-    const mainNames = session.mainboard.map((e) => frontFace(e.name));
+    const mainNames = session.mainboardNames().map(frontFace);
     setLoading(true);
     Promise.all([
       getEngine().classifyDeck([...commanderNames, ...mainNames]),
@@ -597,7 +608,9 @@ function DraftSummaryPanel({
   archetype,
   bracket,
   measuresLoading,
+  roundBusy,
   onTargetChange,
+  onFillLands,
   onExit,
 }: {
   session: DraftSession;
@@ -606,10 +619,13 @@ function DraftSummaryPanel({
   archetype: ClassifyDeckResult | null;
   bracket: BracketEstimate | null;
   measuresLoading: boolean;
+  roundBusy: RoundBusy;
   onTargetChange: (target: BracketTarget) => void;
+  onFillLands: () => void;
   onExit: () => void;
 }) {
   const { t } = useI18n();
+  const { balance } = session;
   const tierLabel = bracket
     ? t(ENGINE_TIER_LABEL[bracket.tier] ?? "draft.bracket.exhibition")
     : "—";
@@ -651,6 +667,32 @@ function DraftSummaryPanel({
         <BracketTargetPicker target={target} onChange={onTargetChange} />
         <p className="hint">{t("draft.summary.targetHint")}</p>
       </div>
+      {balance && (
+        <div className="field" style={{ marginTop: "0.75rem" }}>
+          <span className="field__label">{t("draft.balance.title")}</span>
+          <div className="chips">
+            {DRAFT_CARD_TYPES.map((type) => (
+              <span className="chip" key={type}>
+                {t("draft.balance.chip", {
+                  type: t(BALANCE_TYPE_LABEL[type]),
+                  have: balance.have[type],
+                  target: balance.target[type],
+                })}
+              </span>
+            ))}
+          </div>
+          <div className="import__row">
+            <button
+              className="btn btn--ghost btn--sm"
+              onClick={onFillLands}
+              disabled={roundBusy !== null}
+            >
+              {t("draft.balance.fillLands")}
+            </button>
+          </div>
+          <p className="hint">{t("draft.balance.fillLandsHint")}</p>
+        </div>
+      )}
     </section>
   );
 }
@@ -814,6 +856,13 @@ function DraftSessionView({
     });
   }
 
+  function handleFillLands() {
+    void runRoundAction("all", async () => {
+      await session.fillBasicLands();
+      setDeckVersion((v) => v + 1);
+    });
+  }
+
   function handleRefresh(index: number) {
     void runRoundAction(index, () => session.refreshSlot(index));
   }
@@ -835,7 +884,7 @@ function DraftSessionView({
     onSave(session.toSavedDeck(name));
   }
 
-  const totalCards = session.commanders.length + session.mainboard.length;
+  const totalCards = session.cardCount();
 
   if (session.phase === "commander-selection") {
     return (
@@ -865,7 +914,9 @@ function DraftSessionView({
         archetype={archetype}
         bracket={bracket}
         measuresLoading={measuresLoading}
+        roundBusy={roundBusy}
         onTargetChange={handleTargetChange}
+        onFillLands={handleFillLands}
         onExit={onExit}
       />
       <DraftRoundPanel

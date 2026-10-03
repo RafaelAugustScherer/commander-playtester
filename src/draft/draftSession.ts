@@ -1,4 +1,5 @@
 import type { Card, DecklistEntry } from "../lib/types";
+import { isLand } from "../lib/types";
 import type { SavedDeck } from "../deck/model";
 import { deckToText } from "../deck/model";
 import { extractThemeProfile, type ThemeProfile } from "./themes";
@@ -14,6 +15,13 @@ import {
 } from "./candidates";
 import { DEFAULT_BRACKET_TARGET, type BracketTarget } from "./bracket";
 import { draftCandidateCard } from "./localCandidates";
+import {
+  basicLandCount,
+  basicLandSplit,
+  isBasicLandName,
+  type DraftCardType,
+  type TypeBalance,
+} from "./typeBalance";
 
 export type DraftPhase = "commander-selection" | "drafting";
 
@@ -56,6 +64,7 @@ export class DraftSession {
   mainboard: DecklistEntry[] = [];
   round: RankedCandidate[] = [];
   profile: ThemeProfile = extractThemeProfile([], []);
+  balance: TypeBalance | null = null;
 
   /** Every card resolved so far this session, by lowercase name — avoids re-fetching. */
   private resolved = new Map<string, Card>();
@@ -76,11 +85,29 @@ export class DraftSession {
     return [this.commander, this.background].filter((c): c is Card => c !== null);
   }
 
+  mainboardNames(): string[] {
+    return this.mainboard.flatMap((entry) => Array<string>(entry.quantity).fill(entry.name));
+  }
+
+  cardCount(): number {
+    return [...this.commanders, ...this.mainboard].reduce((sum, e) => sum + e.quantity, 0);
+  }
+
   private deckNames(): { commanders: string[]; mainboard: string[] } {
     return {
       commanders: this.commanders.map((e) => e.name),
-      mainboard: this.mainboard.map((e) => e.name),
+      mainboard: this.mainboardNames(),
     };
+  }
+
+  private colorWeights(): Record<string, number> {
+    const weights: Record<string, number> = {};
+    for (const card of [...this.commanderCards(), ...this.mainboardCards()]) {
+      if (isLand(card)) continue;
+      const colors = card.colorIdentity.filter((c) => this.profile.colorIdentity.includes(c));
+      for (const color of colors) weights[color] = (weights[color] ?? 0) + 1 / colors.length;
+    }
+    return weights;
   }
 
   private rememberResolved(cards: Iterable<Card>): void {
@@ -98,17 +125,20 @@ export class DraftSession {
     this.shown = new Set();
     const deckNames = this.deckNames();
 
-    this.pool =
-      this.phase === "commander-selection"
-        ? await suggestCommanders(this.mainboardCards(), {
-          engine: this.deps.engine,
-          resolver: this.deps.resolver,
-        })
-        : await suggestCandidates(deckNames, this.profile, {
-            engine: this.deps.engine,
-            resolver: this.deps.resolver,
-            target: this.target,
-          });
+    if (this.phase === "commander-selection") {
+      this.pool = await suggestCommanders(this.mainboardCards(), {
+        engine: this.deps.engine,
+        resolver: this.deps.resolver,
+      });
+    } else {
+      const round = await suggestCandidates(deckNames, this.profile, {
+        engine: this.deps.engine,
+        resolver: this.deps.resolver,
+        target: this.target,
+      });
+      this.pool = round.candidates;
+      this.balance = round.balance;
+    }
 
     this.rememberResolved(this.pool.map((c) => c.card));
     this.round = this.pool.slice(0, ROUND_SIZE);
@@ -116,7 +146,7 @@ export class DraftSession {
   }
 
   /** Re-fetch the ranked pool, excluding the deck and everything shown this round. */
-  private async refillPool(): Promise<void> {
+  private async refillPool(slotType: DraftCardType | undefined): Promise<void> {
     const deckNames = this.deckNames();
     const exclude = new Set([
       ...deckNames.commanders,
@@ -131,12 +161,15 @@ export class DraftSession {
             resolver: this.deps.resolver,
             exclude,
           })
-        : await suggestCandidates(deckNames, this.profile, {
-            engine: this.deps.engine,
-            resolver: this.deps.resolver,
-            target: this.target,
-            exclude,
-          });
+        : (
+            await suggestCandidates(deckNames, this.profile, {
+              engine: this.deps.engine,
+              resolver: this.deps.resolver,
+              target: this.target,
+              exclude,
+              slotTypes: slotType ? Array<DraftCardType>(ROUND_SIZE).fill(slotType) : undefined,
+            })
+          ).candidates;
 
     this.rememberResolved(fresh.map((c) => c.card));
     const seen = new Set(this.pool.map((c) => c.card.name.toLowerCase()));
@@ -247,19 +280,21 @@ export class DraftSession {
     if (index < 0 || index >= this.round.length) {
       throw new DraftSessionError("invalid-slot");
     }
-    const replaced = this.round[index].card;
+    const replaced = this.round[index];
+    const isReplacement = (c: RankedCandidate) =>
+      !this.shown.has(c.card.name.toLowerCase()) && c.slotType === replaced.slotType;
 
-    let unshown = this.pool.filter((c) => !this.shown.has(c.card.name.toLowerCase()));
+    let unshown = this.pool.filter(isReplacement);
     if (unshown.length === 0) {
-      await this.refillPool();
-      unshown = this.pool.filter((c) => !this.shown.has(c.card.name.toLowerCase()));
+      await this.refillPool(replaced.slotType);
+      unshown = this.pool.filter(isReplacement);
     }
     if (unshown.length === 0) return;
 
     let best = unshown[0];
-    let bestSimilarity = cardSimilarity(replaced, best.card);
+    let bestSimilarity = cardSimilarity(replaced.card, best.card);
     for (const candidate of unshown.slice(1)) {
-      const similarity = cardSimilarity(replaced, candidate.card);
+      const similarity = cardSimilarity(replaced.card, candidate.card);
       if (similarity > bestSimilarity) {
         best = candidate;
         bestSimilarity = similarity;
@@ -281,6 +316,21 @@ export class DraftSession {
     const card = this.round[index].card;
     this.addToMainboard(card);
     this.profile = extractThemeProfile(this.commanderCards(), this.mainboardCards());
+    await this.openRound();
+  }
+
+  async fillBasicLands(): Promise<void> {
+    if (this.phase !== "drafting") {
+      throw new DraftSessionError("not-in-drafting");
+    }
+    if (!this.balance) return;
+    const balance = this.balance;
+    this.mainboard = this.mainboard.filter((entry) => !isBasicLandName(entry.name));
+    const openSlots = 100 - this.cardCount();
+    const count = basicLandCount(balance, openSlots);
+    this.mainboard.push(
+      ...basicLandSplit(count, this.profile.colorIdentity, this.colorWeights()),
+    );
     await this.openRound();
   }
 

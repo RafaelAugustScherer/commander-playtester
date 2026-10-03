@@ -12,7 +12,7 @@ import type {
   ClassifyDeckResult,
   DraftCandidateData,
   RankCardCandidatesInput,
-  RankedCardName,
+  RankCardCandidatesResult,
 } from "./draftQueries";
 
 interface Pending {
@@ -143,7 +143,7 @@ export class EngineClient {
     return this.req("resolveCards", { names });
   }
 
-  rankCardCandidates(input: RankCardCandidatesInput): Promise<RankedCardName[]> {
+  rankCardCandidates(input: RankCardCandidatesInput): Promise<RankCardCandidatesResult> {
     return this.req("rankCardCandidates", input);
   }
 

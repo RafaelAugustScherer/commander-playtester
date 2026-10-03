@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { cardTokens } from "./tokens";
+import { cardTokens, mentionsSubtype } from "./tokens";
 import type { Card } from "../lib/types";
 
 function card(overrides: Partial<Card> = {}): Card {
@@ -91,5 +91,29 @@ describe("cardTokens", () => {
     );
     expect(tokens).toContain("zombie");
     expect(tokens).toContain("mill");
+  });
+});
+
+describe("mentionsSubtype", () => {
+  it("finds a subtype named in the singular", () => {
+    expect(mentionsSubtype("create a 1/1 red Goblin creature token", "goblin")).toBe(true);
+  });
+
+  it("finds regular and irregular plurals", () => {
+    expect(mentionsSubtype("Goblins you control get +1/+1.", "goblin")).toBe(true);
+    expect(mentionsSubtype("Tap ten untapped Elves you control", "elf")).toBe(true);
+    expect(mentionsSubtype("Allies you control gain lifelink", "ally")).toBe(true);
+    expect(mentionsSubtype("other Sphinxes you control", "sphinx")).toBe(true);
+  });
+
+  it("ignores the subtype inside another word", () => {
+    expect(mentionsSubtype("Sacrifice this creature itself", "elf")).toBe(false);
+    expect(mentionsSubtype("Angelfire burns on", "angel")).toBe(false);
+  });
+
+  it("is false when the text never names the subtype", () => {
+    expect(
+      mentionsSubtype("Instant and sorcery spells you cast cost {1} less to cast.", "wizard"),
+    ).toBe(false);
   });
 });

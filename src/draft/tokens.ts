@@ -80,6 +80,23 @@ function subtypesFromTypeLine(typeLine: string): string[] {
   return [...tokens];
 }
 
+function subtypeForms(subtype: string): string[] {
+  return [
+    subtype,
+    `${subtype}s`,
+    `${subtype}es`,
+    subtype.replace(/fe?$/, "ves"),
+    subtype.replace(/y$/, "ies"),
+  ];
+}
+
+export function mentionsSubtype(text: string, subtype: string): boolean {
+  const forms = subtypeForms(subtype.toLowerCase()).map((form) =>
+    form.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
+  );
+  return new RegExp(`\\b(?:${forms.join("|")})\\b`, "i").test(text);
+}
+
 /** Extract a card's theme tokens: permanent subtypes plus oracle-text signals. */
 export function cardTokens(card: Card): Set<string> {
   const tokens = new Set<string>(subtypesFromTypeLine(card.typeLine));

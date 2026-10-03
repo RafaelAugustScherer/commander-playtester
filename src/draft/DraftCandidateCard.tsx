@@ -1,8 +1,20 @@
 import type { MouseEvent as ReactMouseEvent } from "react";
 import { Plus, RefreshCw } from "lucide-react";
 import type { RankedCandidate } from "./candidates";
+import type { DraftCardType } from "./typeBalance";
 import { useI18n } from "../i18n/I18nContext";
+import type { MsgKey } from "../i18n/messages";
 import type { Preview } from "../board/CardPreview";
+
+const SLOT_LABEL: Record<DraftCardType, MsgKey> = {
+  land: "draft.slot.land",
+  creature: "draft.slot.creature",
+  instant: "draft.slot.instant",
+  sorcery: "draft.slot.sorcery",
+  artifact: "draft.slot.artifact",
+  enchantment: "draft.slot.enchantment",
+  planeswalker: "draft.slot.planeswalker",
+};
 
 /** One suggested card in a `suggestion round`: art, rationale chips, and its actions. */
 export function DraftCandidateCard({
@@ -23,7 +35,7 @@ export function DraftCandidateCard({
   preview: Preview | null;
 }) {
   const { t } = useI18n();
-  const { card, score, bracketTilt } = candidate;
+  const { card, score, bracketTilt, slotType } = candidate;
 
   function enter(e: ReactMouseEvent) {
     onHover({
@@ -62,6 +74,11 @@ export function DraftCandidateCard({
       ) : (
         <div className="draft-card__img draft-card__img--placeholder">
           {card.name}
+        </div>
+      )}
+      {slotType && (
+        <div className="chips draft-card__tags">
+          <span className="chip">{t(SLOT_LABEL[slotType])}</span>
         </div>
       )}
       {score.matchedTokens.length > 0 && (

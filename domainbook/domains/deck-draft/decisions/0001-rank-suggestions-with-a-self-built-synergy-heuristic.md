@@ -16,8 +16,9 @@ A runtime spike over the vendored engine (v0.71) settled what phase-rs can suppl
 exposes, with no running game and tolerant of a partial deck:
 
 - `search_cards_js` — a card search over the database, filterable by free text and by
-  color-identity containment; returns lean rows (name, mana value, color identity,
-  legalities).
+  the card's own colours (not its color identity); returns lean rows (name, mana value,
+  color identity, legalities). Later introspection found `type_line` and `legal_format`
+  filters too (`deck-draft/ADR-0003`).
 - `estimate_bracket_for_deck` — the WotC bracket, naming the cards that drive each axis.
 - `classify_deck_js` — the deck's archetype.
 

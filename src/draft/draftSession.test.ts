@@ -3,7 +3,12 @@ import { DraftSession, DraftSessionError } from "./draftSession";
 import type { DraftEngine, CardResolver } from "./candidates";
 import type { Card } from "../lib/types";
 import { parseDecklist } from "../lib/decklist";
-import type { DraftCandidateData } from "../engine/draftQueries";
+import type {
+  DraftCandidateData,
+  RankCardCandidatesInput,
+  RankCardCandidatesResult,
+} from "../engine/draftQueries";
+import { basicLandCount, primaryType, zeroCounts, type TypeBalance } from "./typeBalance";
 
 function card(overrides: Partial<Card> = {}): Card {
   return {
@@ -45,16 +50,69 @@ const POOL_CARDS: Card[] = [
   card({ name: "Craterhoof Behemoth", typeLine: "Legendary Creature — Elemental" }),
 ];
 
-function makeEngine(): DraftEngine {
+function fixedBalance(): TypeBalance {
+  return {
+    target: {
+      land: 36,
+      creature: 30,
+      instant: 10,
+      sorcery: 8,
+      artifact: 8,
+      enchantment: 6,
+      planeswalker: 1,
+    },
+    nonbasicLandTarget: 12,
+    have: zeroCounts(),
+    basicLands: 0,
+  };
+}
+
+function emptyRanking(): RankCardCandidatesResult {
+  return { candidates: [], balance: fixedBalance() };
+}
+
+interface FakeEngineOptions {
+  pool?: Card[];
+  known?: Card[];
+  balance?: TypeBalance;
+  inputs?: RankCardCandidatesInput[];
+}
+
+function makeEngine({
+  pool = POOL_CARDS,
+  known = [],
+  balance = fixedBalance(),
+  inputs = [],
+}: FakeEngineOptions = {}): DraftEngine {
   const byName = new Map(
-    [...BASE_CARDS, ...POOL_CARDS].map((c) => [c.name.toLowerCase(), c]),
+    [...BASE_CARDS, ...POOL_CARDS, ...pool, ...known].map((c) => [c.name.toLowerCase(), c]),
   );
   return {
     commanderCandidates: async () => POOL_CARDS.map(commanderData),
-    rankCardCandidates: async ({ exclude }) =>
-      POOL_CARDS.filter((candidate) => !exclude.includes(candidate.name.toLowerCase()))
-        .slice(0, 3)
-        .map(({ name }) => ({ name, bracketTilt: 0 })),
+    rankCardCandidates: async (input) => {
+      inputs.push(input);
+      const available = pool.filter((c) => !input.exclude.includes(c.name.toLowerCase()));
+      if (!input.slotTypes) {
+        return {
+          candidates: available.slice(0, 3).map((c) => ({
+            name: c.name,
+            bracketTilt: 0,
+            slotType: primaryType(c.typeLine) ?? "creature",
+          })),
+          balance,
+        };
+      }
+      const taken = new Set<string>();
+      const candidates = input.slotTypes.flatMap((slotType) => {
+        const match = available.find(
+          (c) => primaryType(c.typeLine) === slotType && !taken.has(c.name),
+        );
+        if (!match) return [];
+        taken.add(match.name);
+        return [{ name: match.name, bracketTilt: 0, slotType }];
+      });
+      return { candidates, balance };
+    },
     resolveCards: async (names) =>
       names.flatMap((name) => {
         const found = byName.get(name.trim().toLowerCase());
@@ -63,9 +121,9 @@ function makeEngine(): DraftEngine {
   };
 }
 
-function makeResolver(): CardResolver {
+function makeResolver(extra: Card[] = []): CardResolver {
   const byName = new Map(
-    [...BASE_CARDS, ...POOL_CARDS].map((c) => [c.name.toLowerCase(), c]),
+    [...BASE_CARDS, ...POOL_CARDS, ...extra].map((c) => [c.name.toLowerCase(), c]),
   );
   return {
     resolve: async (names) => {
@@ -194,7 +252,12 @@ describe("DraftSession", () => {
       commanderCandidates: async () => POOL_CARDS.map(commanderData),
       rankCardCandidates: async (input) => {
         inputs.push(input);
-        return [{ name: picks[inputs.length - 1], bracketTilt: 0 }];
+        return {
+          candidates: [
+            { name: picks[inputs.length - 1], bracketTilt: 0, slotType: "creature" },
+          ],
+          balance: fixedBalance(),
+        };
       },
       resolveCards: async (names) =>
         names.flatMap((name) => {
@@ -251,6 +314,239 @@ describe("DraftSession", () => {
   });
 });
 
+const DRAFT_BASE_NAMES = ["Elvish Champion", "Timberwatch Elf", "Elvish Archer"];
+
+describe("DraftSession type-aware refresh", () => {
+  const mixedPool: Card[] = [
+    card({ name: "Fierce Empath", typeLine: "Creature — Elf" }),
+    card({ name: "Opt", typeLine: "Instant" }),
+    card({ name: "Giant Growth", typeLine: "Instant" }),
+    card({ name: "Brainstorm", typeLine: "Instant" }),
+    card({ name: "Rampant Growth", typeLine: "Sorcery" }),
+    card({ name: "Llanowar Elves", typeLine: "Creature — Elf Druid" }),
+    card({ name: "Heritage Druid", typeLine: "Creature — Elf Druid" }),
+  ];
+
+  async function draftingSession(inputs: RankCardCandidatesInput[]): Promise<DraftSession> {
+    const session = new DraftSession({
+      engine: makeEngine({ pool: mixedPool, inputs }),
+      resolver: makeResolver(mixedPool),
+    });
+    await session.start(DRAFT_BASE_NAMES, "Elvish Champion");
+    return session;
+  }
+
+  it("carries the engine's slot type onto each round candidate", async () => {
+    const session = await draftingSession([]);
+    expect(session.round.map((c) => [c.card.name, c.slotType])).toEqual([
+      ["Fierce Empath", "creature"],
+      ["Opt", "instant"],
+      ["Giant Growth", "instant"],
+    ]);
+  });
+
+  it("keeps the engine's type balance on the session while drafting", async () => {
+    const session = await draftingSession([]);
+    expect(session.balance).toEqual(fixedBalance());
+  });
+
+  it("has no type balance during commander selection", async () => {
+    const session = makeSession();
+    await session.start(BASE_NAMES, null);
+    expect(session.balance).toBeNull();
+  });
+
+  it("replaces a slot with a candidate of the same type, requesting that type from the engine", async () => {
+    const inputs: RankCardCandidatesInput[] = [];
+    const session = await draftingSession(inputs);
+
+    await session.refreshSlot(1);
+
+    expect(session.round[1].card.name).toBe("Brainstorm");
+    expect(session.round[1].slotType).toBe("instant");
+    expect(inputs[inputs.length - 1].slotTypes).toEqual(["instant", "instant", "instant"]);
+  });
+
+  it("refreshes a creature slot with another creature even when other types are unshown", async () => {
+    const session = await draftingSession([]);
+
+    await session.refreshSlot(0);
+
+    expect(session.round[0].slotType).toBe("creature");
+    expect(["Llanowar Elves", "Heritage Druid"]).toContain(session.round[0].card.name);
+  });
+
+  it("leaves the slot unchanged when no unshown candidate of its type remains", async () => {
+    const session = await draftingSession([]);
+    await session.refreshSlot(0);
+    await session.refreshSlot(1);
+    const roundBefore = session.round.map((c) => c.card.name);
+
+    await session.refreshSlot(1);
+
+    expect(session.round.map((c) => c.card.name)).toEqual(roundBefore);
+    expect(session.round[1].card.name).toBe("Brainstorm");
+  });
+
+  it("never repeats a card within the round across several refreshes of different slots", async () => {
+    const session = await draftingSession([]);
+
+    await session.refreshSlot(1);
+    await session.refreshSlot(0);
+    await session.refreshSlot(2);
+    await session.refreshSlot(1);
+
+    const names = session.round.map((c) => c.card.name);
+    expect(new Set(names).size).toBe(names.length);
+    expect(session.round.map((c) => c.slotType)).toEqual(["creature", "instant", "instant"]);
+  });
+});
+
+describe("DraftSession basic lands", () => {
+  const simicCommander = card({
+    name: "Simic Commander",
+    typeLine: "Legendary Creature — Merfolk",
+    colorIdentity: ["G", "U"],
+  });
+  const greenOne = card({ name: "Green One", colorIdentity: ["G"] });
+  const greenTwo = card({ name: "Green Two", colorIdentity: ["G"] });
+  const greenThree = card({ name: "Green Three", colorIdentity: ["G"] });
+  const blueOne = card({ name: "Blue One", colorIdentity: ["U"] });
+
+  async function monoGreenSession(
+    balance: TypeBalance,
+    inputs: RankCardCandidatesInput[] = [],
+  ): Promise<DraftSession> {
+    const session = new DraftSession({
+      engine: makeEngine({ balance, inputs }),
+      resolver: makeResolver(),
+    });
+    await session.start(DRAFT_BASE_NAMES, "Elvish Champion");
+    return session;
+  }
+
+  function quantityOf(session: DraftSession, name: string): number {
+    return session.mainboard
+      .filter((e) => e.name.toLowerCase() === name.toLowerCase())
+      .reduce((sum, e) => sum + e.quantity, 0);
+  }
+
+  it("sums quantities across commanders and mainboard in cardCount", async () => {
+    const session = await monoGreenSession(fixedBalance());
+    expect(session.cardCount()).toBe(3);
+
+    session.mainboard.push({ quantity: 4, name: "Forest" });
+
+    expect(session.cardCount()).toBe(7);
+  });
+
+  it("expands mainboard entries by quantity in mainboardNames", async () => {
+    const session = await monoGreenSession(fixedBalance());
+    session.mainboard.push({ quantity: 3, name: "Forest" });
+
+    const names = session.mainboardNames();
+
+    expect(names.filter((n) => n === "Forest")).toHaveLength(3);
+    expect(names).toHaveLength(5);
+  });
+
+  it("adds basics matching the planned count for the deck's single colour", async () => {
+    const balance = fixedBalance();
+    const session = await monoGreenSession(balance);
+    const planned = basicLandCount(balance, 100 - session.cardCount());
+
+    await session.fillBasicLands();
+
+    expect(planned).toBe(24);
+    expect(session.mainboard).toContainEqual({ quantity: planned, name: "Forest" });
+    expect(session.cardCount()).toBe(3 + planned);
+  });
+
+  it("counts drafted nonbasic lands against the planned basics", async () => {
+    const balance = { ...fixedBalance(), have: { ...zeroCounts(), land: 15 } };
+    const session = await monoGreenSession(balance);
+
+    await session.fillBasicLands();
+
+    expect(quantityOf(session, "Forest")).toBe(36 - 15);
+  });
+
+  it("never plans more basics than the open deck slots", async () => {
+    const session = await monoGreenSession(fixedBalance());
+    session.mainboard.push({ quantity: 85, name: "Filler Card" });
+
+    await session.fillBasicLands();
+
+    expect(quantityOf(session, "Forest")).toBe(12);
+    expect(session.cardCount()).toBe(100);
+  });
+
+  it("splits basics across the deck's colours in proportion to their cards", async () => {
+    const session = new DraftSession({
+      engine: makeEngine({
+        known: [simicCommander, greenOne, greenTwo, greenThree, blueOne],
+      }),
+      resolver: makeResolver([simicCommander, greenOne, greenTwo, greenThree, blueOne]),
+    });
+    await session.start(
+      [simicCommander, greenOne, greenTwo, greenThree, blueOne].map((c) => c.name),
+      simicCommander.name,
+    );
+
+    await session.fillBasicLands();
+
+    expect(session.mainboard.filter((e) => ["Forest", "Island"].includes(e.name))).toEqual([
+      { quantity: 17, name: "Forest" },
+      { quantity: 7, name: "Island" },
+    ]);
+  });
+
+  it("replaces earlier basics on a re-run instead of stacking them", async () => {
+    const session = await monoGreenSession(fixedBalance());
+    await session.fillBasicLands();
+    expect(quantityOf(session, "Forest")).toBe(24);
+
+    session.balance = { ...fixedBalance(), target: { ...fixedBalance().target, land: 30 } };
+    await session.fillBasicLands();
+
+    expect(session.mainboard.filter((e) => e.name === "Forest")).toEqual([
+      { quantity: 18, name: "Forest" },
+    ]);
+    expect(session.cardCount()).toBe(3 + 18);
+  });
+
+  it("removes a hand-added basic before adding the planned ones", async () => {
+    const session = await monoGreenSession(fixedBalance());
+    session.mainboard.push({ quantity: 5, name: "forest" });
+
+    await session.fillBasicLands();
+
+    expect(quantityOf(session, "Forest")).toBe(24);
+    expect(session.mainboard.filter((e) => e.name.toLowerCase() === "forest")).toHaveLength(1);
+  });
+
+  it("sends the expanded mainboard, basics included, to the engine on the next round", async () => {
+    const inputs: RankCardCandidatesInput[] = [];
+    const session = await monoGreenSession(fixedBalance(), inputs);
+
+    await session.fillBasicLands();
+
+    const lastInput = inputs[inputs.length - 1];
+    expect(lastInput.mainboard.filter((n) => n === "Forest")).toHaveLength(24);
+    expect(lastInput.mainboard).toHaveLength(2 + 24);
+  });
+
+  it("throws not-in-drafting during commander selection", async () => {
+    const session = makeSession();
+    await session.start(BASE_NAMES, null);
+
+    await expect(session.fillBasicLands()).rejects.toMatchObject({
+      name: "DraftSessionError",
+      kind: "not-in-drafting",
+    });
+  });
+});
+
 describe("DraftSession Choose-a-Background pairing", () => {
   const background = card({
     name: "Blue Background",
@@ -275,7 +571,7 @@ describe("DraftSession Choose-a-Background pairing", () => {
     );
     return {
       commanderCandidates: async () => cards.map(commanderData),
-      rankCardCandidates: async () => [],
+      rankCardCandidates: async () => emptyRanking(),
       resolveCards: async (names) =>
         names.flatMap((name) => {
           const found = byName.get(name.trim().toLowerCase());
@@ -379,7 +675,7 @@ describe("DraftSession base card color identity", () => {
 
     const engine: DraftEngine = {
       commanderCandidates: async () => commanderPool.map(commanderData),
-      rankCardCandidates: async () => [],
+      rankCardCandidates: async () => emptyRanking(),
       resolveCards: async (names) =>
         names.flatMap((name) => {
           const identity = engineIdentities[name.trim().toLowerCase()];
