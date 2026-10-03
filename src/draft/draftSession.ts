@@ -72,6 +72,7 @@ export class DraftSession {
   private pool: RankedCandidate[] = [];
   /** Names shown in the current round (refreshes included) — never repeated within it. */
   private shown = new Set<string>();
+  private blacklist = new Set<string>();
   constructor(private readonly deps: DraftSessionDeps) {}
 
   private mainboardCards(): Card[] {
@@ -129,12 +130,14 @@ export class DraftSession {
       this.pool = await suggestCommanders(this.mainboardCards(), {
         engine: this.deps.engine,
         resolver: this.deps.resolver,
+        exclude: this.blacklist,
       });
     } else {
       const round = await suggestCandidates(deckNames, this.profile, {
         engine: this.deps.engine,
         resolver: this.deps.resolver,
         target: this.target,
+        exclude: this.blacklist,
       });
       this.pool = round.candidates;
       this.balance = round.balance;
@@ -145,13 +148,14 @@ export class DraftSession {
     for (const candidate of this.round) this.shown.add(candidate.card.name.toLowerCase());
   }
 
-  /** Re-fetch the ranked pool, excluding the deck and everything shown this round. */
+  /** Re-fetch the ranked pool, excluding the deck, the blacklist and everything shown this round. */
   private async refillPool(slotType: DraftCardType | undefined): Promise<void> {
     const deckNames = this.deckNames();
     const exclude = new Set([
       ...deckNames.commanders,
       ...deckNames.mainboard,
       ...this.shown,
+      ...this.blacklist,
     ]);
 
     const fresh =
@@ -303,6 +307,7 @@ export class DraftSession {
 
     this.round[index] = best;
     this.shown.add(best.card.name.toLowerCase());
+    this.blacklist.add(replaced.card.name.toLowerCase());
   }
 
   /** Add a round slot's card to the deck (the 99), end the round, and open a fresh one. */

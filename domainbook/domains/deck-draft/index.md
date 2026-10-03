@@ -106,7 +106,7 @@ whole card pool by heart.
 - Every suggested card is within the `commander card`'s `color identity` and legal in
   Commander.
 - A card shown in a `suggestion round` never reappears in that same round, including
-  across refreshes.
+  across refreshes, and a card on the `blacklist` never reappears in that draft.
 - A deck drafted to completion lands close to EDHREC's average deck for its commander,
   type by type (`npm run draft-balance`, `deck-draft/ADR-0003`).
 - Leaving a draft yields a decklist that round-trips through the parser — pasting it
