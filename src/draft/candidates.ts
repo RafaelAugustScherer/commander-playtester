@@ -12,6 +12,7 @@ import { scoreCandidate, type CandidateScore } from "./scoring";
 import type { BracketTarget } from "./bracket";
 import { isSuggestable, type DraftCustomization } from "./customization";
 import { draftCandidateCard } from "./localCandidates";
+import { hasChooseABackground, isBackground } from "./partners";
 import type { DraftCardType, TypeBalance } from "./typeBalance";
 
 /** The engine calls the draft pipeline needs — narrow enough to fake in tests. */
@@ -58,16 +59,6 @@ const EXTRA_COMMANDER_COLOR_PENALTY = 2;
 /** Every letter of `identity` is in `allowed`; colorless (`[]`) always passes. */
 function isWithinColorIdentity(identity: string[], allowed: string[]): boolean {
   return identity.every((color) => allowed.includes(color));
-}
-
-/** A legendary Background (e.g. "Legendary Enchantment — Background"). */
-export function isBackground(card: Card): boolean {
-  return /\bBackground\b/.test(card.typeLine);
-}
-
-/** Carries the "Choose a Background" keyword, printed verbatim on the card. */
-export function hasChooseABackground(card: Card): boolean {
-  return /\bchoose a background\b/i.test(card.oracleText);
 }
 
 /** The one Background among `cards`, or null if there are zero or several (ambiguous). */

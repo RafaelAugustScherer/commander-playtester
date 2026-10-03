@@ -7,7 +7,8 @@ in the deck-library glossary; these are the ones this context adds.
 ## Base cards
 
 The three or more cards the user enters to start a draft, setting its theme. One of them
-may be flagged as the `commander card`; if none is, the first `suggestion round` picks
+may be chosen as the `commander card`, and a second one may join it when the two can pair;
+if none is, the first `suggestion round` picks
 the commander.
 
 - **Aliases:** seed cards, seed

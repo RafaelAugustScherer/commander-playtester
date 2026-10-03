@@ -50,6 +50,10 @@ export interface CardValidation {
   commanderLegal: boolean;
   /** The card may be a commander (legendary creature or engine-eligible). */
   commanderEligible: boolean;
+  /** Front face type line, empty when the card is unknown. */
+  typeLine: string;
+  /** Front face rules text, empty when the card is unknown. */
+  oracleText: string;
 }
 
 export type EngineThemeProfile = Omit<ThemeProfile, "tokenWeights" | "creatureTypes"> & {

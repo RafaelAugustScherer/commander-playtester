@@ -3,6 +3,7 @@ import type { SavedDeck } from "../deck/model";
 import { fetchCardsCached } from "../lib/scryfallCache";
 import { getEngine } from "../engine/EngineClient";
 import { frontFace } from "../lib/cardName";
+import { canPairAsCommanders } from "./partners";
 import { parseDecklist } from "../lib/decklist";
 import type {
   BracketEstimate,
@@ -75,6 +76,7 @@ function useCardValidation(names: string[]): {
 export interface DraftSeed {
   names: string[];
   commander: string | null;
+  partner: string | null;
 }
 
 type EntryMode = "rows" | "paste";
@@ -193,31 +195,19 @@ function DraftCustomizationPicker({
   );
 }
 
-/** After removing base-card row `removedIndex`, where the flagged commander row lands. */
-function shiftCommanderRow(row: number | null, removedIndex: number): number | null {
-  if (row === null || row === removedIndex) return null;
-  return row > removedIndex ? row - 1 : row;
-}
-
-/** The rows-mode inputs: up to ten card-name fields with autocomplete + a commander flag. */
+/** The rows-mode inputs: up to ten card-name fields with autocomplete. */
 function DraftEntryRows({
   names,
-  commanderRow,
   isInvalid,
-  isCommanderEligible,
   onSetName,
   onAddRow,
   onRemoveRow,
-  onSetCommanderRow,
 }: {
   names: string[];
-  commanderRow: number | null;
   isInvalid: (name: string) => boolean;
-  isCommanderEligible: (name: string) => boolean;
   onSetName: (index: number, value: string) => void;
   onAddRow: () => void;
   onRemoveRow: (index: number) => void;
-  onSetCommanderRow: (row: number | null) => void;
 }) {
   const { t } = useI18n();
   return (
@@ -231,25 +221,6 @@ function DraftEntryRows({
             placeholder={t("draft.entry.baseCardPlaceholder")}
             invalid={isInvalid(name)}
           />
-          <label className="draft-entry-row__commander">
-            <input
-              type="radio"
-              name="draft-commander"
-              checked={commanderRow === i}
-              onChange={() => onSetCommanderRow(i)}
-              disabled={!name.trim() || !isCommanderEligible(name)}
-            />
-            {t("draft.entry.commanderFlag")}
-          </label>
-          {commanderRow === i && (
-            <button
-              type="button"
-              className="btn btn--ghost btn--sm"
-              onClick={() => onSetCommanderRow(null)}
-            >
-              {t("draft.entry.unflag")}
-            </button>
-          )}
           {names.length > MIN_BASE_CARDS && (
             <button
               type="button"
@@ -271,33 +242,48 @@ function DraftEntryRows({
   );
 }
 
-/** The paste-mode inputs: a decklist textarea and an optional commander picker. */
+/** The paste-mode input: a decklist textarea. */
 function DraftEntryPaste({
   text,
-  commander,
-  commanderOptions,
   onSetText,
-  onSetCommander,
 }: {
   text: string;
-  commander: string;
-  /** The pasted names that may be a commander (eligible only). */
-  commanderOptions: string[];
   onSetText: (value: string) => void;
+}) {
+  return (
+    <textarea
+      className="import__textarea"
+      value={text}
+      onChange={(e) => onSetText(e.target.value)}
+      placeholder={"Sol Ring\nArcane Signet\n1 Cultivate\n..."}
+      spellCheck={false}
+    />
+  );
+}
+
+/** The commander picker, plus a second-commander picker once the commander can pair with a base card. */
+function DraftCommanderFields({
+  commander,
+  commanderOptions,
+  partner,
+  partnerOptions,
+  onSetCommander,
+  onSetPartner,
+}: {
+  commander: string;
+  /** The base cards that may be a commander (eligible only). */
+  commanderOptions: string[];
+  partner: string;
+  /** The base cards that may join `commander` in the command zone. */
+  partnerOptions: string[];
   onSetCommander: (value: string) => void;
+  onSetPartner: (value: string) => void;
 }) {
   const { t } = useI18n();
   const hasOptions = commanderOptions.length > 0;
   return (
     <>
-      <textarea
-        className="import__textarea"
-        value={text}
-        onChange={(e) => onSetText(e.target.value)}
-        placeholder={"Sol Ring\nArcane Signet\n1 Cultivate\n..."}
-        spellCheck={false}
-      />
-      <label className="field draft-commander-field" style={{ marginTop: "0.6rem" }}>
+      <label className="field draft-commander-field">
         <span className="field__label">{t("draft.entry.commanderLabel")}</span>
         <SearchableSelect
           options={commanderOptions}
@@ -314,6 +300,20 @@ function DraftEntryPaste({
           clearLabel={t("draft.entry.clearCommander")}
         />
       </label>
+      {commander && partnerOptions.length > 0 && (
+        <label className="field draft-commander-field">
+          <span className="field__label">{t("draft.entry.partnerLabel")}</span>
+          <SearchableSelect
+            options={partnerOptions}
+            value={partner}
+            onChange={onSetPartner}
+            placeholder={t("draft.entry.partnerSearchPlaceholder")}
+            emptyLabel={t("draft.entry.commanderNoMatch")}
+            clearable
+            clearLabel={t("draft.entry.clearPartner")}
+          />
+        </label>
+      )}
     </>
   );
 }
@@ -328,6 +328,7 @@ function DraftEntry({
   onStart: (
     names: string[],
     commanderName: string | null,
+    partnerName: string | null,
     target: BracketTarget,
     tribal: TribalMode,
     customization: DraftCustomization,
@@ -337,9 +338,9 @@ function DraftEntry({
   const { t } = useI18n();
   const [mode, setMode] = useState<EntryMode>(seed ? "paste" : "rows");
   const [names, setNames] = useState<string[]>(["", "", ""]);
-  const [commanderRow, setCommanderRow] = useState<number | null>(null);
   const [pasteText, setPasteText] = useState<string>(seed ? seed.names.join("\n") : "");
-  const [pasteCommander, setPasteCommander] = useState<string>(seed?.commander ?? "");
+  const [commander, setCommander] = useState<string>(seed?.commander ?? "");
+  const [partner, setPartner] = useState<string>(seed?.partner ?? "");
   const [target, setTarget] = useState<BracketTarget>(DEFAULT_BRACKET_TARGET);
   const [tribal, setTribal] = useState<TribalMode>({ enabled: false, tribes: [] });
   const [customization, setCustomization] = useState<DraftCustomization>(DEFAULT_CUSTOMIZATION);
@@ -372,21 +373,35 @@ function DraftEntry({
   });
   const legalCount = enteredNames.filter((n) => statusOf(n)?.commanderLegal).length;
   const commanderOptions = enteredNames.filter(isCommanderEligible);
+  const partnerOptions = useMemo(() => {
+    const pairingCard = (name: string) => {
+      const s = statuses.get(name.trim().toLowerCase());
+      return s?.exists && s.commanderLegal
+        ? { name, typeLine: s.typeLine, oracleText: s.oracleText }
+        : null;
+    };
+    const commanderCard = commander ? pairingCard(commander) : null;
+    if (!commanderCard) return [];
+    return enteredNames.filter((name) => {
+      const other = pairingCard(name);
+      return other !== null && canPairAsCommanders(commanderCard, other);
+    });
+  }, [commander, enteredNames, statuses]);
+  const sameName = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
 
-  // Drop a chosen commander once validation shows it can't be one.
+  // Drop a chosen commander once it leaves the base cards or validation shows it can't be one.
   useEffect(() => {
-    if (!pasteCommander) return;
-    const s = statuses.get(pasteCommander.trim().toLowerCase());
-    if (s && !s.commanderEligible) setPasteCommander("");
-  }, [statuses, pasteCommander]);
+    if (!commander) return;
+    const s = statuses.get(commander.trim().toLowerCase());
+    if (!enteredNames.some((n) => sameName(n, commander)) || (s && !s.commanderEligible)) {
+      setCommander("");
+    }
+  }, [statuses, commander, enteredNames]);
 
   useEffect(() => {
-    if (commanderRow === null) return;
-    const name = names[commanderRow]?.trim();
-    if (!name) return;
-    const s = statuses.get(name.toLowerCase());
-    if (s && !s.commanderEligible) setCommanderRow(null);
-  }, [statuses, commanderRow, names]);
+    if (!partner || !checked) return;
+    if (!partnerOptions.some((n) => sameName(n, partner))) setPartner("");
+  }, [checked, partner, partnerOptions]);
 
   function setName(index: number, value: string) {
     setNames((prev) => prev.map((n, i) => (i === index ? value : n)));
@@ -398,21 +413,10 @@ function DraftEntry({
 
   function removeRow(index: number) {
     setNames((prev) => prev.filter((_, i) => i !== index));
-    setCommanderRow((row) => shiftCommanderRow(row, index));
-  }
-
-  /** The raw names and flagged commander for the active input mode. */
-  function collectEntry(): { names: string[]; commander: string } {
-    if (mode === "paste") {
-      return { names: parsePastedNames(pasteText), commander: pasteCommander.trim() };
-    }
-    const commander = commanderRow !== null ? (names[commanderRow]?.trim() ?? "") : "";
-    return { names, commander };
   }
 
   async function handleStart() {
-    const entry = collectEntry();
-    const unique = [...new Set(entry.names.map((n) => n.trim()).filter(Boolean))];
+    const unique = enteredNames;
     if (unique.length < MIN_BASE_CARDS) {
       setStatus({
         kind: "error",
@@ -431,16 +435,15 @@ function DraftEntry({
       return;
     }
 
-    const commanderName =
-      entry.commander &&
-      resolvedNames.some((n) => n.toLowerCase() === entry.commander.toLowerCase())
-        ? entry.commander
-        : null;
+    const resolvedName = (name: string) =>
+      name && resolvedNames.some((n) => sameName(n, name)) ? name.trim() : null;
+    const commanderName = resolvedName(commander);
+    const partnerName = commanderName ? resolvedName(partner) : null;
 
     setStatus({ kind: "starting" });
     try {
       await getEngine().ready();
-      await onStart(resolvedNames, commanderName, target, tribal, customization);
+      await onStart(resolvedNames, commanderName, partnerName, target, tribal, customization);
     } catch (err) {
       setStatus({
         kind: "error",
@@ -483,24 +486,24 @@ function DraftEntry({
         {mode === "rows" ? (
           <DraftEntryRows
             names={names}
-            commanderRow={commanderRow}
             isInvalid={isInvalidName}
-            isCommanderEligible={isCommanderEligible}
             onSetName={setName}
             onAddRow={addRow}
             onRemoveRow={removeRow}
-            onSetCommanderRow={setCommanderRow}
           />
         ) : (
-          <DraftEntryPaste
-            text={pasteText}
-            commander={pasteCommander}
-            commanderOptions={commanderOptions}
-            onSetText={setPasteText}
-            onSetCommander={setPasteCommander}
-          />
+          <DraftEntryPaste text={pasteText} onSetText={setPasteText} />
         )}
       </div>
+
+      <DraftCommanderFields
+        commander={commander}
+        commanderOptions={commanderOptions}
+        partner={partner}
+        partnerOptions={partnerOptions}
+        onSetCommander={setCommander}
+        onSetPartner={setPartner}
+      />
 
       {checked &&
         enteredNames.length > 0 &&
@@ -702,8 +705,8 @@ function DraftSummaryPanel({
   const tierLabel = bracket
     ? t(ENGINE_TIER_LABEL[bracket.tier] ?? "draft.bracket.exhibition")
     : "—";
-  const commanderName = session.background
-    ? `${session.commander?.name} + ${session.background.name}`
+  const commanderName = session.partner
+    ? `${session.commander?.name} + ${session.partner.name}`
     : (session.commander?.name ?? t("deck.noCommander"));
 
   return (
@@ -1076,6 +1079,7 @@ export function DraftView({
   async function handleStart(
     names: string[],
     commanderName: string | null,
+    partnerName: string | null,
     target: BracketTarget,
     tribal: TribalMode,
     customization: DraftCustomization,
@@ -1084,7 +1088,7 @@ export function DraftView({
       engine: engineDraftEngine,
       resolver: scryfallCardResolver,
     });
-    await session.start(names, commanderName, target, tribal, customization);
+    await session.start(names, commanderName, target, tribal, customization, partnerName);
     sessionRef.current = session;
     setStarted(true);
   }

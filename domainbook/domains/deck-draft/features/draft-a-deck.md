@@ -19,19 +19,20 @@ draft flows straight into `match setup`; an unfinished one is saved partial and 
 
 ## Rule: A draft starts from at least three base cards
 
-The user enters three or more `base cards` to seed the theme. One may be flagged as the
+The user enters three or more `base cards` to seed the theme. One may be chosen as the
 `commander card`. Fewer than three is refused — three is the floor for a theme worth
 ranking against.
 
 Base cards can be entered two ways: **one by one**, where each field suggests matching card
-names as it is typed and a card is flagged commander with a radio; or by **pasting a list**
-of names (the same decklist text the editor accepts), with the commander chosen from a
-select below. Seeding from an existing deck uses the paste form, pre-filled.
+names as it is typed; or by **pasting a list** of names (the same decklist text the editor
+accepts). Either way, the commander is chosen from a select below the cards, listing only the
+commander-eligible ones. Seeding from an existing deck uses the paste form, pre-filled with
+its commander and second commander.
 
 ```gherkin
 Example: Three seed cards start a draft
   Given the author enters "Krenko, Mob Boss", "Goblin Chieftain" and "Skirk Prospector"
-  And flags "Krenko, Mob Boss" as the commander
+  And chooses "Krenko, Mob Boss" as the commander
   When the author starts the draft
   Then the draft opens with those three cards in the deck
   And the color identity is fixed to red
@@ -42,15 +43,57 @@ Example: Fewer than three is refused
   Then starting is refused and the three-card minimum is shown
 ```
 
+## Rule: A commander that can pair may take a second commander from the base cards
+
+Once the chosen commander can share the command zone with one of the other `base cards`, a
+second, optional select appears below the first, listing only the base cards it pairs with.
+Picking one makes both cards commanders; the deck's `color identity` is the union of theirs.
+Nothing is pre-selected — a pairing card left unpicked stays in the deck.
+
+Two cards pair when one of them allows it:
+
+- **Partner** pairs with another card with Partner; a named variant such as
+  **Partner—Survivors** or **Partner—Character select** pairs only with the same variant.
+- **Partner with** *name* pairs only with the card it names, which names it back.
+- **Friends forever** pairs with another card with Friends forever.
+- **Choose a Background** pairs with a legendary Background enchantment.
+- **Doctor's companion** pairs with a legendary Time Lord Doctor that has no other creature
+  types.
+
+The draft reads these from the card's rules text, not the engine's keyword data, because the
+engine files the named Partner variants under plain Partner. The draft never suggests a second
+commander; it only comes from the base cards.
+
+```gherkin
+Example: Two Partner commanders share the command zone
+  Given base cards "Kraum, Ludevic's Opus", "Tymna the Weaver" and "Sol Ring"
+  And the author chooses "Kraum, Ludevic's Opus" as the commander
+  When the author chooses "Tymna the Weaver" as the second commander
+  And starts the draft
+  Then both are commanders
+  And the color identity is white, blue, black and red
+
+Example: Only cards that pair are offered
+  Given the chosen commander has Partner—Survivors
+  When the second-commander select is opened
+  Then it lists base cards with Partner—Survivors only
+  And a base card with plain Partner is not listed
+
+Example: A Background left unpicked stays in the deck
+  Given the commander has Choose a Background and a Background is among the base cards
+  When the author starts the draft without choosing a second commander
+  Then the Background is in the deck, not the command zone
+```
+
 ## Rule: When the seed names no commander, the commander is chosen first
 
-If none of the `base cards` is flagged commander, the first `suggestion round` offers
+If none of the `base cards` is chosen as commander, the first `suggestion round` offers
 commander-eligible cards. Picking one sets the deck's `color identity` before any other
 card is suggested.
 
 ```gherkin
 Example: The first round picks a commander
-  Given a draft seeded with three cards and no commander flagged
+  Given a draft seeded with three cards and no commander chosen
   When the draft opens
   Then the first round offers commander-eligible cards only
   And choosing one sets the deck's color identity
@@ -59,7 +102,7 @@ Example: The first round picks a commander
 
 ## Rule: Only candidates that can cover every base card's color identity are offered
 
-When no `base card` is flagged commander, the first `suggestion round` offers only
+When no `base card` is chosen as commander, the first `suggestion round` offers only
 commander-eligible candidates whose `color identity` is a superset of the union of every
 base card's own color identity — the same subset rule that governs a legal Commander deck,
 enforced up front instead of left to chance. A candidate that would leave some base card

@@ -33,7 +33,7 @@ export function DeckEditor({
   initial?: SavedDeck;
   onSave: (deck: SavedDeck) => void;
   onCancel: () => void;
-  onDraft: (names: string[], commander: string | null) => void;
+  onDraft: (names: string[], commander: string | null, partner: string | null) => void;
 }) {
   const { t } = useI18n();
   const [name, setName] = useState(initial?.name ?? "");
@@ -74,7 +74,7 @@ export function DeckEditor({
   const canDraft = new Set(draftNames.map((n) => n.toLowerCase())).size >= 3;
 
   function handleDraft() {
-    onDraft(draftNames, parsed.commanders[0]?.name ?? null);
+    onDraft(draftNames, parsed.commanders[0]?.name ?? null, parsed.commanders[1]?.name ?? null);
   }
 
   function handleSave() {

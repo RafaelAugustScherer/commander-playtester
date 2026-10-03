@@ -12,6 +12,19 @@ depth live there. A purely-internal PR that touches no product or architecture m
 skip its version with a `Skip-Docs: <reason>` trailer instead. There are no
 per-domain changelogs; this file is the single timeline (`ADR-0007`).
 
+## [0.35.0] - 2026-10-03
+
+### Added
+
+- The draft takes a second commander from the base cards when the commander can pair with it —
+  Partner (and its named variants), Partner with, Friends forever, Choose a Background or
+  Doctor's companion (`deck-draft/features/draft-a-deck.md`).
+
+### Changed
+
+- The draft's commander is chosen from a select in both entry modes; the per-card commander
+  radio is gone. A Background is no longer made a commander automatically at entry.
+
 ## [0.34.1] - 2026-10-03
 
 ### Fixed

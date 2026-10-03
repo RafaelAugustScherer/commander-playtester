@@ -814,14 +814,6 @@ th {
 .input[aria-invalid="true"] {
   border-color: var(--bad);
 }
-.draft-entry-row__commander {
-  display: flex;
-  align-items: center;
-  gap: 0.3rem;
-  font-size: 0.82rem;
-  color: var(--muted);
-  white-space: nowrap;
-}
 .draft-commander-field .combobox {
   max-width: none;
 }

@@ -731,7 +731,7 @@ describe("DraftSession basic lands", () => {
   });
 });
 
-describe("DraftSession Choose-a-Background pairing", () => {
+describe("DraftSession second commander", () => {
   const background = card({
     name: "Blue Background",
     typeLine: "Legendary Enchantment — Background",
@@ -745,6 +745,18 @@ describe("DraftSession Choose-a-Background pairing", () => {
   });
   const otherGreenCard = card({ name: "Other Green Card", colorIdentity: ["G"] });
   const thirdGreenCard = card({ name: "Third Green Card", colorIdentity: ["G"] });
+  const whitePartner = card({
+    name: "White Partner",
+    typeLine: "Legendary Creature — Human",
+    colorIdentity: ["W"],
+    oracleText: "Partner (You can have two commanders if both have partner.)",
+  });
+  const blackPartner = card({
+    name: "Black Partner",
+    typeLine: "Legendary Creature — Zombie",
+    colorIdentity: ["B"],
+    oracleText: "Partner (You can have two commanders if both have partner.)",
+  });
 
   function makeBgEngine(cards: Card[]): DraftEngine {
     const byName = new Map(
@@ -778,7 +790,7 @@ describe("DraftSession Choose-a-Background pairing", () => {
     };
   }
 
-  it("start() pairs a flagged Choose-a-Background commander with the base cards' Background", async () => {
+  it("start() pairs the commander with the chosen Background", async () => {
     const baseCards = [partnerCommander, background, otherGreenCard];
     const session = new DraftSession({
       engine: makeBgEngine([]),
@@ -788,11 +800,15 @@ describe("DraftSession Choose-a-Background pairing", () => {
     await session.start(
       baseCards.map((c) => c.name),
       partnerCommander.name,
+      "focused",
+      undefined,
+      undefined,
+      background.name,
     );
 
     expect(session.phase).toBe("drafting");
     expect(session.commander?.name).toBe(partnerCommander.name);
-    expect(session.background?.name).toBe(background.name);
+    expect(session.partner?.name).toBe(background.name);
     expect(session.commanders.map((e) => e.name).sort()).toEqual(
       [partnerCommander.name, background.name].sort(),
     );
@@ -820,7 +836,7 @@ describe("DraftSession Choose-a-Background pairing", () => {
 
     expect(session.phase).toBe("drafting");
     expect(session.commander?.name).toBe(partnerCommander.name);
-    expect(session.background?.name).toBe(background.name);
+    expect(session.partner?.name).toBe(background.name);
     expect(session.commanders.map((e) => e.name).sort()).toEqual(
       [partnerCommander.name, background.name].sort(),
     );
@@ -828,6 +844,59 @@ describe("DraftSession Choose-a-Background pairing", () => {
       [otherGreenCard.name, thirdGreenCard.name].sort(),
     );
     expect(session.profile.colorIdentity).toEqual(["G", "U"]);
+  });
+  it("start() leaves a Background in the deck when no second commander is chosen", async () => {
+    const baseCards = [partnerCommander, background, otherGreenCard];
+    const session = new DraftSession({
+      engine: makeBgEngine([]),
+      resolver: makeBgResolver(baseCards),
+    });
+
+    await session.start(baseCards.map((c) => c.name), partnerCommander.name);
+
+    expect(session.partner).toBeNull();
+    expect(session.commanders.map((e) => e.name)).toEqual([partnerCommander.name]);
+    expect(session.mainboard.map((e) => e.name)).toContain(background.name);
+  });
+
+  it("start() pairs two Partner commanders and unions their color identity", async () => {
+    const baseCards = [whitePartner, blackPartner, otherGreenCard];
+    const session = new DraftSession({
+      engine: makeBgEngine(baseCards),
+      resolver: makeBgResolver(baseCards),
+    });
+
+    await session.start(
+      baseCards.map((c) => c.name),
+      whitePartner.name,
+      "focused",
+      undefined,
+      undefined,
+      blackPartner.name,
+    );
+
+    expect(session.commanders.map((e) => e.name)).toEqual([whitePartner.name, blackPartner.name]);
+    expect(session.mainboard.map((e) => e.name)).toEqual([otherGreenCard.name]);
+    expect([...session.profile.colorIdentity].sort()).toEqual(["B", "W"]);
+  });
+
+  it("start() refuses a second commander the first cannot pair with", async () => {
+    const baseCards = [whitePartner, partnerCommander, otherGreenCard];
+    const session = new DraftSession({
+      engine: makeBgEngine(baseCards),
+      resolver: makeBgResolver(baseCards),
+    });
+
+    await expect(
+      session.start(
+        baseCards.map((c) => c.name),
+        whitePartner.name,
+        "focused",
+        undefined,
+        undefined,
+        partnerCommander.name,
+      ),
+    ).rejects.toMatchObject({ kind: "partner-cannot-pair" });
   });
 });
 

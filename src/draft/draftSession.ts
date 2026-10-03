@@ -7,7 +7,6 @@ import { cardSimilarity } from "./similarity";
 import {
   suggestCandidates,
   suggestCommanders,
-  hasChooseABackground,
   singleBackgroundAmong,
   type DraftEngine,
   type CardResolver,
@@ -16,6 +15,7 @@ import {
 import { DEFAULT_BRACKET_TARGET, type BracketTarget } from "./bracket";
 import { DEFAULT_CUSTOMIZATION, type DraftCustomization } from "./customization";
 import { draftCandidateCard } from "./localCandidates";
+import { canPairAsCommanders, hasChooseABackground } from "./partners";
 import {
   basicLandCount,
   basicLandSplit,
@@ -29,6 +29,8 @@ export type DraftPhase = "commander-selection" | "drafting";
 export type DraftSessionErrorKind =
   | "too-few-base-cards"
   | "commander-not-in-base-cards"
+  | "partner-not-in-base-cards"
+  | "partner-cannot-pair"
   | "commander-not-found"
   | "not-in-commander-selection"
   | "not-in-drafting"
@@ -69,8 +71,8 @@ export interface DraftSessionDeps {
 export class DraftSession {
   phase: DraftPhase = "commander-selection";
   commander: Card | null = null;
-  /** The Background paired with `commander` via "Choose a Background", if any. */
-  background: Card | null = null;
+  /** The second commander paired with `commander` (Partner, Background, …), if any. */
+  partner: Card | null = null;
   target: BracketTarget = DEFAULT_BRACKET_TARGET;
   /**
    * Tribal mode: when on, creature slots offer only creatures of `tribes` and
@@ -112,9 +114,9 @@ export class DraftSession {
     );
   }
 
-  /** `commander` plus `background`, when paired — for `extractThemeProfile`. */
+  /** `commander` plus `partner`, when paired — for `extractThemeProfile`. */
   private commanderCards(): Card[] {
-    return [this.commander, this.background].filter((c): c is Card => c !== null);
+    return [this.commander, this.partner].filter((c): c is Card => c !== null);
   }
 
   mainboardNames(): string[] {
@@ -225,6 +227,7 @@ export class DraftSession {
    * Start a draft from three or more base cards. If `commanderName` names one
    * of them, its color identity is fixed immediately and drafting opens;
    * otherwise the first round offers commander-eligible candidates.
+   * `partnerName`, another base card, joins the commander in the command zone.
    */
   async start(
     baseCardNames: string[],
@@ -232,6 +235,7 @@ export class DraftSession {
     target: BracketTarget = DEFAULT_BRACKET_TARGET,
     tribal: TribalMode = { enabled: false, tribes: [] },
     customization: DraftCustomization = DEFAULT_CUSTOMIZATION,
+    partnerName: string | null = null,
   ): Promise<void> {
     this.tribal = normalizeTribal(tribal);
     this.customization = customization;
@@ -246,24 +250,22 @@ export class DraftSession {
     this.rememberResolved(baseCards);
 
     if (commanderName) {
-      const key = commanderName.trim().toLowerCase();
-      const commanderCard = baseCards.find((c) => c.name.toLowerCase() === key);
+      const baseCard = (name: string) =>
+        baseCards.find((c) => c.name.toLowerCase() === name.trim().toLowerCase());
+      const commanderCard = baseCard(commanderName);
       if (!commanderCard) throw new DraftSessionError("commander-not-in-base-cards");
+      const partnerCard = partnerName ? baseCard(partnerName) : undefined;
+      if (partnerName && !partnerCard) throw new DraftSessionError("partner-not-in-base-cards");
+      if (partnerCard && !canPairAsCommanders(commanderCard, partnerCard)) {
+        throw new DraftSessionError("partner-cannot-pair");
+      }
 
-      const others = baseCards.filter((c) => c !== commanderCard);
-      const background = hasChooseABackground(commanderCard)
-        ? singleBackgroundAmong(others)
-        : null;
-      const mainboardCards = background ? others.filter((c) => c !== background) : others;
+      const commandZone = partnerCard ? [commanderCard, partnerCard] : [commanderCard];
+      const mainboardCards = baseCards.filter((c) => !commandZone.includes(c));
 
       this.commander = commanderCard;
-      this.background = background;
-      this.commanders = background
-        ? [
-            { quantity: 1, name: commanderCard.name },
-            { quantity: 1, name: background.name },
-          ]
-        : [{ quantity: 1, name: commanderCard.name }];
+      this.partner = partnerCard ?? null;
+      this.commanders = commandZone.map((c) => ({ quantity: 1, name: c.name }));
       this.mainboard = mainboardCards.map((c) => ({ quantity: 1, name: c.name }));
       this.phase = "drafting";
       this.profile = extractThemeProfile(
@@ -274,7 +276,7 @@ export class DraftSession {
       await this.openRound();
     } else {
       this.commander = null;
-      this.background = null;
+      this.partner = null;
       this.commanders = [];
       this.mainboard = baseCards.map((c) => ({ quantity: 1, name: c.name }));
       this.phase = "commander-selection";
@@ -305,7 +307,7 @@ export class DraftSession {
       : null;
 
     this.commander = card;
-    this.background = background;
+    this.partner = background;
     if (background) {
       this.commanders = [
         { quantity: 1, name: card.name },

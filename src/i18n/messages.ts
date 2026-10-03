@@ -832,8 +832,8 @@ export const messages = {
 
   "draft.entry.title": { pt: "Draft de deck", en: "Draft a deck" },
   "draft.entry.subtitle": {
-    pt: "Informe três ou mais cartas para dar o tema do deck. Você pode marcar uma delas como comandante.",
-    en: "Enter three or more cards to seed the deck's theme. You can flag one of them as the commander.",
+    pt: "Informe três ou mais cartas para dar o tema do deck. Você pode escolher uma delas como comandante.",
+    en: "Enter three or more cards to seed the deck's theme. You can choose one of them as the commander.",
   },
   "draft.entry.baseCardsLabel": { pt: "Cartas base", en: "Base cards" },
   "draft.entry.baseCardPlaceholder": { pt: "Nome da carta", en: "Card name" },
@@ -855,9 +855,19 @@ export const messages = {
     pt: "Nenhuma carta corresponde",
     en: "No matching card",
   },
-  "draft.entry.commanderFlag": { pt: "Comandante", en: "Commander" },
-  "draft.entry.unflag": { pt: "Remover", en: "Unflag" },
   "draft.entry.clearCommander": { pt: "Limpar comandante", en: "Clear commander" },
+  "draft.entry.partnerLabel": {
+    pt: "Segundo comandante (opcional)",
+    en: "Second commander (optional)",
+  },
+  "draft.entry.partnerSearchPlaceholder": {
+    pt: "Escolher segundo comandante…",
+    en: "Pick a second commander…",
+  },
+  "draft.entry.clearPartner": {
+    pt: "Limpar segundo comandante",
+    en: "Clear second commander",
+  },
   "draft.entry.removeCard": { pt: "Remover carta", en: "Remove card" },
   "draft.entry.addCard": { pt: "+ Adicionar carta", en: "+ Add another card" },
   "draft.entry.bracketLabel": { pt: "Bracket alvo", en: "Bracket target" },

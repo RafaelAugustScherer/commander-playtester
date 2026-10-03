@@ -18,7 +18,7 @@ import init, {
 } from "./vendor/engine_wasm.js";
 import { draftQueries } from "./draftQueries";
 import type { CardValidation, DraftCandidateData, SearchCardRow } from "./draftQueries";
-import { candidateData, createDraftRanker, type DraftRanker } from "./draftRanking";
+import { candidateData, cardTypeLine, createDraftRanker, type DraftRanker } from "./draftRanking";
 import { frontFace } from "../lib/cardName";
 import { rankNameSuggestions } from "../draft/cardNameSuggest";
 import { isCommanderLegal, isCommanderEligible } from "../draft/cardLegality";
@@ -116,6 +116,8 @@ function validateCards(names: string[]): CardValidation[] {
       commanderEligible:
         exists &&
         isCommanderEligible(draftQueries.is_card_commander_eligible(name), face),
+      typeLine: face ? cardTypeLine(face.card_type) : "",
+      oracleText: face?.oracle_text ?? "",
     };
   });
 }
