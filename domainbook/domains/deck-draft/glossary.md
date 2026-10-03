@@ -160,7 +160,7 @@ type is not enough: a plain Elf gets no bonus (`deck-draft/ADR-0006`).
 
 ## Tribal mode
 
-A switch in the draft's `customization` section that, while on, makes every creature slot offer only
+A checkbox in the draft's `customization` section that, while on, makes every creature slot offer only
 creatures of the tribes the author picks (a Changeling counts as every tribe), and gives
 cards that name one of them or are Kindred of one a bonus in any slot. The author picks
 the tribes by hand; turning it off keeps them for later (`deck-draft/ADR-0006`).
@@ -172,14 +172,15 @@ the tribes by hand; turning it off keeps them for later (`deck-draft/ADR-0006`).
 
 ## Customization
 
-The draft's section below the `bracket target` for what the author wants offered: the
-`tribal mode` switch, plus **Suggest planeswalkers** and **Suggest dungeon mechanics**, both
-off by default. With a switch off, those cards are never offered, commander round included.
+The draft's section below the `bracket target` for what the author wants offered, as
+checkboxes: `tribal mode`, **Suggest planeswalkers** and **Suggest dungeon mechanics**, both
+off by default, and **Suggest ramp**, on by default. With a checkbox off, those cards are
+never offered, commander round included.
 
 - **Aliases:** personalização
 - **Status:** draft
-- **Example:** With both new switches off, an Atraxa draft is never offered a planeswalker
-  or a card that takes the initiative.
+- **Example:** By default, an Atraxa draft is never offered a planeswalker or a card that
+  takes the initiative; with **Suggest ramp** off, it is never offered Sol Ring.
 
 ## Draft session
 

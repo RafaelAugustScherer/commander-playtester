@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { DEFAULT_CUSTOMIZATION } from "../draft/customization";
+import { DEFAULT_CUSTOMIZATION, type DraftCustomization } from "../draft/customization";
 import { createDraftRanker } from "./draftRanking";
 import type { CardFaceData, DraftQueryExports, SearchCardRow } from "./draftQueries";
 import { extractThemeProfile } from "../draft/themes";
@@ -257,7 +257,7 @@ describe("createDraftRanker customization", () => {
     printings: 5,
   };
 
-  function rank(customization: { planeswalkers: boolean; dungeons: boolean }) {
+  function rank(customization: DraftCustomization) {
     const { queries, cardDataJson } = fakeEngine([HYLDA, TAPPER, WALKER, DELVER]);
     return createDraftRanker(queries, cardDataJson).rankCardCandidates({
       commanders: [HYLDA.name],
@@ -278,7 +278,7 @@ describe("createDraftRanker customization", () => {
   });
 
   it("offers them once each is turned on", () => {
-    const { candidates } = rank({ planeswalkers: true, dungeons: true });
+    const { candidates } = rank({ planeswalkers: true, dungeons: true, ramp: true });
 
     expect(candidates.map((c) => c.name).sort()).toEqual(
       [DELVER.name, TAPPER.name, WALKER.name].sort(),

@@ -18,6 +18,7 @@ import { QuickDraft, QuickDraftToggle } from "./QuickDraft";
 import { TribalToggle, TribePicker } from "./TribalPicker";
 import { DRAFT_CARD_TYPES, type DraftCardType } from "./typeBalance";
 import { CardNameInput } from "../components/CardNameInput";
+import { XpCheckbox } from "../components/XpCheckbox";
 import { SearchableSelect } from "../components/SearchableSelect";
 import { CardPreview, type Preview } from "../board/CardPreview";
 import { useI18n } from "../i18n/I18nContext";
@@ -148,29 +149,6 @@ function BracketTargetPicker({
   );
 }
 
-function SuggestToggle({
-  label,
-  pressed,
-  disabled,
-  onChange,
-}: {
-  label: string;
-  pressed: boolean;
-  disabled?: boolean;
-  onChange: (pressed: boolean) => void;
-}) {
-  return (
-    <button
-      className={`seg__btn ${pressed ? "seg__btn--active" : ""}`}
-      onClick={() => onChange(!pressed)}
-      aria-pressed={pressed}
-      disabled={disabled}
-    >
-      {label}
-    </button>
-  );
-}
-
 function DraftCustomizationPicker({
   tribal,
   customization,
@@ -187,22 +165,30 @@ function DraftCustomizationPicker({
   const { t } = useI18n();
   return (
     <>
-      <div className="seg">
-        <TribalToggle tribal={tribal} disabled={disabled} onChange={onTribalChange} />
-        <SuggestToggle
+      <div className="xp-checkbox__list">
+        <XpCheckbox
           label={t("draft.customization.planeswalkers")}
-          pressed={customization.planeswalkers}
+          checked={customization.planeswalkers}
           disabled={disabled}
           onChange={(planeswalkers) => onCustomizationChange({ ...customization, planeswalkers })}
         />
-        <SuggestToggle
+        <XpCheckbox
           label={t("draft.customization.dungeons")}
-          pressed={customization.dungeons}
+          checked={customization.dungeons}
           disabled={disabled}
           onChange={(dungeons) => onCustomizationChange({ ...customization, dungeons })}
         />
+        <XpCheckbox
+          label={t("draft.customization.ramp")}
+          checked={customization.ramp}
+          disabled={disabled}
+          onChange={(ramp) => onCustomizationChange({ ...customization, ramp })}
+        />
+        <div className="xp-checkbox__group">
+          <TribalToggle tribal={tribal} disabled={disabled} onChange={onTribalChange} />
+          <TribePicker tribal={tribal} disabled={disabled} onChange={onTribalChange} />
+        </div>
       </div>
-      <TribePicker tribal={tribal} disabled={disabled} onChange={onTribalChange} />
     </>
   );
 }

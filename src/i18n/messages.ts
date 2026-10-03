@@ -916,6 +916,7 @@ export const messages = {
     pt: "Sugerir mecânicas de dungeons",
     en: "Suggest dungeon mechanics",
   },
+  "draft.customization.ramp": { pt: "Sugerir ramp", en: "Suggest ramp" },
   "draft.tribal.toggle": { pt: "Tribal", en: "Tribal" },
   "draft.tribal.label": { pt: "Tribos", en: "Tribes" },
   "draft.tribal.placeholder": {

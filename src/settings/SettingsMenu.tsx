@@ -51,7 +51,7 @@ export function SettingsMenu() {
             className="xp-settings__item"
             onClick={() => setManualMana(!settings.manualMana)}
           >
-            <span className="xp-settings__check" aria-hidden />
+            <span className="xp-check" aria-hidden />
             <span className="xp-settings__text">
               <span className="xp-settings__label">{t("settings.manualMana")}</span>
               <span className="xp-settings__desc">{t("settings.manualManaDesc")}</span>

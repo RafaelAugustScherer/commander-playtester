@@ -1,5 +1,6 @@
 import { useCallback, useState } from "react";
 import { CardNameInput } from "../components/CardNameInput";
+import { XpCheckbox } from "../components/XpCheckbox";
 import { useI18n } from "../i18n/I18nContext";
 import { CREATURE_TYPES } from "./creatureTypes";
 import type { TribalMode } from "./draftSession";
@@ -24,14 +25,12 @@ export function TribalToggle({
 }) {
   const { t } = useI18n();
   return (
-    <button
-      className={`seg__btn ${tribal.enabled ? "seg__btn--active" : ""}`}
-      onClick={() => onChange({ ...tribal, enabled: !tribal.enabled })}
-      aria-pressed={tribal.enabled}
+    <XpCheckbox
+      label={t("draft.tribal.toggle")}
+      checked={tribal.enabled}
       disabled={disabled}
-    >
-      {t("draft.tribal.toggle")}
-    </button>
+      onChange={(enabled) => onChange({ ...tribal, enabled })}
+    />
   );
 }
 
@@ -84,7 +83,7 @@ export function TribePicker({
   }
 
   return (
-    <div className="field" style={{ marginTop: "0.5rem" }}>
+    <div className="field">
       <span className="field__label">{t("draft.tribal.label")}</span>
       {tribal.tribes.length > 0 && (
         <div className="chips" style={{ marginTop: 0, marginBottom: "0.5rem" }}>

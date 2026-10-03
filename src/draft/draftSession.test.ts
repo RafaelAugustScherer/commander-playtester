@@ -495,10 +495,10 @@ describe("DraftSession refresh blacklist", () => {
 });
 
 describe("DraftSession customization", () => {
-  it("sends no planeswalkers and no dungeons to the engine by default", async () => {
+  it("sends no planeswalkers, no dungeons and ramp to the engine by default", async () => {
     const inputs: RankCardCandidatesInput[] = [];
     await draftingSession(inputs);
-    expect(inputs[0].customization).toEqual({ planeswalkers: false, dungeons: false });
+    expect(inputs[0].customization).toEqual({ planeswalkers: false, dungeons: false, ramp: true });
   });
 
   it("re-offers the round with the new choice when it changes while drafting", async () => {
@@ -506,12 +506,13 @@ describe("DraftSession customization", () => {
     const session = await draftingSession(inputs);
     const before = inputs.length;
 
-    await session.setCustomization({ planeswalkers: true, dungeons: false });
+    await session.setCustomization({ planeswalkers: true, dungeons: false, ramp: true });
 
     expect(inputs).toHaveLength(before + 1);
     expect(inputs[inputs.length - 1].customization).toEqual({
       planeswalkers: true,
       dungeons: false,
+      ramp: true,
     });
   });
 });
