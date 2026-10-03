@@ -6,6 +6,7 @@ import type {
 } from "../engine/draftQueries";
 import { getEngine } from "../engine/EngineClient";
 import { fetchCardsCached } from "../lib/scryfallCache";
+import { frontFace } from "../lib/cardName";
 import { extractThemeProfile, type ThemeProfile } from "./themes";
 import { scoreCandidate, type CandidateScore } from "./scoring";
 import type { BracketTarget } from "./bracket";
@@ -150,7 +151,7 @@ export async function suggestCommanders(
   const { engine, resolver } = opts;
   const excluded = new Set(
     [...baseCards.map((c) => c.name), ...(opts.exclude ?? [])].map((n) =>
-      n.toLowerCase(),
+      frontFace(n).toLowerCase(),
     ),
   );
 

@@ -335,7 +335,9 @@ exist in the card database. Candidates are narrowed, scored, bracket-adjusted, a
 locally before only the three selected cards are fetched for display. Any one can be refreshed
 on its own, replaced by the closest remaining candidate of the same `slot type` that has not
 appeared in this round. The replaced card joins the `blacklist` and is never suggested again
-in this draft; the blacklist is not shown. Adding a card ends the round. The next ranking
+in this draft; the blacklist is not shown. A card already in the deck is never suggested — a
+two-sided card such as Depose // Deploy included, whichever of its names it is known by.
+Adding a card ends the round. The next ranking
 rebuilds its profile from the commander and every card selected so far.
 
 ```gherkin
@@ -350,6 +352,11 @@ Example: A refreshed-away card never comes back
   Given the author refreshed a suggestion away
   When later rounds are offered, commander rounds included
   Then that card is not suggested again in this draft
+
+Example: A two-sided card in the deck is not suggested again
+  Given the author added Depose // Deploy to the deck
+  When later rounds are offered
+  Then Depose // Deploy is not among the suggestions
 
 Example: Adding a card starts a fresh round
   Given a round showing three suggestions

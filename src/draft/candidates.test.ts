@@ -285,6 +285,16 @@ describe("suggestCommanders", () => {
     expect(results.map((r) => r.card.name)).not.toContain("Base Elf One");
   });
 
+  it("leaves out a two-sided candidate excluded under its full name", async () => {
+    const results = await suggestCommanders(baseCards, {
+      engine: makeEngine(),
+      customization: DEFAULT_CUSTOMIZATION,
+      resolver,
+      exclude: new Set(["Eligible Elf Lord // Elf Lord's Hall"]),
+    });
+    expect(results.map((r) => r.card.name)).not.toContain("Eligible Elf Lord");
+  });
+
   it("ranks the full local pool and resolves only the top three cards", async () => {
     const candidates = [
       card({ name: "Alpha Elf", typeLine: "Legendary Creature — Elf" }),
