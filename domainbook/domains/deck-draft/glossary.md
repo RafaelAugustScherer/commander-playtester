@@ -89,7 +89,9 @@ slots. Running it again replaces the earlier basics (`deck-draft/ADR-0007`).
 ## Synergy score
 
 The self-built ranking of a candidate card against the cards already in the deck — the
-sum of the `theme token`s it shares (with `commander weighting` applied), plus fit for
+sum of the `theme token`s it shares (with `commander weighting` applied, and each token
+strengthened when a repeatable or every-opponent clause carries it,
+`deck-draft/ADR-0008`), plus fit for
 the deck's role gaps and mana curve, plus a `tribal payoff` bonus, plus the `bracket
 target` tilt, plus a small tilt toward more-played cards by reprint count
 (`deck-draft/ADR-0002`). The engine supplies
