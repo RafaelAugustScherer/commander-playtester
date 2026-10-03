@@ -12,6 +12,7 @@ import { frontFace } from "../lib/cardName";
 import { bracketTilt } from "../draft/bracket";
 import { rankLocalCandidates, type LocallyRankedCandidate } from "../draft/localCandidates";
 import type { ThemeProfile } from "../draft/themes";
+import { mentionsSubtype } from "../draft/tokens";
 import {
   DRAFT_CARD_TYPES,
   allocateSlots,
@@ -139,6 +140,7 @@ export function createDraftRanker(
   );
   const themeCache = new Map<string, DraftCandidateData[]>();
   const typeCache = new Map<string, DraftCandidateData[]>();
+  const subtypeCache = new Map<string, DraftCandidateData[]>();
   const faceCache = new Map<string, CardFaceData | null>();
   const signalCache = new Map<string, TypeCounts>();
 
@@ -190,31 +192,67 @@ export function createDraftRanker(
     return { target: counts, nonbasicLandTarget: nonbasicLands, have, basicLands };
   }
 
-  function themeCandidates(profile: ThemeProfile): DraftCandidateData[] {
+  function textCandidates(token: string): DraftCandidateData[] {
+    let candidates = themeCache.get(token);
+    if (!candidates) {
+      candidates = queries
+        .search_cards_js({ text: token, limit: TOKEN_MATCH_SCAN })
+        .results.filter(
+          (card) =>
+            card.legalities?.commander === "legal" &&
+            wholeCardNames.has(card.name.toLowerCase()),
+        )
+        .sort((a, b) => popularityBonus(b.name) - popularityBonus(a.name))
+        .slice(0, THEME_CANDIDATES_PER_TOKEN)
+        .flatMap((card) => {
+          const candidate = candidateData(queries, card);
+          return candidate ? [candidate] : [];
+        });
+      themeCache.set(token, candidates);
+    }
+    return candidates;
+  }
+
+  function typeLineRows(typeLine: string, identity: string[]): SearchCardRow[] {
+    const seen = new Set<string>();
+    return queries
+      .search_cards_js({ type_line: typeLine, legal_format: "commander", limit: TOKEN_MATCH_SCAN })
+      .results.filter((row) => {
+        const name = row.name.toLowerCase();
+        if (seen.has(name) || !wholeCardNames.has(name)) return false;
+        seen.add(name);
+        return row.color_identity.every((color) => identity.includes(color));
+      })
+      .sort((a, b) => popularityBonus(b.name) - popularityBonus(a.name));
+  }
+
+  function subtypeCandidates(subtype: string, identity: string[]): DraftCandidateData[] {
+    const key = `${subtype}|${[...identity].sort().join("")}`;
+    let candidates = subtypeCache.get(key);
+    if (!candidates) {
+      candidates = typeLineRows(subtype, identity)
+        .slice(0, THEME_CANDIDATES_PER_TOKEN)
+        .flatMap((row) => {
+          const candidate = candidateData(queries, row);
+          return candidate ? [candidate] : [];
+        });
+      subtypeCache.set(key, candidates);
+    }
+    return candidates;
+  }
+
+  function themeCandidates(profile: ThemeProfile, rulesTexts: string[]): DraftCandidateData[] {
     const tokens = [...profile.tokenWeights]
       .sort((a, b) => b[1] - a[1])
       .slice(0, THEME_COUNT)
       .map(([token]) => token);
     const candidates = new Map<string, DraftCandidateData>();
     for (const token of tokens) {
-      let tokenCandidates = themeCache.get(token);
-      if (!tokenCandidates) {
-        tokenCandidates = queries
-          .search_cards_js({ text: token, limit: TOKEN_MATCH_SCAN })
-          .results.filter(
-            (card) =>
-              card.legalities?.commander === "legal" &&
-              wholeCardNames.has(card.name.toLowerCase()),
-          )
-          .sort((a, b) => popularityBonus(b.name) - popularityBonus(a.name))
-          .slice(0, THEME_CANDIDATES_PER_TOKEN)
-          .flatMap((card) => {
-            const candidate = candidateData(queries, card);
-            return candidate ? [candidate] : [];
-          });
-        themeCache.set(token, tokenCandidates);
-      }
-      for (const candidate of tokenCandidates) {
+      const tribal =
+        subtypeTypes.has(token) && rulesTexts.some((text) => mentionsSubtype(text, token))
+          ? subtypeCandidates(token, profile.colorIdentity)
+          : [];
+      for (const candidate of [...textCandidates(token), ...tribal]) {
         candidates.set(candidate.name.toLowerCase(), candidate);
       }
     }
@@ -225,22 +263,8 @@ export function createDraftRanker(
     const key = `${type}|${[...identity].sort().join("")}`;
     const cached = typeCache.get(key);
     if (cached) return cached;
-    const seen = new Set<string>();
-    const rows = queries
-      .search_cards_js({
-        type_line: TYPE_LINE_FILTER[type],
-        legal_format: "commander",
-        limit: TOKEN_MATCH_SCAN,
-      })
-      .results.filter((row) => {
-        const name = row.name.toLowerCase();
-        if (seen.has(name) || !wholeCardNames.has(name)) return false;
-        seen.add(name);
-        return row.color_identity.every((color) => identity.includes(color));
-      })
-      .sort((a, b) => popularityBonus(b.name) - popularityBonus(a.name));
     const candidates: DraftCandidateData[] = [];
-    for (const row of rows) {
+    for (const row of typeLineRows(TYPE_LINE_FILTER[type], identity)) {
       if (candidates.length >= TYPE_CANDIDATES_PER_TYPE) break;
       const candidate = candidateData(queries, row);
       if (candidate && isDraftableAs(candidate.typeLine, type)) candidates.push(candidate);
@@ -299,9 +323,12 @@ export function createDraftRanker(
     );
     const slotTypes = input.slotTypes ?? allocateSlots(balance, ROUND_SIZE, eligible);
 
+    const rulesTexts = [...input.commanders, ...new Set(input.mainboard)].map(
+      (name) => faceOf(name)?.oracle_text ?? "",
+    );
     const pool = new Map<string, DraftCandidateData>();
     const slotPools = [...new Set(slotTypes)].flatMap((type) => typePools.get(type) ?? []);
-    for (const candidate of [...themeCandidates(profile), ...slotPools]) {
+    for (const candidate of [...themeCandidates(profile, rulesTexts), ...slotPools]) {
       pool.set(candidate.name.toLowerCase(), candidate);
     }
     const ranked = rankLocalCandidates([...pool.values()], profile, excluded, popularityBonus);

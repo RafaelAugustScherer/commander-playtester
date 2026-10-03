@@ -50,6 +50,15 @@ const EDHREC_AVERAGE_DECKS: Row[] = [
   ["Krenko, Mob Boss", 34, 31, 7, 8, 12, 7, 0],
 ];
 
+const TRIBES: Record<string, string> = {
+  "Lathril, Blade of the Elves": "Elf",
+  "Krenko, Mob Boss": "Goblin",
+};
+
+function hasSubtype(typeLine: string, subtype: string): boolean {
+  return (typeLine.split("—")[1] ?? "").trim().split(/\s+/).includes(subtype);
+}
+
 function counts(row: Row): TypeCounts {
   const [, land, creature, instant, sorcery, artifact, enchantment, planeswalker] = row;
   return { land, creature, instant, sorcery, artifact, enchantment, planeswalker };
@@ -125,7 +134,7 @@ describe.skipIf(!ENABLED)("draft type balance against EDHREC average decks", () 
     },
   };
 
-  async function draftDeck(commander: string): Promise<TypeCounts> {
+  async function draftDeck(commander: string): Promise<{ deck: TypeCounts; onTribe: number }> {
     const session = new DraftSession({ engine, resolver });
     await session.start([commander, ...SEED_CARDS], commander, "focused");
     const random = seededRandom(commander);
@@ -145,13 +154,18 @@ describe.skipIf(!ENABLED)("draft type balance against EDHREC average decks", () 
       await session.addCard(pick);
     }
     await session.fillBasicLands();
+    const tribe = TRIBES[commander];
     const deck = zeroCounts();
+    let onTribe = 0;
     for (const entry of session.mainboard) {
       const card = cardOf(entry.name);
       const type = card ? primaryType(card.typeLine) : null;
       if (type) deck[type] += entry.quantity;
+      if (card && tribe && type === "creature" && hasSubtype(card.typeLine, tribe)) {
+        onTribe += entry.quantity;
+      }
     }
-    return deck;
+    return { deck, onTribe };
   }
 
   it("boots the engine", { timeout: 120_000 }, async () => {
@@ -174,6 +188,7 @@ describe.skipIf(!ENABLED)("draft type balance against EDHREC average decks", () 
     const rows = EDHREC_AVERAGE_DECKS.filter(([name]) => !ONLY || ONLY.includes(name));
     const lines = [`${"commander".padEnd(30)}      ${DRAFT_CARD_TYPES.map((t) => t.slice(0, 3).padStart(3)).join("")}`];
     const drafted = new Map<string, TypeCounts>();
+    const tribal = new Map<string, { onTribe: number; creatures: number }>();
     let baselineError = 0;
     let targetError = 0;
     let deckError = 0;
@@ -190,8 +205,9 @@ describe.skipIf(!ENABLED)("draft type balance against EDHREC average decks", () 
         target: "focused",
         exclude: [name.toLowerCase()],
       });
-      const deck = await draftDeck(name);
+      const { deck, onTribe } = await draftDeck(name);
       drafted.set(name, deck);
+      if (TRIBES[name]) tribal.set(name, { onTribe, creatures: deck.creature });
       baselineError += meanAbsError(baseline, reference);
       targetError += meanAbsError(start.balance.target, reference);
       deckError += meanAbsError(deck, reference);
@@ -200,6 +216,9 @@ describe.skipIf(!ENABLED)("draft type balance against EDHREC average decks", () 
         `${"".padEnd(30)} target${format(start.balance.target)}  mae ${meanAbsError(start.balance.target, reference).toFixed(1)}`,
         `${"".padEnd(30)} draft ${format(deck)}  mae ${meanAbsError(deck, reference).toFixed(1)}  (${DRAFT_CARD_TYPES.reduce((s, t) => s + deck[t], 0)} cards)`,
       );
+    }
+    for (const [name, { onTribe, creatures }] of tribal) {
+      lines.push(`${name}: ${onTribe} of ${creatures} creatures have the ${TRIBES[name]} type`);
     }
     lines.push(
       `mean abs error per type — baseline ${(baselineError / rows.length).toFixed(2)}, target ${(targetError / rows.length).toFixed(2)}, drafted ${(deckError / rows.length).toFixed(2)}`,

@@ -27,6 +27,8 @@ per-domain changelogs; this file is the single timeline (`ADR-0007`).
 
 - Draft land suggestions now favour colour-fixing and widely played lands over
   cycling lands (`deck-draft/ADR-0003`).
+- Draft theme search now reaches a tribe's cards by type line when the commander or
+  a drafted card names that tribe (`deck-draft/ADR-0004`).
 
 ## [0.22.0] - 2026-10-02
 

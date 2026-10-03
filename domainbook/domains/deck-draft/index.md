@@ -92,8 +92,8 @@ whole card pool by heart.
   not from source, so the churning-ABI risk still applies (`TDR-0001`).
 - A commander's type lean can be read from the engine's parsed abilities (cast triggers,
   cost reductions, "you control" filters), and `search_cards_js` filters by type-line word
-  and format legality. Both were found by runtime introspection, so a re-pin must re-check
-  them (`deck-draft/ADR-0003`, `TDR-0001`).
+  (a card type or a subtype) and format legality. Both were found by runtime introspection,
+  so a re-pin must re-check them (`deck-draft/ADR-0003`, `deck-draft/ADR-0004`, `TDR-0001`).
 - Synergy quality lives entirely in the heuristic; the engine measures power and
   legality, never synergy. The heuristic is the tuning lever, and its `theme token` list
   is where its ceiling is set.
