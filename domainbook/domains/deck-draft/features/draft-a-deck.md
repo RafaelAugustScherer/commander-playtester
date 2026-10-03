@@ -185,8 +185,8 @@ make other mana cards fit its theme. What ramp is worth follows the deck's `mana
 — its average spend, counting each card's priciest activated ability and the commander
 three times, and leaving the deck's ramp out. A deck whose appetite is low gets no ramp
 bonus; above that the bonus grows until the appetite is high. Cheap ramp gets the whole
-bonus, three-mana ramp half and four-mana ramp none. Ramp whose mana grows with a tribe the
-deck has gets more. In a deck without green, creature ramp gets a quarter: those decks ramp
+bonus, three-mana ramp half and four-mana ramp none. Ramp whose mana ability names a tribe
+the deck has ("Add {G} for each Elf") gets more, growing with the tribe. In a deck without green, creature ramp gets a quarter: those decks ramp
 with artifacts (`deck-draft/ADR-0009`).
 
 The bonus keeps pace with the draft instead of front-loading: the deck should hold about

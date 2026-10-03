@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { RAMP_WEIGHT, scoreCandidate } from "./scoring";
+import { RAMP_WEIGHT } from "./rampScore";
+import { scoreCandidate } from "./scoring";
 import { extractThemeProfile } from "./themes";
 import type { Card } from "../lib/types";
 
@@ -215,6 +216,25 @@ describe("scoreCandidate", () => {
       });
       const elves = [card({ name: "Elf", typeLine: "Creature — Elf" })];
       expect(rampScoreIn(5, priest, elves)).toBeGreaterThan(rampScoreIn(5, dork, elves));
+    });
+
+    it("grows the tribe bonus with the tribe, only for a tribe its mana names", () => {
+      const priest = card({
+        name: "Priest",
+        manaValue: 1,
+        roles: ["ramp"],
+        oracleText: "{T}: Add {G} for each Elf on the battlefield.",
+      });
+      const elfMention = card({
+        name: "Mention",
+        manaValue: 1,
+        roles: ["ramp"],
+        oracleText: "Other Elves you control get +1/+1.\n{T}: Add {G}.",
+      });
+      const elves = (n: number) =>
+        Array.from({ length: n }, (_, i) => card({ name: `Elf ${i}`, manaValue: 5, typeLine: "Creature — Elf" }));
+      expect(rampScoreIn(5, priest, elves(6))).toBeGreaterThan(rampScoreIn(5, priest, elves(1)));
+      expect(rampScoreIn(5, elfMention, elves(6))).toBe(rampScoreIn(5, dork, elves(6)));
     });
 
     it("follows the deck's ramp pace instead of its raw ramp count", () => {

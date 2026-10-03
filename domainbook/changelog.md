@@ -23,9 +23,10 @@ per-domain changelogs; this file is the single timeline (`ADR-0007`).
 
 ### Fixed
 
-- Ramp is recognised in more wordings: "add one mana", "add an amount of", tapping other
-  creatures for mana, and searches for a basic land type such as Forest
-  (`domains/deck-draft/features/draft-a-deck.md`).
+- Ramp is recognised in more wordings, in goldfishing and the draft alike: "add one mana",
+  "add an amount of", ramp Auras ("adds an additional {G}"), two extra land drops, and
+  searches for a basic land type such as Forest. Mana filters such as Prophetic Prism are
+  no longer counted as ramp (`domains/analysis/index.md`).
 
 ## [0.32.0] - 2026-10-03
 

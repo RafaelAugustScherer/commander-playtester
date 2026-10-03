@@ -1,4 +1,5 @@
 import type { Card } from "../lib/types";
+import { rulesLines } from "../lib/rulesText";
 
 // The lines of a land that only make or find mana: a single-mana ability
 // (one coloured or colourless mana, or one of any colour), an "enters tapped"
@@ -19,22 +20,6 @@ const FIXER_LINES: RegExp[] = [
   /\bsearch your library for (?:a|an) (?:basic land|(?:plains|island|swamp|mountain|forest)\b[^.]*) card\b/i,
   /^basic landcycling\b/i,
 ];
-
-/** A line without its parenthesised reminder text. */
-function withoutReminder(line: string): string {
-  let text = "";
-  let depth = 0;
-  for (const ch of line) {
-    if (ch === "(") depth++;
-    else if (ch === ")") depth = Math.max(0, depth - 1);
-    else if (depth === 0) text += ch;
-  }
-  return text.split(" ").filter(Boolean).join(" ");
-}
-
-export function rulesLines(card: Card): string[] {
-  return card.oracleText.split("\n").map(withoutReminder).filter(Boolean);
-}
 
 // A rider that makes a mana ability worth playing on its own (Cavern of Souls).
 const UTILITY_RIDER = /\bcan't be countered\b/i;

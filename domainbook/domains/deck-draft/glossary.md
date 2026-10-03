@@ -103,8 +103,8 @@ no such score; this context owns it (`deck-draft/ADR-0001`).
 ## Mana appetite
 
 How much mana a deck wants to spend: the average, over its nonland cards other than ramp,
-of the higher of each card's mana value and its priciest activated ability, with the
-commander counted three times. It sets how much a ramp card is worth in the `synergy score`
+of the higher of each card's mana value and its priciest activated ability (keyword costs
+such as Equip included), with the commander counted three times. It sets how much a ramp card is worth in the `synergy score`
 (`deck-draft/ADR-0009`).
 
 - **Status:** draft

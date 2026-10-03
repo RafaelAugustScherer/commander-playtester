@@ -1,6 +1,6 @@
 import type { Card } from "../lib/types";
 import { CREATURE_TYPES } from "./creatureTypes";
-import { rulesLines } from "./lands";
+import { rulesLines } from "../lib/rulesText";
 
 /**
  * One curated oracle-text signal. Matching `pattern` contributes `token` to the
@@ -217,7 +217,7 @@ const CAPITALISED_WORD = /(?<![\w'-])[A-Z][\w'-]*/g;
  * control", "an Angel, Demon, or Dragon creature card"). Mentions in the card's
  * own name, in tokens it creates, and in "non-" exclusions don't count.
  */
-function namedCreatureTypes(text: string, name: string): string[] {
+export function namedCreatureTypes(text: string, name: string): string[] {
   let rules = text;
   for (const face of name.split("//")) {
     const trimmed = face.trim();

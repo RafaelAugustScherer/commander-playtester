@@ -10,6 +10,8 @@ code:
   - src/analysis/**
   - src/lib/goldfish.ts
   - src/lib/roles.ts
+  - src/lib/ramp.ts
+  - src/lib/rulesText.ts
 relationships:
   - with: simulation
     type: customer-supplier
@@ -52,6 +54,12 @@ Answer "how good is this deck" two ways: **consistency** now, from the deck alon
 - A win rate is reported with a confidence interval and broken out per matchup, so
   a small `run` reads as uncertain rather than exact.
 - Analysis is seeded, so a fixed deck and seed give reproducible numbers.
+- Goldfishing's ramp count and its ramp casts use one ramp reading shared with the
+  deck draft (`src/lib/ramp.ts`). A permanent counts as a mana source only when its
+  mana ability makes more mana than it costs, so a filter such as Prophetic Prism is
+  not ramp, while ramp Auras (Utopia Sprawl) and searches for a basic land type
+  (Nature's Lore) are. Cheap mana permanents, land searches, extra land drops and
+  Treasure makers are ramp.
 - Head-to-head is the client-side delivery of `docs/ROADMAP.md`'s old Forge-backed
   "Phase 4", without the backend that phase assumed.
 

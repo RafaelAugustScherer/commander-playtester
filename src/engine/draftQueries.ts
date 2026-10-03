@@ -6,10 +6,10 @@
 // docs/engine-upgrade.md). Game-independent: they need the card database
 // loaded but not a running game (deck-draft/ADR-0001, TDR-0001).
 
-import type { CardRole } from "../lib/types";
 import type { DraftCardType, TypeBalance } from "../draft/typeBalance";
 import type { BracketTarget } from "../draft/bracket";
 import type { DraftCustomization } from "../draft/customization";
+import type { ThemeProfile } from "../draft/themes";
 import * as engineWasm from "./vendor/engine_wasm.js";
 
 export interface SearchCardsQuery {
@@ -52,18 +52,10 @@ export interface CardValidation {
   commanderEligible: boolean;
 }
 
-export interface EngineThemeProfile {
+export type EngineThemeProfile = Omit<ThemeProfile, "tokenWeights" | "creatureTypes"> & {
   tokenWeights: Array<[string, number]>;
-  curve: number[];
-  roleCounts: Record<CardRole, number>;
-  colorIdentity: string[];
   creatureTypes: Array<[string, number]>;
-  creatureCount: number;
-  tribes: string[];
-  manaAppetite: number;
-  nonlandCount: number;
-  rampCount: number;
-}
+};
 
 export interface RankCardCandidatesInput {
   commanders: string[];

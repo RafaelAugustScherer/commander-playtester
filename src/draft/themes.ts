@@ -1,6 +1,5 @@
-import type { Card, CardRole } from "../lib/types";
-import { rulesLines } from "./lands";
-import { activationMana, isLastingRamp } from "./ramp";
+import { isLastingRamp, manaSpent } from "../lib/ramp";
+import { isLand, type Card, type CardRole } from "../lib/types";
 import { creatureTypesOf, themeTokens, rewardedTokens } from "./tokens";
 
 /** How many times a commander's tokens count against the same token from the 99. */
@@ -13,6 +12,9 @@ export const COMMANDER_WEIGHT = 3;
  * creatures (`deck-draft/ADR-0005`).
  */
 export const REWARD_WEIGHT = 5;
+
+/** How many creatures of a type it takes to get most of the way to a tribe's full bonus. */
+export const TRIBAL_SATURATION = 3;
 
 /** Number of mana-value buckets in a curve histogram (0..6, plus a 7+ bucket). */
 const CURVE_BUCKETS = 8;
@@ -67,7 +69,7 @@ export function extractThemeProfile(
     addTokenWeights(tokenWeights, themeTokens(card), COMMANDER_WEIGHT);
     addTokenWeights(tokenWeights, rewardedTokens(card), REWARD_WEIGHT);
     addCurveAndRoles(curve, roleCounts, card);
-    if (!isLandCard(card)) {
+    if (!isLand(card)) {
       appetiteSum += COMMANDER_WEIGHT * manaSpent(card);
       appetiteWeight += COMMANDER_WEIGHT;
     }
@@ -75,7 +77,7 @@ export function extractThemeProfile(
   for (const card of others) {
     addTokenWeights(tokenWeights, themeTokens(card), 1);
     addCurveAndRoles(curve, roleCounts, card);
-    if (isLandCard(card)) continue;
+    if (isLand(card)) continue;
     nonlandCount++;
     if (isLastingRamp(card)) {
       rampCount++;
@@ -104,18 +106,6 @@ export function extractThemeProfile(
     nonlandCount,
     rampCount,
   };
-}
-
-function isLandCard(card: Card): boolean {
-  return /\bLand\b/.test(card.typeLine);
-}
-
-function manaSpent(card: Card): number {
-  let spent = card.manaValue;
-  for (const line of rulesLines(card)) {
-    spent = Math.max(spent, activationMana(line));
-  }
-  return spent;
 }
 
 function addTokenWeights(
