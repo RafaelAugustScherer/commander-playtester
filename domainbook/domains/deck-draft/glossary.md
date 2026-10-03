@@ -46,6 +46,16 @@ draft.
 - **Example:** Refreshing away Cyclonic Rift keeps it out of every later round of that
   draft.
 
+## Quick draft
+
+The one-card-at-a-time way to draft: the round's first card alone over a darkened screen,
+taken (added, or picked as commander) by a swipe right or the right button, passed on by a
+swipe left or the left button. Passing is a `refresh`, so the card joins the `blacklist`.
+
+- **Status:** draft
+- **Example:** Swiping left on a suggested board wipe brings in the next closest board
+  wipe, and the first one never returns.
+
 ## Type balance
 
 The target count of each card type — land, creature, instant, sorcery, artifact,
