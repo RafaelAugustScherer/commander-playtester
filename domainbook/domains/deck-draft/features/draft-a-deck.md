@@ -116,6 +116,11 @@ and other counters, and legendaries. Some cards only *enable* a mechanic — a c
 an enters trigger for a blink deck, a legendary creature for a legends deck. They fit that
 theme without making one: drafting them does not pull the deck toward it.
 
+A token counts for more when the clause that carries it repeats — a "whenever" or "at the
+beginning of" trigger, or an activated ability, on a permanent — and again when it reaches
+every opponent ("each opponent", "your opponents", "at the beginning of each…"); an effect
+on every player does not count as reaching opponents (`deck-draft/ADR-0008`).
+
 Tapping creatures includes tapping one from a list of permanent types ("tap target
 artifact, creature, or land"), counting an opponent's tapped creatures, and rewarding an
 opponent's creature becoming tapped. Each mechanic's pool keeps its most-played cards
@@ -126,6 +131,16 @@ Example: A tap commander is offered cards that tap creatures
   Given a draft whose commander is "Hylda of the Icy Crown"
   When rounds are suggested
   Then most non-land suggestions tap creatures, such as "Cryptic Command" or "Sleep"
+
+Example: A repeatable engine outranks a one-shot effect
+  Given a draft whose commander rewards tapping creatures
+  When "Kapsho Kitefins" and a sorcery that taps one creature once are scored
+  Then the tap effect counts for more on Kapsho Kitefins, whose trigger repeats
+
+Example: Reaching every opponent counts for more
+  Given two cards that draw at the beginning of an end step
+  When one says "each end step" and the other "your end step"
+  Then "each end step" counts for more, and "your next end step" for least
 
 Example: Tapping from a list or counting tapped creatures is tapping
   Given a draft whose commander is "Hylda of the Icy Crown"

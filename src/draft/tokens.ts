@@ -1,5 +1,6 @@
 import type { Card } from "../lib/types";
 import { CREATURE_TYPES } from "./creatureTypes";
+import { rulesLines } from "./lands";
 
 /**
  * One curated oracle-text signal. Matching `pattern` contributes `token` to the
@@ -287,6 +288,51 @@ export function cardTokens(card: Card): ReadonlySet<string> {
     cardTokenCache.set(key, tokens);
   }
   return tokens;
+}
+
+export const REPEATABLE_STRENGTH = 1.5;
+export const MULTIPLAYER_STRENGTH = 1.5;
+
+const ONE_SHOT_CARD = /\b(?:Instant|Sorcery)\b/;
+const TRIGGERED_CLAUSE = /^(?:whenever\b|at the beginning of (?!(?:the |your )?next\b))/i;
+const ACTIVATED_CLAUSE = /^[^:."—•]*:/;
+const MULTIPLAYER_CLAUSE =
+  /\b(?:each opponent|your opponents|all opponents|each other player|whenever an opponent|at the beginning of each)\b/i;
+
+function clauseStrength(clause: string, oneShotCard: boolean): number {
+  let strength = 1;
+  const repeatable = TRIGGERED_CLAUSE.test(clause.trimStart()) || ACTIVATED_CLAUSE.test(clause);
+  if (!oneShotCard && repeatable) strength *= REPEATABLE_STRENGTH;
+  if (MULTIPLAYER_CLAUSE.test(clause)) strength *= MULTIPLAYER_STRENGTH;
+  return strength;
+}
+
+function clauseTokens(clause: string, name: string): Set<string> {
+  const tokens = textThemeTokens(clause, name);
+  for (const { token, enabler } of ORACLE_TEXT_PATTERNS) {
+    if (enabler?.test(clause)) tokens.add(token);
+  }
+  return tokens;
+}
+
+const strengthCache = new Map<string, ReadonlyMap<string, number>>();
+
+export function tokenStrengths(card: Card): ReadonlyMap<string, number> {
+  const key = cacheKey(card);
+  let strengths = strengthCache.get(key);
+  if (!strengths) {
+    const found = new Map<string, number>();
+    const oneShotCard = ONE_SHOT_CARD.test(card.typeLine);
+    for (const clause of rulesLines(card)) {
+      const strength = clauseStrength(clause, oneShotCard);
+      for (const token of clauseTokens(clause, card.name)) {
+        found.set(token, Math.max(found.get(token) ?? 1, strength));
+      }
+    }
+    strengths = found;
+    strengthCache.set(key, strengths);
+  }
+  return strengths;
 }
 
 /**

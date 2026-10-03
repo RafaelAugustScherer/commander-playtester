@@ -12,6 +12,14 @@ depth live there. A purely-internal PR that touches no product or architecture m
 skip its version with a `Skip-Docs: <reason>` trailer instead. There are no
 per-domain changelogs; this file is the single timeline (`ADR-0007`).
 
+## [0.32.0] - 2026-10-03
+
+### Changed
+
+- Draft suggestions favour repeatable effects and effects that reach every opponent: a
+  theme a card delivers through a "whenever" trigger, an activated ability or "each
+  opponent" counts for more than a one-shot or single-opponent one (`deck-draft/ADR-0008`).
+
 ## [0.31.0] - 2026-10-03
 
 ### Fixed

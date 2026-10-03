@@ -8,6 +8,9 @@ import {
   themeTokens,
   tokenSearches,
   rewardedTokens,
+  tokenStrengths,
+  REPEATABLE_STRENGTH,
+  MULTIPLAYER_STRENGTH,
 } from "./tokens";
 import type { Card } from "../lib/types";
 
@@ -284,5 +287,66 @@ describe("tribe membership", () => {
     expect(servesTribe(card({ oracleText: "Elves you control get +1/+1." }), ["elf"])).toBe(true);
     expect(servesTribe(card({ typeLine: "Kindred Sorcery — Elf" }), ["elf"])).toBe(true);
     expect(servesTribe(card({ typeLine: "Creature — Elf" }), ["elf"])).toBe(false);
+  });
+});
+
+describe("tokenStrengths", () => {
+  const strength = (overrides: Partial<Card>, token: string) =>
+    tokenStrengths(card(overrides)).get(token) ?? 1;
+
+  it("counts a one-shot effect once", () => {
+    expect(strength({ oracleText: "When this creature enters, draw a card." }, "draw a card")).toBe(1);
+    expect(
+      strength({ typeLine: "Sorcery", oracleText: "At the beginning of your upkeep, draw a card." }, "draw a card"),
+    ).toBe(1);
+  });
+
+  it("strengthens a repeatable trigger or activated ability on a permanent", () => {
+    expect(
+      strength(
+        { oracleText: "Whenever another creature you control enters, tap target creature an opponent controls." },
+        "tap creature",
+      ),
+    ).toBe(REPEATABLE_STRENGTH);
+    expect(
+      strength(
+        { typeLine: "Enchantment", oracleText: "Tap an untapped creature you control: Tap target artifact, creature, or land." },
+        "tap creature",
+      ),
+    ).toBe(REPEATABLE_STRENGTH);
+  });
+
+  it("strengthens an effect that reaches every opponent", () => {
+    expect(
+      strength({ typeLine: "Instant", oracleText: "Tap all creatures your opponents control." }, "tap creature"),
+    ).toBe(MULTIPLAYER_STRENGTH);
+    expect(
+      strength({ typeLine: "Instant", oracleText: "Tap target creature." }, "tap creature"),
+    ).toBe(1);
+  });
+
+  it("ranks each end step over your end step over your next end step", () => {
+    const at = (when: string) =>
+      strength({ typeLine: "Enchantment", oracleText: `At the beginning of ${when}, draw a card.` }, "draw a card");
+
+    expect(at("each end step")).toBe(REPEATABLE_STRENGTH * MULTIPLAYER_STRENGTH);
+    expect(at("your end step")).toBe(REPEATABLE_STRENGTH);
+    expect(at("the next end step")).toBe(1);
+  });
+
+  it("takes the strongest clause that carries a token, and ignores reminder text", () => {
+    const tokens = tokenStrengths(
+      card({
+        oracleText:
+          "When this creature enters, draw a card.\nWhenever an opponent casts a spell, draw a card. (Reminder: it's a trigger.)",
+      }),
+    );
+    expect(tokens.get("draw a card")).toBe(REPEATABLE_STRENGTH * MULTIPLAYER_STRENGTH);
+  });
+
+  it("does not strengthen a symmetric effect", () => {
+    expect(
+      strength({ typeLine: "Sorcery", oracleText: "Each player draws two cards." }, "draw a card"),
+    ).toBe(1);
   });
 });

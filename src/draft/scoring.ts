@@ -1,6 +1,6 @@
 import type { Card } from "../lib/types";
 import type { ThemeProfile } from "./themes";
-import { cardTokens, namedTribes, servesTribe } from "./tokens";
+import { cardTokens, namedTribes, servesTribe, tokenStrengths } from "./tokens";
 
 const CURVE_FIT_WEIGHT = 2;
 const ROLE_GAP_WEIGHT = 2;
@@ -49,10 +49,11 @@ function themeFit(
 ): { themeScore: number; matchedTokens: string[] } {
   let themeScore = 0;
   const matchedTokens: string[] = [];
+  const strengths = tokenStrengths(card);
   for (const token of cardTokens(card)) {
     const weight = profile.tokenWeights.get(token);
     if (weight) {
-      themeScore += weight;
+      themeScore += weight * (strengths.get(token) ?? 1);
       matchedTokens.push(token);
     }
   }

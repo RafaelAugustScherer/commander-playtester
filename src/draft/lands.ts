@@ -32,7 +32,7 @@ function withoutReminder(line: string): string {
   return text.split(" ").filter(Boolean).join(" ");
 }
 
-function rulesLines(card: Card): string[] {
+export function rulesLines(card: Card): string[] {
   return card.oracleText.split("\n").map(withoutReminder).filter(Boolean);
 }
 
