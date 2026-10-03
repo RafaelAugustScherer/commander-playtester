@@ -153,6 +153,34 @@ Example: Commander ranking produces a full round
   Then it shows exactly three legal commanders
 ```
 
+## Rule: Quick draft offers one card at a time
+
+A **Quick draft** toggle, shown while drafting (the commander round included), shows the
+round's first card — the `slot type` the deck is shortest of — alone over a darkened
+screen. Taking it adds it to the deck, or picks it as commander in the commander round.
+Passing on it is a `refresh` of that slot, so the card joins the `blacklist`. On a touch
+screen the author swipes right to take and left to pass; on desktop two buttons below the
+card do the same. Closing it (X) returns to the three-card round as it stands.
+
+```gherkin
+Example: Swiping right adds the card
+  Given quick draft is open on a round whose first card is "Skirk Prospector"
+  When the author swipes right
+  Then "Skirk Prospector" is added to the deck
+  And quick draft shows the first card of the next round
+
+Example: Swiping left passes on the card for good
+  Given quick draft is open on a round whose first card is a creature
+  When the author swipes left
+  Then the card joins the blacklist and is never suggested again in this draft
+  And quick draft shows the closest unseen card of the same slot type
+
+Example: Closing quick draft keeps the round
+  Given quick draft is open on a round showing three suggestions
+  When the author closes it
+  Then the three-card round is shown as it stood
+```
+
 ## Rule: Each round offers the card types the deck is short of
 
 The draft keeps a `type balance`: a target count of lands, creatures, instants, sorceries,

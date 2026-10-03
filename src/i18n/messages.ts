@@ -953,6 +953,8 @@ export const messages = {
     pt: "Não foi possível completar a ação. Tente novamente.",
     en: "Couldn't complete that action. Try again.",
   },
+  "draft.quick.toggle": { pt: "Draft rápido", en: "Quick draft" },
+  "draft.quick.skip": { pt: "Pular", en: "Skip" },
 
   "draft.leave.title": { pt: "Sair do draft", en: "Leave the draft" },
   "draft.leave.copy": { pt: "Copiar lista", en: "Copy list" },

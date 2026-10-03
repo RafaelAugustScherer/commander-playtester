@@ -12,6 +12,14 @@ depth live there. A purely-internal PR that touches no product or architecture m
 skip its version with a `Skip-Docs: <reason>` trailer instead. There are no
 per-domain changelogs; this file is the single timeline (`ADR-0007`).
 
+## [0.25.0] - 2026-10-03
+
+### Added
+
+- **Quick draft** shows a draft's suggestions one card at a time over a darkened screen;
+  swipe right (or the right button on desktop) to add, left to pass on it for good
+  (`domains/deck-draft/features/draft-a-deck.md`).
+
 ## [0.24.0] - 2026-10-03
 
 ### Changed

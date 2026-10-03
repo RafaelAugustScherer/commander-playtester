@@ -29,8 +29,9 @@ whole card pool by heart.
 ## Domain Roles
 
 - Assisted-authoring context: the counterpart to `deck library`'s by-hand authoring.
-  The user still owns every choice — they pick from three, or refresh for three more —
-  but the context proposes the candidates rather than leaving the blank page (`ADR-0009`).
+  The user still owns every choice — they pick from three, or refresh for three more,
+  or take or pass one card at a time in `quick draft` — but the context proposes the
+  candidates rather than leaving the blank page (`ADR-0009`).
 - Ranking context: it owns the `synergy score`. Candidates come from the engine's own
   card database (narrowed by `search_cards_js`); the *ordering* is a self-built
   heuristic over card text and types, because the engine has no card-fit signal to lean

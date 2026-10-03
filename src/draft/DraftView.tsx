@@ -13,6 +13,7 @@ import { DraftSession } from "./draftSession";
 import { engineDraftEngine, scryfallCardResolver } from "./candidates";
 import { BRACKET_TARGETS, DEFAULT_BRACKET_TARGET, type BracketTarget } from "./bracket";
 import { DraftCandidateCard } from "./DraftCandidateCard";
+import { QuickDraft, QuickDraftToggle } from "./QuickDraft";
 import { DRAFT_CARD_TYPES, type DraftCardType } from "./typeBalance";
 import { CardNameInput } from "../components/CardNameInput";
 import { SearchableSelect } from "../components/SearchableSelect";
@@ -552,6 +553,8 @@ function DraftCommanderPanel({
   session,
   roundBusy,
   roundError,
+  quickDraft,
+  onQuickDraftChange,
   onPick,
   onRefresh,
   onExit,
@@ -561,6 +564,8 @@ function DraftCommanderPanel({
   session: DraftSession;
   roundBusy: RoundBusy;
   roundError: string | null;
+  quickDraft: boolean;
+  onQuickDraftChange: (on: boolean) => void;
   onPick: (index: number) => void;
   onRefresh: (index: number) => void;
   onExit: () => void;
@@ -577,6 +582,7 @@ function DraftCommanderPanel({
         </button>
       </div>
       <p className="hint">{t("draft.commander.hint")}</p>
+      <QuickDraftToggle checked={quickDraft} onChange={onQuickDraftChange} />
       {roundBusy === "all" && <p className="hint">{t("draft.round.loadingNext")}</p>}
       {session.round.length === 0 ? (
         <p className="hint">{t("draft.commander.empty")}</p>
@@ -701,6 +707,8 @@ function DraftRoundPanel({
   session,
   roundBusy,
   roundError,
+  quickDraft,
+  onQuickDraftChange,
   onAdd,
   onRefresh,
   onHover,
@@ -709,6 +717,8 @@ function DraftRoundPanel({
   session: DraftSession;
   roundBusy: RoundBusy;
   roundError: string | null;
+  quickDraft: boolean;
+  onQuickDraftChange: (on: boolean) => void;
   onAdd: (index: number) => void;
   onRefresh: (index: number) => void;
   onHover: (p: Preview | null) => void;
@@ -719,6 +729,7 @@ function DraftRoundPanel({
   return (
     <section className="panel">
       <h3>{t("draft.round.title")}</h3>
+      <QuickDraftToggle checked={quickDraft} onChange={onQuickDraftChange} />
       {loadingNext && <p className="hint">{t("draft.round.loadingNext")}</p>}
       {session.round.length === 0 ? (
         <p className="hint">{t("draft.round.empty")}</p>
@@ -816,6 +827,7 @@ function DraftSessionView({
   const [saveName, setSaveName] = useState("");
   const [copied, setCopied] = useState(false);
   const [preview, setPreview] = useState<Preview | null>(null);
+  const [quickDraft, setQuickDraft] = useState(false);
   const copyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const { archetype, bracket, loading: measuresLoading } = useDeckMeasures(
@@ -843,14 +855,14 @@ function DraftSessionView({
   }
 
   function handlePick(index: number) {
-    void runRoundAction("all", async () => {
+    return runRoundAction("all", async () => {
       await session.pickCommander(session.round[index].card.name);
       setDeckVersion((v) => v + 1);
     });
   }
 
   function handleAdd(index: number) {
-    void runRoundAction("all", async () => {
+    return runRoundAction("all", async () => {
       await session.addCard(index);
       setDeckVersion((v) => v + 1);
     });
@@ -864,7 +876,7 @@ function DraftSessionView({
   }
 
   function handleRefresh(index: number) {
-    void runRoundAction(index, () => session.refreshSlot(index));
+    return runRoundAction(index, () => session.refreshSlot(index));
   }
 
   function handleTargetChange(next: BracketTarget) {
@@ -886,59 +898,70 @@ function DraftSessionView({
 
   const totalCards = session.cardCount();
 
-  if (session.phase === "commander-selection") {
-    return (
-      <>
-        {preview && <CardPreview preview={preview} />}
+  return (
+    <>
+      {preview && <CardPreview preview={preview} />}
+      {session.phase === "commander-selection" ? (
         <DraftCommanderPanel
           session={session}
           roundBusy={roundBusy}
           roundError={roundError}
+          quickDraft={quickDraft}
+          onQuickDraftChange={setQuickDraft}
           onPick={handlePick}
           onRefresh={handleRefresh}
           onExit={onExit}
           onHover={setPreview}
           preview={preview}
         />
-      </>
-    );
-  }
-
-  return (
-    <div>
-      {preview && <CardPreview preview={preview} />}
-      <DraftSummaryPanel
-        session={session}
-        target={target}
-        totalCards={totalCards}
-        archetype={archetype}
-        bracket={bracket}
-        measuresLoading={measuresLoading}
-        roundBusy={roundBusy}
-        onTargetChange={handleTargetChange}
-        onFillLands={handleFillLands}
-        onExit={onExit}
-      />
-      <DraftRoundPanel
-        session={session}
-        roundBusy={roundBusy}
-        roundError={roundError}
-        onAdd={handleAdd}
-        onRefresh={handleRefresh}
-        onHover={setPreview}
-        preview={preview}
-      />
-      <DraftLeavePanel
-        session={session}
-        totalCards={totalCards}
-        saveName={saveName}
-        setSaveName={setSaveName}
-        copied={copied}
-        onCopy={() => void handleCopy()}
-        onSave={handleSave}
-        onExit={onExit}
-      />
-    </div>
+      ) : (
+        <div>
+          <DraftSummaryPanel
+            session={session}
+            target={target}
+            totalCards={totalCards}
+            archetype={archetype}
+            bracket={bracket}
+            measuresLoading={measuresLoading}
+            roundBusy={roundBusy}
+            onTargetChange={handleTargetChange}
+            onFillLands={handleFillLands}
+            onExit={onExit}
+          />
+          <DraftRoundPanel
+            session={session}
+            roundBusy={roundBusy}
+            roundError={roundError}
+            quickDraft={quickDraft}
+            onQuickDraftChange={setQuickDraft}
+            onAdd={handleAdd}
+            onRefresh={handleRefresh}
+            onHover={setPreview}
+            preview={preview}
+          />
+          <DraftLeavePanel
+            session={session}
+            totalCards={totalCards}
+            saveName={saveName}
+            setSaveName={setSaveName}
+            copied={copied}
+            onCopy={() => void handleCopy()}
+            onSave={handleSave}
+            onExit={onExit}
+          />
+        </div>
+      )}
+      {quickDraft && (
+        <QuickDraft
+          session={session}
+          busy={roundBusy !== null}
+          error={roundError}
+          onAdd={() => (session.phase === "commander-selection" ? handlePick(0) : handleAdd(0))}
+          onSkip={() => handleRefresh(0)}
+          onClose={() => setQuickDraft(false)}
+        />
+      )}
+    </>
   );
 }
 
