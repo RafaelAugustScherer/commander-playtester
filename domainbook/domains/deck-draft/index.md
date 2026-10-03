@@ -48,6 +48,7 @@ whole card pool by heart.
 | `RequestSuggestions`| user         | Command |
 | `RefreshSuggestion` | user         | Command |
 | `AddCard`           | user         | Command |
+| `FillBasicLands`    | user         | Command |
 | `ExportDraft`       | user         | Query   |
 
 ## Outbound Communication
@@ -69,6 +70,10 @@ whole card pool by heart.
 - The `commander card` carries more weight than the other 99 when scoring fit; if the
   `base cards` name no commander, the first `suggestion round` picks the commander, so
   `color identity` is fixed before any other suggestion is made (`draft-a-deck`).
+- Each round's three slots go to the card types the deck is shortest of against a
+  commander-set `type balance`, and each slot's pool adds the most-printed cards of its
+  type, so a spellslinger is offered spells and an enchantress enchantments. Basic lands
+  come from one **Fill basic lands** step rather than from rounds (`deck-draft/ADR-0003`).
 - A `bracket target` (default Focused) steers the ranking through the engine's bracket
   estimate; a card that would push the deck past the target is penalised, not hidden —
   the user stays in control (`ADR-0009`).
@@ -85,6 +90,10 @@ whole card pool by heart.
   `classify_deck_js`) are game-independent and partial-deck-safe — they need only the
   loaded card database, not a running game. This was confirmed by runtime introspection,
   not from source, so the churning-ABI risk still applies (`TDR-0001`).
+- A commander's type lean can be read from the engine's parsed abilities (cast triggers,
+  cost reductions, "you control" filters), and `search_cards_js` filters by type-line word
+  and format legality. Both were found by runtime introspection, so a re-pin must re-check
+  them (`deck-draft/ADR-0003`, `TDR-0001`).
 - Synergy quality lives entirely in the heuristic; the engine measures power and
   legality, never synergy. The heuristic is the tuning lever, and its `theme token` list
   is where its ceiling is set.
@@ -98,6 +107,8 @@ whole card pool by heart.
   Commander.
 - A card shown in a `suggestion round` never reappears in that same round, including
   across refreshes.
+- A deck drafted to completion lands close to EDHREC's average deck for its commander,
+  type by type (`npm run draft-balance`, `deck-draft/ADR-0003`).
 - Leaving a draft yields a decklist that round-trips through the parser — pasting it
   back produces the same cards.
 - A partial deck produced by a draft cannot be started in `match setup`.

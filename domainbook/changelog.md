@@ -12,6 +12,22 @@ depth live there. A purely-internal PR that touches no product or architecture m
 skip its version with a `Skip-Docs: <reason>` trailer instead. There are no
 per-domain changelogs; this file is the single timeline (`ADR-0007`).
 
+## [0.23.0] - 2026-10-03
+
+### Added
+
+- Draft rounds now **balance card types** toward a commander-specific mix, so
+  spellslingers are offered instants and sorceries, enchantress commanders
+  enchantments, and so on; the summary shows each type against its target
+  (`domains/deck-draft/features/draft-a-deck.md`, `deck-draft/ADR-0003`).
+- **Fill basic lands** tops a draft up with basics split by the deck's colours
+  (`domains/deck-draft/features/draft-a-deck.md`).
+
+### Changed
+
+- Draft land suggestions now favour colour-fixing and widely played lands over
+  cycling lands (`deck-draft/ADR-0003`).
+
 ## [0.22.0] - 2026-10-02
 
 ### Changed

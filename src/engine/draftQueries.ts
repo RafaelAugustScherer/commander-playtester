@@ -7,11 +7,15 @@
 // loaded but not a running game (deck-draft/ADR-0001, TDR-0001).
 
 import type { CardRole } from "../lib/types";
+import type { DraftCardType, TypeBalance } from "../draft/typeBalance";
+import type { BracketTarget } from "../draft/bracket";
 import * as engineWasm from "./vendor/engine_wasm.js";
 
 export interface SearchCardsQuery {
   text?: string;
   colors?: string[];
+  type_line?: string;
+  legal_format?: string;
   limit?: number;
 }
 
@@ -58,13 +62,31 @@ export interface RankCardCandidatesInput {
   commanders: string[];
   mainboard: string[];
   profile: EngineThemeProfile;
-  target: string;
+  target: BracketTarget;
   exclude: string[];
+  slotTypes?: DraftCardType[];
 }
 
 export interface RankedCardName {
   name: string;
   bracketTilt: number;
+  slotType: DraftCardType;
+}
+
+export interface RankCardCandidatesResult {
+  candidates: RankedCardName[];
+  balance: TypeBalance;
+}
+
+export interface FaceTrigger {
+  mode?: string;
+  valid_card?: unknown;
+  valid_target?: { type?: string } | null;
+}
+
+export interface FaceStaticAbility {
+  mode?: string | { ModifyCost?: { mode?: string; spell_filter?: unknown } } | null;
+  affected?: { controller?: string } | null;
 }
 
 export interface CardFaceData {
@@ -75,6 +97,10 @@ export interface CardFaceData {
     subtypes?: string[];
   };
   oracle_text?: string;
+  triggers?: FaceTrigger[];
+  static_abilities?: FaceStaticAbility[];
+  abilities?: unknown[];
+  replacements?: unknown[];
 }
 
 export interface BracketDeckInput {
@@ -97,7 +123,7 @@ export interface ClassifyDeckResult {
   secondary?: string;
 }
 
-interface DraftQueryExports {
+export interface DraftQueryExports {
   search_cards_js(query: SearchCardsQuery): SearchCardsResult;
   get_card_face_data(name: string): CardFaceData | null;
   estimate_bracket_for_deck(deck: BracketDeckInput): BracketEstimate | null;

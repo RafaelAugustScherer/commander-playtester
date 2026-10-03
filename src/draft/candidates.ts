@@ -2,7 +2,7 @@ import type { Card } from "../lib/types";
 import type {
   DraftCandidateData,
   RankCardCandidatesInput,
-  RankedCardName,
+  RankCardCandidatesResult,
 } from "../engine/draftQueries";
 import { getEngine } from "../engine/EngineClient";
 import { fetchCardsCached } from "../lib/scryfallCache";
@@ -10,11 +10,12 @@ import { extractThemeProfile, type ThemeProfile } from "./themes";
 import { scoreCandidate, type CandidateScore } from "./scoring";
 import type { BracketTarget } from "./bracket";
 import { draftCandidateCard } from "./localCandidates";
+import type { DraftCardType, TypeBalance } from "./typeBalance";
 
 /** The engine calls the draft pipeline needs — narrow enough to fake in tests. */
 export interface DraftEngine {
   commanderCandidates(): Promise<DraftCandidateData[]>;
-  rankCardCandidates(input: RankCardCandidatesInput): Promise<RankedCardName[]>;
+  rankCardCandidates(input: RankCardCandidatesInput): Promise<RankCardCandidatesResult>;
   resolveCards(names: string[]): Promise<DraftCandidateData[]>;
 }
 
@@ -40,6 +41,7 @@ export interface RankedCandidate {
   score: CandidateScore;
   bracketTilt: number;
   total: number;
+  slotType?: DraftCardType;
 }
 
 /** The deck-so-far's card names, for exclusion and bracket-estimate calls. */
@@ -78,26 +80,26 @@ export interface SuggestCandidatesOptions {
   target: BracketTarget;
   /** Names to leave out beyond the deck's own cards (e.g. shown-this-round), lowercase or not. */
   exclude?: Set<string>;
+  slotTypes?: DraftCardType[];
 }
 
-/**
- * Rank candidates for the deck's 99: engine search on the deck's top theme
- * tokens, filtered to the commander's color identity and Commander legality,
- * pre-ranked by matched-token weight, then scored and bracket-tilted for a
- * bounded shortlist. Sorted highest-fit first.
- */
+export interface SuggestedRound {
+  candidates: RankedCandidate[];
+  balance: TypeBalance;
+}
+
 export async function suggestCandidates(
   deck: DraftDeckNames,
   profile: ThemeProfile,
   opts: SuggestCandidatesOptions,
-): Promise<RankedCandidate[]> {
+): Promise<SuggestedRound> {
   const { engine, resolver, target } = opts;
   const excluded = new Set(
     [...deck.commanders, ...deck.mainboard, ...(opts.exclude ?? [])].map((n) =>
       n.toLowerCase(),
     ),
   );
-  const ranked = await engine.rankCardCandidates({
+  const { candidates, balance } = await engine.rankCardCandidates({
     commanders: deck.commanders,
     mainboard: deck.mainboard,
     profile: {
@@ -106,14 +108,18 @@ export async function suggestCandidates(
     },
     target,
     exclude: [...excluded],
+    slotTypes: opts.slotTypes,
   });
-  const resolved = await resolver.resolve(ranked.map(({ name }) => name));
-  return ranked.flatMap(({ name, bracketTilt }) => {
-    const card = resolved.get(name.toLowerCase());
-    if (!card) return [];
-    const score = scoreCandidate(card, profile);
-    return [{ card, score, bracketTilt, total: score.total + bracketTilt }];
-  });
+  const resolved = await resolver.resolve(candidates.map(({ name }) => name));
+  return {
+    balance,
+    candidates: candidates.flatMap(({ name, bracketTilt, slotType }) => {
+      const card = resolved.get(name.toLowerCase());
+      if (!card) return [];
+      const score = scoreCandidate(card, profile);
+      return [{ card, score, bracketTilt, total: score.total + bracketTilt, slotType }];
+    }),
+  };
 }
 
 export interface SuggestCommandersOptions {

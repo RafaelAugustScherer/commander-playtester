@@ -912,6 +912,28 @@ export const messages = {
     en: "Applies starting with the next round of suggestions.",
   },
 
+  "draft.balance.title": { pt: "Equilíbrio de tipos", en: "Type balance" },
+  "draft.balance.type.land": { pt: "Terrenos", en: "Lands" },
+  "draft.balance.type.creature": { pt: "Criaturas", en: "Creatures" },
+  "draft.balance.type.instant": { pt: "Mágicas instantâneas", en: "Instants" },
+  "draft.balance.type.sorcery": { pt: "Feitiços", en: "Sorceries" },
+  "draft.balance.type.artifact": { pt: "Artefatos", en: "Artifacts" },
+  "draft.balance.type.enchantment": { pt: "Encantamentos", en: "Enchantments" },
+  "draft.balance.type.planeswalker": { pt: "Planeswalkers", en: "Planeswalkers" },
+  "draft.balance.chip": { pt: "{type} {have}/{target}", en: "{type} {have}/{target}" },
+  "draft.balance.fillLands": { pt: "Completar terrenos básicos", en: "Fill basic lands" },
+  "draft.balance.fillLandsHint": {
+    pt: "Completa os terrenos até a meta, deixando espaço para os terrenos não básicos que ainda serão sugeridos. Pode ser clicado de novo para recalcular.",
+    en: "Tops lands up to the target, leaving room for the nonbasic lands still to be suggested. Press again to recalculate.",
+  },
+  "draft.slot.land": { pt: "Vaga de terreno", en: "Land slot" },
+  "draft.slot.creature": { pt: "Vaga de criatura", en: "Creature slot" },
+  "draft.slot.instant": { pt: "Vaga de mágica instantânea", en: "Instant slot" },
+  "draft.slot.sorcery": { pt: "Vaga de feitiço", en: "Sorcery slot" },
+  "draft.slot.artifact": { pt: "Vaga de artefato", en: "Artifact slot" },
+  "draft.slot.enchantment": { pt: "Vaga de encantamento", en: "Enchantment slot" },
+  "draft.slot.planeswalker": { pt: "Vaga de planeswalker", en: "Planeswalker slot" },
+
   "draft.round.title": { pt: "Sugestões", en: "Suggestions" },
   "draft.round.loadingNext": {
     pt: "Buscando a próxima rodada…",

@@ -6,7 +6,39 @@ import type { Card } from "../lib/types";
 import type {
   DraftCandidateData,
   RankCardCandidatesInput,
+  RankCardCandidatesResult,
 } from "../engine/draftQueries";
+import { zeroCounts, type DraftCardType, type TypeBalance } from "./typeBalance";
+
+function fixedBalance(): TypeBalance {
+  return {
+    target: {
+      land: 36,
+      creature: 30,
+      instant: 10,
+      sorcery: 8,
+      artifact: 8,
+      enchantment: 6,
+      planeswalker: 1,
+    },
+    nonbasicLandTarget: 12,
+    have: { ...zeroCounts(), creature: 2 },
+    basicLands: 0,
+  };
+}
+
+function ranking(
+  names: Array<{ name: string; bracketTilt?: number; slotType?: DraftCardType }>,
+): RankCardCandidatesResult {
+  return {
+    candidates: names.map(({ name, bracketTilt = 0, slotType = "creature" }) => ({
+      name,
+      bracketTilt,
+      slotType,
+    })),
+    balance: fixedBalance(),
+  };
+}
 
 function card(overrides: Partial<Card> = {}): Card {
   return {
@@ -65,11 +97,11 @@ describe("suggestCandidates", () => {
       commanderCandidates: async () => [],
       rankCardCandidates: async (input) => {
         rankedInputs.push(input);
-        return selected.map(({ name }) => ({ name, bracketTilt: 0 }));
+        return ranking(selected);
       },
       resolveCards: async () => [],
     };
-    const results = await suggestCandidates(deck, profile, {
+    const { candidates: results } = await suggestCandidates(deck, profile, {
       engine,
       resolver: {
         resolve: async (names) => {
@@ -91,13 +123,14 @@ describe("suggestCandidates", () => {
   it("includes the locally computed bracket tilt in the displayed total", async () => {
     const engine: DraftEngine = {
       commanderCandidates: async () => [],
-      rankCardCandidates: async () => [
-        { name: "In Identity Elf", bracketTilt: 0 },
-        { name: "Bracket Heavy Elf", bracketTilt: -4 },
-      ],
+      rankCardCandidates: async () =>
+        ranking([
+          { name: "In Identity Elf", bracketTilt: 0 },
+          { name: "Bracket Heavy Elf", bracketTilt: -4 },
+        ]),
       resolveCards: async () => [],
     };
-    const results = await suggestCandidates(deck, profile, {
+    const { candidates: results } = await suggestCandidates(deck, profile, {
       engine,
       resolver,
       target: "focused",
@@ -107,6 +140,96 @@ describe("suggestCandidates", () => {
     expect(heavy.bracketTilt).toBe(-4);
     expect(heavy.total).toBe(heavy.score.total - 4);
     expect(plain.total).toBe(plain.score.total);
+  });
+
+  it("passes the requested slot types through to the engine input", async () => {
+    const rankedInputs: RankCardCandidatesInput[] = [];
+    const engine: DraftEngine = {
+      commanderCandidates: async () => [],
+      rankCardCandidates: async (input) => {
+        rankedInputs.push(input);
+        return ranking([]);
+      },
+      resolveCards: async () => [],
+    };
+    await suggestCandidates(deck, profile, {
+      engine,
+      resolver,
+      target: "focused",
+      slotTypes: ["instant", "land", "creature"],
+    });
+    expect(rankedInputs[0].slotTypes).toEqual(["instant", "land", "creature"]);
+  });
+
+  it("leaves slot types undefined in the engine input when none are requested", async () => {
+    const rankedInputs: RankCardCandidatesInput[] = [];
+    const engine: DraftEngine = {
+      commanderCandidates: async () => [],
+      rankCardCandidates: async (input) => {
+        rankedInputs.push(input);
+        return ranking([]);
+      },
+      resolveCards: async () => [],
+    };
+    await suggestCandidates(deck, profile, { engine, resolver, target: "focused" });
+    expect(rankedInputs[0].slotTypes).toBeUndefined();
+  });
+
+  it("carries each engine slot type onto the matching resolved candidate", async () => {
+    const engine: DraftEngine = {
+      commanderCandidates: async () => [],
+      rankCardCandidates: async () =>
+        ranking([
+          { name: "In Identity Elf", slotType: "instant" },
+          { name: "Colorless Elf Artifact", slotType: "artifact" },
+          { name: "Bracket Heavy Elf", slotType: "land" },
+        ]),
+      resolveCards: async () => [],
+    };
+    const { candidates } = await suggestCandidates(deck, profile, {
+      engine,
+      resolver,
+      target: "focused",
+    });
+    expect(candidates.map((c) => [c.card.name, c.slotType])).toEqual([
+      ["In Identity Elf", "instant"],
+      ["Colorless Elf Artifact", "artifact"],
+      ["Bracket Heavy Elf", "land"],
+    ]);
+  });
+
+  it("returns the engine's type balance alongside the candidates", async () => {
+    const balance = fixedBalance();
+    const engine: DraftEngine = {
+      commanderCandidates: async () => [],
+      rankCardCandidates: async () => ({ candidates: [], balance }),
+      resolveCards: async () => [],
+    };
+    const round = await suggestCandidates(deck, profile, {
+      engine,
+      resolver,
+      target: "focused",
+    });
+    expect(round.balance).toBe(balance);
+    expect(round.candidates).toEqual([]);
+  });
+
+  it("drops engine names the resolver cannot find without disturbing the others", async () => {
+    const engine: DraftEngine = {
+      commanderCandidates: async () => [],
+      rankCardCandidates: async () =>
+        ranking([
+          { name: "Unknown Card", slotType: "sorcery" },
+          { name: "In Identity Elf", slotType: "creature" },
+        ]),
+      resolveCards: async () => [],
+    };
+    const { candidates } = await suggestCandidates(deck, profile, {
+      engine,
+      resolver,
+      target: "focused",
+    });
+    expect(candidates.map((c) => c.card.name)).toEqual(["In Identity Elf"]);
   });
 });
 
@@ -125,7 +248,7 @@ describe("suggestCommanders", () => {
   function makeEngine(): DraftEngine {
     return {
       commanderCandidates: async () => commanderPool.map(commanderData),
-      rankCardCandidates: async () => [],
+      rankCardCandidates: async () => ranking([]),
       resolveCards: async () => [],
     };
   }
@@ -159,7 +282,7 @@ describe("suggestCommanders", () => {
     const cardResolver = makeResolver([...baseCards, ...candidates]);
     const engine: DraftEngine = {
       commanderCandidates: async () => candidates.map(commanderData),
-      rankCardCandidates: async () => [],
+      rankCardCandidates: async () => ranking([]),
       resolveCards: async () => [],
     };
     const results = await suggestCommanders(baseCards, {
@@ -191,7 +314,7 @@ describe("suggestCommanders", () => {
     const blueBase = card({ name: "Blue Base", colorIdentity: ["U"] });
     const engine: DraftEngine = {
       commanderCandidates: async () => [broad, exact].map(commanderData),
-      rankCardCandidates: async () => [],
+      rankCardCandidates: async () => ranking([]),
       resolveCards: async () => [],
     };
     const results = await suggestCommanders([...baseCards, blueBase], {
@@ -218,7 +341,7 @@ describe("suggestCommanders color identity coverage", () => {
   function makeEngine(cards: Card[]): DraftEngine {
     return {
       commanderCandidates: async () => cards.map(commanderData),
-      rankCardCandidates: async () => [],
+      rankCardCandidates: async () => ranking([]),
       resolveCards: async () => [],
     };
   }

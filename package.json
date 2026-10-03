@@ -1,6 +1,6 @@
 {
   "name": "commander-playtester",
-  "version": "0.22.0",
+  "version": "0.23.0",
   "private": true,
   "type": "module",
   "description": "Web playtester for Magic: The Gathering Commander decks — import, goldfish, and score.",
@@ -15,6 +15,7 @@
     "duplication": "jscpd src",
     "fetch-engine": "bash scripts/fetch-engine.sh",
     "engine-smoke": "ENGINE_SMOKE=1 vitest run scripts/engine-smoke.test.ts",
+    "draft-balance": "DRAFT_BALANCE=1 vitest run scripts/draft-balance.test.ts",
     "prepare-match": "PLAYWRIGHT_BROWSERS_PATH=0 node scripts/prepare-match.mjs",
     "prepare-match:install": "PLAYWRIGHT_BROWSERS_PATH=0 playwright install chromium"
   },

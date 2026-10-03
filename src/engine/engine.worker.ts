@@ -17,18 +17,11 @@ import init, {
   submit_action,
 } from "./vendor/engine_wasm.js";
 import { draftQueries } from "./draftQueries";
-import type {
-  CardValidation,
-  DraftCandidateData,
-  EngineThemeProfile,
-  SearchCardRow,
-} from "./draftQueries";
+import type { CardValidation, DraftCandidateData, SearchCardRow } from "./draftQueries";
+import { candidateData, createDraftRanker, type DraftRanker } from "./draftRanking";
 import { frontFace } from "../lib/cardName";
-import { bracketTilt, type BracketTarget } from "../draft/bracket";
-import { rankLocalCandidates } from "../draft/localCandidates";
 import { rankNameSuggestions } from "../draft/cardNameSuggest";
 import { isCommanderLegal, isCommanderEligible } from "../draft/cardLegality";
-import type { ThemeProfile } from "../draft/themes";
 
 // Absolute base URL for engine assets, supplied by the main thread on "ready".
 // It must be resolved against the *page* location, not the worker's: a relative
@@ -40,40 +33,7 @@ let started = false;
 let dbLoaded = false;
 let commanderConfig: any = null;
 let cachedCommanderCandidates: DraftCandidateData[] | null = null;
-const cachedThemeCandidates = new Map<string, DraftCandidateData[]>();
-const THEME_COUNT = 8;
-// A theme token's matches are sorted by popularity, then the top slice kept.
-// The scan pulls every match first so the slice is the most-played matches,
-// not an alphabetical prefix (a common token like "graveyard" has thousands).
-const TOKEN_MATCH_SCAN = 100_000;
-const THEME_CANDIDATES_PER_TOKEN = 250;
-const BRACKET_SHORTLIST_SIZE = 12;
-const ROUND_SIZE = 3;
-// How hard reprint frequency (our only in-data popularity proxy) tilts the
-// ranking. Applied to log2(1 + printings), so it nudges ties toward staples
-// without overriding a clearly better theme fit. Calibrated (0.75) against
-// EDHREC staple lists for popular commanders (deck-draft/ADR-0002).
-const POPULARITY_WEIGHT = 0.75;
-
-// Lowercase card name -> number of printings, our proxy for how played a card
-// is (EDHREC-style play-rate data is not in the card database). Built once from
-// the same card-data JSON the engine loads — no network, no Scryfall.
-let printingCounts = new Map<string, number>();
-
-function buildPopularityIndex(cardDataJson: string): void {
-  const data = JSON.parse(cardDataJson) as Record<string, any>;
-  const counts = new Map<string, number>();
-  for (const key of Object.keys(data)) {
-    const ids = data[key]?.metadata?.source_printing_ids;
-    counts.set(key.toLowerCase(), Array.isArray(ids) ? ids.length : 0);
-  }
-  printingCounts = counts;
-}
-
-function popularityBonus(name: string): number {
-  const printings = printingCounts.get(name.trim().toLowerCase()) ?? 0;
-  return POPULARITY_WEIGHT * Math.log2(1 + printings);
-}
+let ranker: DraftRanker | null = null;
 
 async function ensureStarted(): Promise<void> {
   if (started) return;
@@ -104,29 +64,11 @@ async function ensureDb(): Promise<void> {
   if (dbLoaded) return;
   const text = await fetchCardData();
   load_card_database(text);
-  buildPopularityIndex(text);
+  ranker = createDraftRanker(draftQueries, text);
   const reg = getFormatRegistry();
   const list = Array.isArray(reg) ? reg : [];
   commanderConfig = list.find((f: any) => f?.format === "Commander")?.default_config;
   dbLoaded = true;
-}
-
-function cardTypeLine(cardType: NonNullable<ReturnType<typeof draftQueries.get_card_face_data>>["card_type"]): string {
-  const types = [...(cardType?.supertypes ?? []), ...(cardType?.core_types ?? [])];
-  const subtypes = cardType?.subtypes ?? [];
-  return subtypes.length > 0 ? `${types.join(" ")} — ${subtypes.join(" ")}` : types.join(" ");
-}
-
-function candidateData(card: SearchCardRow): DraftCandidateData | null {
-  const face = draftQueries.get_card_face_data(card.name);
-  if (!face) return null;
-  return {
-    name: card.name,
-    manaValue: card.mana_value,
-    typeLine: cardTypeLine(face.card_type),
-    oracleText: face.oracle_text ?? "",
-    colorIdentity: card.color_identity,
-  };
 }
 
 // The engine's free-text search matches name *and* oracle text and returns many
@@ -185,7 +127,7 @@ function resolveCards(names: string[]): DraftCandidateData[] {
       index.get(name.trim().toLowerCase()) ??
       index.get(frontFace(name).toLowerCase());
     if (!row) return [];
-    const candidate = candidateData(row);
+    const candidate = candidateData(draftQueries, row);
     return candidate ? [candidate] : [];
   });
 }
@@ -201,74 +143,10 @@ function commanderCandidates(): DraftCandidateData[] {
       ) {
         return [];
       }
-      const candidate = candidateData(card);
+      const candidate = candidateData(draftQueries, card);
       return candidate ? [candidate] : [];
     });
   return cachedCommanderCandidates;
-}
-
-function themeCandidates(profile: ThemeProfile): DraftCandidateData[] {
-  const tokens = [...profile.tokenWeights]
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, THEME_COUNT)
-    .map(([token]) => token);
-  const candidates = new Map<string, DraftCandidateData>();
-  for (const token of tokens) {
-    let tokenCandidates = cachedThemeCandidates.get(token);
-    if (!tokenCandidates) {
-      tokenCandidates = draftQueries
-        .search_cards_js({ text: token, limit: TOKEN_MATCH_SCAN })
-        .results.filter((card) => card.legalities?.commander === "legal")
-        .sort((a, b) => popularityBonus(b.name) - popularityBonus(a.name))
-        .slice(0, THEME_CANDIDATES_PER_TOKEN)
-        .flatMap((card) => {
-          const candidate = candidateData(card);
-          return candidate ? [candidate] : [];
-        });
-      cachedThemeCandidates.set(token, tokenCandidates);
-    }
-    for (const candidate of tokenCandidates) {
-      candidates.set(candidate.name.toLowerCase(), candidate);
-    }
-  }
-  return [...candidates.values()];
-}
-
-function themeProfile(profile: EngineThemeProfile): ThemeProfile {
-  return {
-    ...profile,
-    tokenWeights: new Map(profile.tokenWeights),
-  };
-}
-
-function rankedCardNames(args: {
-  commanders: string[];
-  mainboard: string[];
-  profile: EngineThemeProfile;
-  target: BracketTarget;
-  exclude: string[];
-}): Array<{ name: string; bracketTilt: number }> {
-  const profile = themeProfile(args.profile);
-  const excluded = new Set(args.exclude.map((name) => name.toLowerCase()));
-  const shortlist = rankLocalCandidates(
-    themeCandidates(profile),
-    profile,
-    excluded,
-    popularityBonus,
-  ).slice(0, BRACKET_SHORTLIST_SIZE);
-  return shortlist
-    .map(({ card, score }) => {
-      const estimate = draftQueries.estimate_bracket_for_deck({
-        commander: args.commanders.map(frontFace),
-        main_deck: [...args.mainboard, card.name].map(frontFace),
-      });
-      const tilt = bracketTilt(estimate, args.target);
-      const total = score.total + popularityBonus(card.name) + tilt;
-      return { name: card.name, bracketTilt: tilt, total };
-    })
-    .sort((a, b) => b.total - a.total)
-    .slice(0, ROUND_SIZE)
-    .map(({ name, bracketTilt: tilt }) => ({ name, bracketTilt: tilt }));
 }
 
 async function handle(cmd: string, args: any): Promise<any> {
@@ -366,7 +244,7 @@ async function handle(cmd: string, args: any): Promise<any> {
     case "rankCardCandidates": {
       await ensureStarted();
       await ensureDb();
-      return rankedCardNames(args);
+      return ranker!.rankCardCandidates(args);
     }
     default:
       throw new Error(`unknown engine command: ${cmd}`);
