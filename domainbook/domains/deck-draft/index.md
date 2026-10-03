@@ -76,7 +76,7 @@ whole card pool by heart.
   just token makers (`deck-draft/ADR-0005`). A token carried by a repeatable clause or one
   that reaches every opponent counts for more, so engines outrank one-shot effects
   (`deck-draft/ADR-0008`). Ramp is scored apart from theme, by how much mana the deck
-  wants to spend (`deck-draft/ADR-0009`).
+  wants to spend, at a steady pace through the draft (`deck-draft/ADR-0009`).
 - Each round's three slots go to the card types the deck is shortest of against a
   commander-set `type balance`, and each slot's pool adds the most-printed cards of its
   type, so a spellslinger is offered spells and an enchantress enchantments. Basic lands

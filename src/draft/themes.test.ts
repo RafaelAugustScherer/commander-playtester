@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { activationMana, extractThemeProfile, COMMANDER_WEIGHT, REWARD_WEIGHT } from "./themes";
+import { extractThemeProfile, COMMANDER_WEIGHT, REWARD_WEIGHT } from "./themes";
 import type { Card } from "../lib/types";
 
 function card(overrides: Partial<Card> = {}): Card {
@@ -115,22 +115,16 @@ describe("extractThemeProfile", () => {
       expect(extractThemeProfile([], [sink]).manaAppetite).toBe(7);
     });
 
+    it("leaves lasting ramp out and counts it apart", () => {
+      const rock = card({ manaValue: 1, roles: ["ramp"], oracleText: "{T}: Add {C}{C}." });
+      const profile = extractThemeProfile([], [rock, card({ manaValue: 4 })]);
+      expect(profile.manaAppetite).toBe(4);
+      expect(profile.rampCount).toBe(1);
+      expect(profile.nonlandCount).toBe(2);
+    });
+
     it("is 0 for a deck without nonland cards", () => {
       expect(extractThemeProfile([], []).manaAppetite).toBe(0);
     });
-  });
-});
-
-describe("activationMana", () => {
-  it.each([
-    ["{2}{G}, {T}: Add {G}{G}.", 3],
-    ["{X}{R}: Deal X damage to any target.", 4],
-    ["{G/W}{G/W}: Untap it.", 2],
-    ["{T}: Add {G}.", 0],
-    ["+1: Draw a card.", 0],
-    ["Flying", 0],
-    ["When this enters, choose one: draw a card; or gain 3 life.", 0],
-  ])("reads %j as %d", (line, mana) => {
-    expect(activationMana(line)).toBe(mana);
   });
 });

@@ -150,10 +150,18 @@ describe("scoreCandidate", () => {
   describe("ramp", () => {
     const tapForG = "{T}: Add {G}.";
     const dork = card({ name: "Dork", manaValue: 1, roles: ["ramp"], oracleText: tapForG });
-    const rampScoreIn = (commanderMv: number, candidate = dork, others: Card[] = []) =>
+    const rampScoreIn = (
+      commanderMv: number,
+      candidate = dork,
+      others: Card[] = [],
+      colorIdentity = ["G"],
+    ) =>
       scoreCandidate(
         candidate,
-        extractThemeProfile([card({ name: "Commander", manaValue: commanderMv })], others),
+        extractThemeProfile(
+          [card({ name: "Commander", manaValue: commanderMv, colorIdentity })],
+          others,
+        ),
       ).rampScore;
 
     it("gives nothing while the deck's mana appetite is low", () => {
@@ -209,11 +217,22 @@ describe("scoreCandidate", () => {
       expect(rampScoreIn(5, priest, elves)).toBeGreaterThan(rampScoreIn(5, dork, elves));
     });
 
-    it("fades as the deck's ramp count grows", () => {
+    it("follows the deck's ramp pace instead of its raw ramp count", () => {
       const ramp = (n: number) =>
-        Array.from({ length: n }, (_, i) => card({ name: `Ramp ${i}`, manaValue: 7, roles: ["ramp"], oracleText: tapForG }));
-      expect(rampScoreIn(7, dork, ramp(3))).toBeLessThan(rampScoreIn(7, dork, ramp(1)));
-      expect(rampScoreIn(7, dork, ramp(10))).toBe(0);
+        Array.from({ length: n }, (_, i) => card({ name: `Ramp ${i}`, roles: ["ramp"], oracleText: tapForG }));
+      const spells = (n: number) =>
+        Array.from({ length: n }, (_, i) => card({ name: `Spell ${i}`, manaValue: 7 }));
+      expect(rampScoreIn(7, dork, ramp(3))).toBe(0);
+      expect(rampScoreIn(7, dork, [...ramp(5), ...spells(20)])).toBeGreaterThan(0);
+      expect(rampScoreIn(7, dork, [...ramp(5), ...spells(20)])).toBeLessThan(
+        rampScoreIn(7, dork, spells(20)),
+      );
+    });
+
+    it("gives creature ramp a quarter in a deck without green, and other ramp all of it", () => {
+      const rock = card({ name: "Rock", typeLine: "Artifact", roles: ["ramp"], oracleText: tapForG });
+      expect(rampScoreIn(7, dork, [], ["B"])).toBe(RAMP_WEIGHT / 4);
+      expect(rampScoreIn(7, rock, [], ["B"])).toBe(RAMP_WEIGHT);
     });
 
     it("leaves ramp out of the role-gap term", () => {

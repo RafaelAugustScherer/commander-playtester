@@ -209,7 +209,7 @@ describe.skipIf(!ENABLED)("draft type balance against EDHREC average decks", () 
       const start = ranker.rankCardCandidates({
         commanders: [name],
         mainboard: [],
-        profile: { tokenWeights: [], curve: [], roleCounts: { land: 0, ramp: 0, draw: 0, removal: 0, other: 0 }, colorIdentity: identity, creatureTypes: [], creatureCount: 0, tribes: [], manaAppetite: 0 },
+        profile: { tokenWeights: [], curve: [], roleCounts: { land: 0, ramp: 0, draw: 0, removal: 0, other: 0 }, colorIdentity: identity, creatureTypes: [], creatureCount: 0, tribes: [], manaAppetite: 0, nonlandCount: 0, rampCount: 0 },
         target: "focused",
         customization: EVERYTHING_SUGGESTED,
         exclude: [name.toLowerCase()],

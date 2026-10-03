@@ -17,8 +17,9 @@ per-domain changelogs; this file is the single timeline (`ADR-0007`).
 ### Changed
 
 - Draft suggestions score ramp by the deck's mana appetite (commander cost, curve and
-  costly activated abilities): cheap, lasting ramp rises in expensive decks, and ramp that
-  grows with the deck's tribe rises most (`deck-draft/ADR-0009`).
+  costly activated abilities): cheap, lasting ramp rises in expensive decks, ramp that grows
+  with the deck's tribe rises most, decks without green ramp with artifacts rather than
+  creatures, and ramp is offered at a steady pace through the draft (`deck-draft/ADR-0009`).
 
 ### Fixed
 

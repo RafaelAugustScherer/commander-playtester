@@ -61,6 +61,8 @@ export interface EngineThemeProfile {
   creatureCount: number;
   tribes: string[];
   manaAppetite: number;
+  nonlandCount: number;
+  rampCount: number;
 }
 
 export interface RankCardCandidatesInput {

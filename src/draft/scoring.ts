@@ -1,6 +1,6 @@
 import type { Card } from "../lib/types";
 import type { ThemeProfile } from "./themes";
-import { rulesLines } from "./lands";
+import { isLastingRamp } from "./ramp";
 import { cardTokens, namedTribes, servesTribe, tokenStrengths } from "./tokens";
 
 const CURVE_FIT_WEIGHT = 2;
@@ -17,11 +17,10 @@ const RAMP_APPETITE_SPAN = 2;
 const RAMP_TOO_SLOW_MV = 4;
 const RAMP_CHEAP_MV = 2;
 const RAMP_TARGET = 10;
+const NONLAND_TARGET = 63;
+const RAMP_PACE_SLACK = 2;
 const TRIBAL_RAMP_STRENGTH = 1.5;
-const ONE_SHOT_SPELL = /\b(?:Instant|Sorcery)\b/;
-const LAND_TO_BATTLEFIELD = /\bsearch your library for\b[^.]*\bonto the battlefield\b/i;
-const MANA_ABILITY = /\badd (?:\{[WUBRGC]|one mana|two mana|three mana|x mana|an amount of)/i;
-const EXTRA_LAND = /\bplay (?:an|two|three) additional lands?\b/i;
+const CREATURE_RAMP_WITHOUT_GREEN = 0.25;
 
 export interface CandidateScore {
   total: number;
@@ -103,15 +102,13 @@ export function rampFit(card: Card, profile: ThemeProfile): number {
   const tribal = namedTribes(card).some((tribe) => hasTribe(profile, tribe))
     ? TRIBAL_RAMP_STRENGTH
     : 1;
-  const room = clamp01(1 - profile.roleCounts.ramp / RAMP_TARGET);
-  return RAMP_WEIGHT * need * speed * tribal * room;
-}
-
-function isLastingRamp(card: Card): boolean {
-  if (!card.roles.includes("ramp")) return false;
-  if (LAND_TO_BATTLEFIELD.test(card.oracleText)) return true;
-  if (ONE_SHOT_SPELL.test(card.typeLine)) return false;
-  return rulesLines(card).some((line) => MANA_ABILITY.test(line) || EXTRA_LAND.test(line));
+  const colour =
+    /\bCreature\b/.test(card.typeLine) && !profile.colorIdentity.includes("G")
+      ? CREATURE_RAMP_WITHOUT_GREEN
+      : 1;
+  const pace = (RAMP_TARGET * Math.min(profile.nonlandCount, NONLAND_TARGET)) / NONLAND_TARGET;
+  const room = clamp01(1 + (pace - profile.rampCount) / RAMP_PACE_SLACK);
+  return RAMP_WEIGHT * need * speed * tribal * colour * room;
 }
 
 function hasTribe(profile: ThemeProfile, tribe: string): boolean {
