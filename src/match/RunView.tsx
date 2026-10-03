@@ -121,6 +121,19 @@ import {
   rippleBottomOrderAction,
   type RipplePrompt,
 } from "../sim/decisions/ripple";
+import {
+  libraryOrderAction,
+  libraryOrderCanMove,
+  type LibraryOrderPrompt,
+} from "../sim/decisions/libraryOrder";
+import {
+  empowerJaceAction,
+  type EmpowerJacePrompt,
+} from "../sim/decisions/empowerJace";
+import {
+  orderCostReductionsAction,
+  type CostReductionOrderPrompt,
+} from "../sim/decisions/costReductionOrder";
 import { XpWindow } from "../components/XpWindow";
 import {
   declareAttackersAction,
@@ -935,6 +948,174 @@ function RipplePanel({
         </button>
         <button className="btn btn--ghost" onClick={onLetAi}>
           {t("ripple.letAi")}
+        </button>
+      </div>
+    </>
+  );
+}
+
+interface LibraryOrderTurn {
+  prompt: LibraryOrderPrompt;
+  resolve: (choice: HumanChoice) => void;
+}
+
+function LibraryOrderPanel({
+  turn,
+  order,
+  onMove,
+  onConfirm,
+  onLetAi,
+}: {
+  turn: LibraryOrderTurn;
+  order: number[];
+  onMove: (position: number, delta: number) => void;
+  onConfirm: () => void;
+  onLetAi: () => void;
+}) {
+  const { t } = useI18n();
+  const { prompt } = turn;
+  const byId = new Map(prompt.cards.map((c) => [c.id, c]));
+  const isSplit = prompt.kind === "digRestSplit";
+  let hint = t("libraryOrder.bottomHint");
+  if (isSplit) {
+    hint = prompt.splitLocked
+      ? t("libraryOrder.splitLockedHint")
+      : t("libraryOrder.splitHint", {
+          top: prompt.topCount,
+          bottom: prompt.bottomCount,
+        });
+  }
+  return (
+    <>
+      <div className="control-title">
+        <strong>
+          {isSplit ? t("libraryOrder.splitTitle") : t("libraryOrder.bottomTitle")}
+        </strong>
+      </div>
+      <p className="hint">{hint}</p>
+      {order.map((id, position) => (
+        <div className="import__row" key={id}>
+          <div>
+            <strong>
+              {byId.get(id)?.name ||
+                t("libraryOrder.cardFallback", { number: position + 1 })}
+            </strong>{" "}
+            <span className="hint">
+              {position < prompt.topCount
+                ? t("libraryOrder.top", { n: position + 1 })
+                : t("libraryOrder.bottom")}
+            </span>
+          </div>
+          <button
+            className="btn btn--ghost"
+            aria-label={t("libraryOrder.moveUp")}
+            disabled={!libraryOrderCanMove(prompt, position, position - 1)}
+            onClick={() => onMove(position, -1)}
+          >
+            ▲
+          </button>
+          <button
+            className="btn btn--ghost"
+            aria-label={t("libraryOrder.moveDown")}
+            disabled={!libraryOrderCanMove(prompt, position, position + 1)}
+            onClick={() => onMove(position, 1)}
+          >
+            ▼
+          </button>
+        </div>
+      ))}
+      <div className="import__row">
+        <button className="btn" onClick={onConfirm}>
+          {t("libraryOrder.confirm")}
+        </button>
+        <button className="btn btn--ghost" onClick={onLetAi}>
+          {t("libraryOrder.letAi")}
+        </button>
+      </div>
+    </>
+  );
+}
+
+interface EmpowerJaceTurn {
+  prompt: EmpowerJacePrompt;
+  resolve: (choice: HumanChoice) => void;
+}
+
+function EmpowerJacePanel({ turn }: { turn: EmpowerJaceTurn }) {
+  const { t } = useI18n();
+  const { prompt, resolve } = turn;
+  return (
+    <>
+      <div className="control-title">
+        <strong>{t("empowerJace.title")}</strong>
+      </div>
+      <p className="hint">{t("empowerJace.hint", { n: prompt.count })}</p>
+      <div className="search-list">
+        {prompt.choices.map((choice, index) => (
+          <button
+            key={choice.id}
+            className="btn--ghost"
+            onClick={() => resolve({ action: empowerJaceAction(choice.id) })}
+          >
+            {choice.name ||
+              t("empowerJace.tokenFallback", { number: index + 1 })}
+          </button>
+        ))}
+      </div>
+      <div className="import__row">
+        <button
+          className="btn btn--ghost"
+          onClick={() => resolve({ ai: true })}
+        >
+          {t("empowerJace.letAi")}
+        </button>
+      </div>
+    </>
+  );
+}
+
+interface CostReductionOrderTurn {
+  prompt: CostReductionOrderPrompt;
+  resolve: (choice: HumanChoice) => void;
+}
+
+function CostReductionOrderPanel({ turn }: { turn: CostReductionOrderTurn }) {
+  const { t } = useI18n();
+  const { prompt, resolve } = turn;
+  return (
+    <>
+      <div className="control-title">
+        <strong>{t("costReductionOrder.title")}</strong>
+      </div>
+      <p className="hint">{t("costReductionOrder.hint")}</p>
+      {prompt.reductions.map((reduction, index) => (
+        <p className="hint" key={index}>
+          {reduction.name ||
+            t("costReductionOrder.reductionFallback", { number: index + 1 })}
+          {": −"}
+          {reduction.amount}
+          {reduction.multiplier > 1 ? ` ×${reduction.multiplier}` : ""}
+        </p>
+      ))}
+      <div className="search-list">
+        {prompt.outcomes.map((outcome) => (
+          <button
+            key={`${outcome.order.join("-")}|${outcome.hybridAnnouncement.join("-")}`}
+            className="btn--ghost"
+            onClick={() =>
+              resolve({ action: orderCostReductionsAction(outcome) })
+            }
+          >
+            {t("costReductionOrder.pay", { cost: outcome.cost })}
+          </button>
+        ))}
+      </div>
+      <div className="import__row">
+        <button
+          className="btn btn--ghost"
+          onClick={() => resolve({ ai: true })}
+        >
+          {t("costReductionOrder.letAi")}
         </button>
       </div>
     </>
@@ -1950,6 +2131,12 @@ interface RunnerCallbackDeps {
   setDieKeepTurn: Dispatch<SetStateAction<DieKeepTurn | null>>;
   setRipplePick: Dispatch<SetStateAction<number[]>>;
   setRippleTurn: Dispatch<SetStateAction<RippleTurn | null>>;
+  setLibraryOrderPick: Dispatch<SetStateAction<number[]>>;
+  setLibraryOrderTurn: Dispatch<SetStateAction<LibraryOrderTurn | null>>;
+  setEmpowerJaceTurn: Dispatch<SetStateAction<EmpowerJaceTurn | null>>;
+  setCostReductionOrderTurn: Dispatch<
+    SetStateAction<CostReductionOrderTurn | null>
+  >;
 }
 
 function buildRunnerCallbacks(deps: RunnerCallbackDeps): DriverCallbacks {
@@ -2011,6 +2198,10 @@ function buildRunnerCallbacks(deps: RunnerCallbackDeps): DriverCallbacks {
     setDieKeepTurn,
     setRipplePick,
     setRippleTurn,
+    setLibraryOrderPick,
+    setLibraryOrderTurn,
+    setEmpowerJaceTurn,
+    setCostReductionOrderTurn,
   } = deps;
   return {
     onFrame: (env) => {
@@ -2472,6 +2663,50 @@ function buildRunnerCallbacks(deps: RunnerCallbackDeps): DriverCallbacks {
           },
         });
       }),
+    requestHumanLibraryOrder: (_env, prompt) =>
+      new Promise<HumanChoice>((resolve) => {
+        if (isCancelled()) {
+          resolve({ ai: true });
+          return;
+        }
+        setLibraryOrderPick(prompt.cards.map((c) => c.id));
+        setLibraryOrderTurn({
+          prompt,
+          resolve: (choice) => {
+            setLibraryOrderTurn(null);
+            setLibraryOrderPick([]);
+            resolve(choice);
+          },
+        });
+      }),
+    requestHumanEmpowerJace: (_env, prompt) =>
+      new Promise<HumanChoice>((resolve) => {
+        if (isCancelled()) {
+          resolve({ ai: true });
+          return;
+        }
+        setEmpowerJaceTurn({
+          prompt,
+          resolve: (choice) => {
+            setEmpowerJaceTurn(null);
+            resolve(choice);
+          },
+        });
+      }),
+    requestHumanCostReductionOrder: (_env, prompt) =>
+      new Promise<HumanChoice>((resolve) => {
+        if (isCancelled()) {
+          resolve({ ai: true });
+          return;
+        }
+        setCostReductionOrderTurn({
+          prompt,
+          resolve: (choice) => {
+            setCostReductionOrderTurn(null);
+            resolve(choice);
+          },
+        });
+      }),
   };
 }
 
@@ -2615,6 +2850,13 @@ export function RunView({
   const [dieKeepPick, setDieKeepPick] = useState<Set<number>>(new Set());
   const [rippleTurn, setRippleTurn] = useState<RippleTurn | null>(null);
   const [ripplePick, setRipplePick] = useState<number[]>([]);
+  const [libraryOrderTurn, setLibraryOrderTurn] =
+    useState<LibraryOrderTurn | null>(null);
+  const [libraryOrderPick, setLibraryOrderPick] = useState<number[]>([]);
+  const [empowerJaceTurn, setEmpowerJaceTurn] =
+    useState<EmpowerJaceTurn | null>(null);
+  const [costReductionOrderTurn, setCostReductionOrderTurn] =
+    useState<CostReductionOrderTurn | null>(null);
   const [passingTurn, setPassingTurn] = useState(false);
   const [fastForward, setFastForward] = useState(false);
   const [logEntries, setLogEntries] = useState<LoggedEntry[]>([]);
@@ -2741,6 +2983,10 @@ export function RunView({
             setDieKeepTurn,
             setRipplePick,
             setRippleTurn,
+            setLibraryOrderPick,
+            setLibraryOrderTurn,
+            setEmpowerJaceTurn,
+            setCostReductionOrderTurn,
           }),
         );
         runnerRef.current = runner;
@@ -2907,7 +3153,10 @@ export function RunView({
         countersTurn ||
         combatDamageTurn ||
         dieKeepTurn ||
-        rippleTurn)
+        rippleTurn ||
+        libraryOrderTurn ||
+        empowerJaceTurn ||
+        costReductionOrderTurn)
     ) {
       setPassingTurn(false);
     }
@@ -2936,6 +3185,9 @@ export function RunView({
     combatDamageTurn,
     dieKeepTurn,
     rippleTurn,
+    libraryOrderTurn,
+    empowerJaceTurn,
+    costReductionOrderTurn,
   ]);
 
   // Map draggable hand cards to their play actions for the current window.
@@ -4073,6 +4325,41 @@ export function RunView({
               }
               onLetAi={() => rippleTurn.resolve({ ai: true })}
             />
+          )}
+
+          {libraryOrderTurn && (
+            <LibraryOrderPanel
+              turn={libraryOrderTurn}
+              order={libraryOrderPick}
+              onMove={(position, delta) =>
+                setLibraryOrderPick((prev) => {
+                  const target = position + delta;
+                  if (
+                    !libraryOrderCanMove(libraryOrderTurn.prompt, position, target)
+                  ) {
+                    return prev;
+                  }
+                  const next = [...prev];
+                  [next[position], next[target]] = [
+                    next[target],
+                    next[position],
+                  ];
+                  return next;
+                })
+              }
+              onConfirm={() =>
+                libraryOrderTurn.resolve({
+                  action: libraryOrderAction(libraryOrderPick),
+                })
+              }
+              onLetAi={() => libraryOrderTurn.resolve({ ai: true })}
+            />
+          )}
+
+          {empowerJaceTurn && <EmpowerJacePanel turn={empowerJaceTurn} />}
+
+          {costReductionOrderTurn && (
+            <CostReductionOrderPanel turn={costReductionOrderTurn} />
           )}
 
           {equipCrewTurn && (

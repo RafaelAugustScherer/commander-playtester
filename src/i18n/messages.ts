@@ -495,6 +495,57 @@ export const messages = {
   "ripple.confirm": { pt: "Confirmar", en: "Confirm" },
   "ripple.letAi": { pt: "IA decide", en: "Let the AI decide" },
 
+  "libraryOrder.bottomTitle": {
+    pt: "Ordenar cartas no fundo",
+    en: "Order cards on the bottom",
+  },
+  "libraryOrder.bottomHint": {
+    pt: "Coloque as cartas reveladas no fundo do grimório nesta ordem (topo primeiro).",
+    en: "Put the revealed cards on the bottom of your library in this order (top first).",
+  },
+  "libraryOrder.splitTitle": {
+    pt: "Dividir entre topo e fundo",
+    en: "Split between top and bottom",
+  },
+  "libraryOrder.splitHint": {
+    pt: "As {top} primeiras vão para o topo do grimório (a primeira no topo); as outras {bottom} vão para o fundo, nesta ordem.",
+    en: "The first {top} go on top of the library (the first is topmost); the other {bottom} go to the bottom, in this order.",
+  },
+  "libraryOrder.splitLockedHint": {
+    pt: "A divisão já foi feita; ordene as cartas dentro do topo e do fundo.",
+    en: "The split is already decided; order the cards within the top and the bottom.",
+  },
+  "libraryOrder.top": { pt: "Topo {n}", en: "Top {n}" },
+  "libraryOrder.bottom": { pt: "Fundo", en: "Bottom" },
+  "libraryOrder.cardFallback": { pt: "Carta {number}", en: "Card {number}" },
+  "libraryOrder.moveUp": { pt: "Mover para cima", en: "Move up" },
+  "libraryOrder.moveDown": { pt: "Mover para baixo", en: "Move down" },
+  "libraryOrder.confirm": { pt: "Confirmar", en: "Confirm" },
+  "libraryOrder.letAi": { pt: "IA decide", en: "Let the AI decide" },
+
+  "empowerJace.title": { pt: "Fortalecer Jace", en: "Empower Jace" },
+  "empowerJace.hint": {
+    pt: "Escolha uma ficha de Jace para receber {n} marcador(es) de lealdade.",
+    en: "Choose a Jace token to get {n} loyalty counter(s).",
+  },
+  "empowerJace.tokenFallback": { pt: "Ficha {number}", en: "Token {number}" },
+  "empowerJace.letAi": { pt: "IA decide", en: "Let the AI decide" },
+
+  "costReductionOrder.title": {
+    pt: "Ordem das reduções de custo",
+    en: "Cost reduction order",
+  },
+  "costReductionOrder.hint": {
+    pt: "A ordem das reduções muda o custo total. Escolha quanto pagar.",
+    en: "The order of the reductions changes the total cost. Choose what to pay.",
+  },
+  "costReductionOrder.reductionFallback": {
+    pt: "Redução {number}",
+    en: "Reduction {number}",
+  },
+  "costReductionOrder.pay": { pt: "Pagar {cost}", en: "Pay {cost}" },
+  "costReductionOrder.letAi": { pt: "IA decide", en: "Let the AI decide" },
+
   "equipCrew.sourceFallback": { pt: "isto", en: "this" },
   "equipCrew.equipTitle": { pt: "Equipar {name}", en: "Equip {name}" },
   "equipCrew.stationTitle": { pt: "Guarnecer {name}", en: "Station {name}" },
