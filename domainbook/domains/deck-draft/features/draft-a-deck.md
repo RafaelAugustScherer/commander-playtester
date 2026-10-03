@@ -101,6 +101,38 @@ Example: Commander themes outrank equal non-commander themes
   Then an Elf-tribal candidate ranks above a Goblin-tribal candidate of otherwise equal fit
 ```
 
+## Rule: What the commander rewards leads the ranking
+
+A commander's `theme token`s are not all equal. What it *rewards* — the mechanic its
+"whenever …" trigger conditions name, and the tribes its rules text names — weighs more
+than what its rewards are. Hylda of the Icy Crown rewards tapping an opponent's creature;
+the token, counter and card her trigger gives are incidental, so the draft offers cards
+that tap creatures, not just cards that make tokens or draw (`deck-draft/ADR-0005`).
+
+The heuristic reads mechanics beyond keywords and tribes: tapping creatures, enters and
+blink, dies, attacks, spells that target your creatures, Auras, Equipment, Vehicles,
+defenders, goad, scry and surveil, Clues, Food, Blood, copied spells, energy, experience
+and other counters, and legendaries. Some cards only *enable* a mechanic — a creature with
+an enters trigger for a blink deck, a legendary creature for a legends deck. They fit that
+theme without making one: drafting them does not pull the deck toward it.
+
+```gherkin
+Example: A tap commander is offered cards that tap creatures
+  Given a draft whose commander is "Hylda of the Icy Crown"
+  When rounds are suggested
+  Then most non-land suggestions tap creatures, such as "Cryptic Command" or "Sleep"
+
+Example: A tribe the commander names is a reward
+  Given a draft whose commander is "Kaalia of the Vast"
+  When rounds are suggested
+  Then Angels, Demons and Dragons are offered, though Kaalia is none of them
+
+Example: An enabler fits a theme without making one
+  Given a deck with no blink or enters-matters card
+  When the author adds creatures that only have enters triggers
+  Then later rounds are not pulled toward blink cards
+```
+
 ## Rule: Among comparable fits, more-played cards rank higher
 
 When two candidates fit the theme about equally, the one that is more played wins. The

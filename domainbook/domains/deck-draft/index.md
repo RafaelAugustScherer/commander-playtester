@@ -71,6 +71,9 @@ whole card pool by heart.
 - The `commander card` carries more weight than the other 99 when scoring fit; if the
   `base cards` name no commander, the first `suggestion round` picks the commander, so
   `color identity` is fixed before any other suggestion is made (`draft-a-deck`).
+- What the commander rewards — the mechanic its trigger conditions name and the tribes its
+  text names — outweighs what its rewards are, so a tap commander is offered tappers, not
+  just token makers (`deck-draft/ADR-0005`).
 - Each round's three slots go to the card types the deck is shortest of against a
   commander-set `type balance`, and each slot's pool adds the most-printed cards of its
   type, so a spellslinger is offered spells and an enchantress enchantments. Basic lands

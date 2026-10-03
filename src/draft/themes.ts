@@ -1,8 +1,16 @@
 import type { Card, CardRole } from "../lib/types";
-import { cardTokens } from "./tokens";
+import { themeTokens, rewardedTokens } from "./tokens";
 
 /** How many times a commander's tokens count against the same token from the 99. */
 export const COMMANDER_WEIGHT = 3;
+
+/**
+ * Extra weight, on top of `COMMANDER_WEIGHT`, for what a commander rewards: the
+ * mechanic its "whenever …" trigger conditions name and the tribes its text
+ * names. Calibrated so over half of Hylda of the Icy Crown's offers tap
+ * creatures (`deck-draft/ADR-0005`).
+ */
+export const REWARD_WEIGHT = 5;
 
 /** Number of mana-value buckets in a curve histogram (0..6, plus a 7+ bucket). */
 const CURVE_BUCKETS = 8;
@@ -17,7 +25,8 @@ export interface ThemeProfile {
 
 /**
  * Summarize a deck so far into the profile candidates get scored against:
- * weighted theme tokens (`commander weighting` applied), the mana curve, role
+ * weighted theme tokens (`commander weighting` applied, and more again for
+ * what a commander rewards), the mana curve, role
  * counts, and the commanders' color identity.
  */
 export function extractThemeProfile(
@@ -35,11 +44,12 @@ export function extractThemeProfile(
   };
 
   for (const card of commanders) {
-    addTokenWeights(tokenWeights, card, COMMANDER_WEIGHT);
+    addTokenWeights(tokenWeights, themeTokens(card), COMMANDER_WEIGHT);
+    addTokenWeights(tokenWeights, rewardedTokens(card), REWARD_WEIGHT);
     addCurveAndRoles(curve, roleCounts, card);
   }
   for (const card of others) {
-    addTokenWeights(tokenWeights, card, 1);
+    addTokenWeights(tokenWeights, themeTokens(card), 1);
     addCurveAndRoles(curve, roleCounts, card);
   }
 
@@ -53,10 +63,10 @@ export function extractThemeProfile(
 
 function addTokenWeights(
   weights: Map<string, number>,
-  card: Card,
+  tokens: ReadonlySet<string>,
   weight: number,
 ): void {
-  for (const token of cardTokens(card)) {
+  for (const token of tokens) {
     weights.set(token, (weights.get(token) ?? 0) + weight);
   }
 }
