@@ -494,6 +494,75 @@ describe("DraftSession refresh blacklist", () => {
   });
 });
 
+describe("DraftSession skip", () => {
+  it("moves the next card of the round to the front and refills the back with the same slot type", async () => {
+    const session = await draftingSession([]);
+
+    await session.skipSlot(0);
+
+    expect(session.round.map((c) => [c.card.name, c.slotType])).toEqual([
+      ["Opt", "instant"],
+      ["Giant Growth", "instant"],
+      ["Llanowar Elves", "creature"],
+    ]);
+  });
+
+  it("shows every card of the original round before any replacement", async () => {
+    const session = await draftingSession([]);
+    const original = session.round.map((c) => c.card.name);
+
+    const fronts: string[] = [];
+    for (let i = 0; i < original.length; i++) {
+      fronts.push(session.round[0].card.name);
+      await session.skipSlot(0);
+    }
+
+    expect(fronts).toEqual(original);
+  });
+
+  it("takes the best-ranked replacement, not the one closest to the skipped card", async () => {
+    const session = makeSession();
+    await session.start(BASE_NAMES, null);
+    // round = [Champion, Marwyn{elf,druid}, Imperious]; refresh would pick Clancaller{elf}
+
+    await session.skipSlot(1);
+
+    expect(session.round.map((c) => c.card.name)).toEqual([
+      "Elvish Champion",
+      "Imperious Perfect",
+      "Elvish Clancaller",
+    ]);
+    await session.skipSlot(0);
+    expect(session.round[2].card.name).toBe("Craterhoof Behemoth");
+  });
+
+  it("blacklists the skipped card for later rounds", async () => {
+    const inputs: RankCardCandidatesInput[] = [];
+    const session = await draftingSession(inputs);
+
+    await session.skipSlot(0);
+    await session.addCard(0);
+
+    expect(session.round.map((c) => c.card.name)).not.toContain("Fierce Empath");
+    expect(inputs[inputs.length - 1].exclude).toContain("fierce empath");
+  });
+
+  it("drops the skipped card even when nothing of its type is left to replace it", async () => {
+    const session = await draftingSession([]);
+    await session.skipSlot(0);
+    await session.skipSlot(2);
+
+    await session.skipSlot(2);
+
+    expect(session.round.map((c) => c.card.name)).toEqual(["Opt", "Giant Growth"]);
+  });
+
+  it("rejects a slot outside the round", async () => {
+    const session = await draftingSession([]);
+    await expect(session.skipSlot(3)).rejects.toBeInstanceOf(DraftSessionError);
+  });
+});
+
 describe("DraftSession basic lands", () => {
   const simicCommander = card({
     name: "Simic Commander",

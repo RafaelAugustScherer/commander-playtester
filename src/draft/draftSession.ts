@@ -320,14 +320,7 @@ export class DraftSession {
       throw new DraftSessionError("invalid-slot");
     }
     const replaced = this.round[index];
-    const isReplacement = (c: RankedCandidate) =>
-      !this.shown.has(c.card.name.toLowerCase()) && c.slotType === replaced.slotType;
-
-    let unshown = this.pool.filter(isReplacement);
-    if (unshown.length === 0) {
-      await this.refillPool(replaced.slotType);
-      unshown = this.pool.filter(isReplacement);
-    }
+    const unshown = await this.unshownOfType(replaced.slotType);
     if (unshown.length === 0) return;
 
     let best = unshown[0];
@@ -343,6 +336,28 @@ export class DraftSession {
     this.round[index] = best;
     this.shown.add(best.card.name.toLowerCase());
     this.blacklist.add(replaced.card.name.toLowerCase());
+  }
+
+  async skipSlot(index: number): Promise<void> {
+    if (index < 0 || index >= this.round.length) {
+      throw new DraftSessionError("invalid-slot");
+    }
+    const [skipped] = this.round.splice(index, 1);
+    this.blacklist.add(skipped.card.name.toLowerCase());
+
+    const [next] = await this.unshownOfType(skipped.slotType);
+    if (!next) return;
+    this.round.push(next);
+    this.shown.add(next.card.name.toLowerCase());
+  }
+
+  private async unshownOfType(slotType: DraftCardType | undefined): Promise<RankedCandidate[]> {
+    const isUnshown = (c: RankedCandidate) =>
+      !this.shown.has(c.card.name.toLowerCase()) && c.slotType === slotType;
+    const unshown = this.pool.filter(isUnshown);
+    if (unshown.length > 0) return unshown;
+    await this.refillPool(slotType);
+    return this.pool.filter(isUnshown);
   }
 
   /** Add a round slot's card to the deck (the 99), end the round, and open a fresh one. */

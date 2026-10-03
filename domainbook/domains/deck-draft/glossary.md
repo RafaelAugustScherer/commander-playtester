@@ -50,11 +50,12 @@ draft.
 
 The one-card-at-a-time way to draft: the round's first card alone over a darkened screen,
 taken (added, or picked as commander) by a swipe right or the right button, passed on by a
-swipe left or the left button. Passing is a `refresh`, so the card joins the `blacklist`.
+swipe left or the left button. Passing drops the card into the `blacklist` and shows the
+round's next card; the best-ranked unseen card of the same `slot type` joins the back.
 
 - **Status:** draft
-- **Example:** Swiping left on a suggested board wipe brings in the next closest board
-  wipe, and the first one never returns.
+- **Example:** Swiping left on a suggested board wipe shows the round's second card, a
+  ramp spell, and the next best board wipe waits at the back; the first one never returns.
 
 ## Type balance
 
