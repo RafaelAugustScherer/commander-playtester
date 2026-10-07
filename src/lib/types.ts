@@ -10,6 +10,8 @@ export interface Card {
   manaValue: number;
   typeLine: string;
   oracleText: string;
+  /** Printed power, only when it is a fixed number. */
+  power?: number;
   colors: string[];
   /** True MTG color identity (mana cost + rules text), from Scryfall's `color_identity`. */
   colorIdentity: string[];
@@ -47,4 +49,13 @@ export interface ResolvedDeck {
 
 export function isLand(card: Card): boolean {
   return /\bLand\b/.test(card.typeLine);
+}
+
+export function isCreature(card: Card): boolean {
+  return /\bCreature\b/.test(card.typeLine);
+}
+
+/** Identifies a card's name, type line and rules text, for keeping what is computed from them. */
+export function cardKey(card: { name?: string; typeLine: string; oracleText: string }): string {
+  return `${card.name ?? ""}\u0000${card.typeLine}\u0000${card.oracleText}`;
 }

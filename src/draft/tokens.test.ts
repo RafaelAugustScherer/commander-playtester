@@ -2,6 +2,8 @@ import { describe, it, expect } from "vitest";
 import {
   cardTokens,
   creatureTypesOf,
+  commanderThemeTokens,
+  fitsToken,
   isOfTribe,
   servesTribe,
   mentionsSubtype,
@@ -12,6 +14,7 @@ import {
   REPEATABLE_STRENGTH,
   MULTIPLAYER_STRENGTH,
 } from "./tokens";
+import { fitsPowerCondition } from "./powerTokens";
 import type { Card } from "../lib/types";
 
 function card(overrides: Partial<Card> = {}): Card {
@@ -119,7 +122,8 @@ describe("mechanic tokens", () => {
     ["tap creature", "Tap target artifact or creature."],
     ["tap creature", "Draw a card for each tapped creature target opponent controls."],
     ["tap creature", "Whenever a creature an opponent controls becomes tapped, you may draw a card."],
-    ["etb", "Whenever another creature you control enters, scry 1."],
+    ["creature etb", "Whenever another creature you control enters, scry 1."],
+    ["etb", "Whenever another permanent enters, scry 1."],
     ["etb", "Exile target creature you control, then return that card to the battlefield."],
     ["dies", "Whenever another nontoken creature you control dies, each opponent loses 1 life."],
     ["attacks", "Whenever this creature attacks, draw a card."],
@@ -160,10 +164,60 @@ describe("mechanic tokens", () => {
     const etbCreature = card({ oracleText: "When this creature enters, draw a card." });
     expect(cardTokens(etbCreature)).toContain("etb");
     expect(themeTokens(etbCreature)).not.toContain("etb");
+    expect(cardTokens(etbCreature)).toContain("creature etb");
+    expect(themeTokens(etbCreature)).not.toContain("creature etb");
+
+    const etbEnchantment = card({
+      typeLine: "Enchantment",
+      oracleText: "When this enchantment enters, draw a card.",
+    });
+    expect(cardTokens(etbEnchantment)).toContain("etb");
+    expect(cardTokens(etbEnchantment)).not.toContain("creature etb");
 
     const legend = card({ typeLine: "Legendary Creature — Human Knight" });
     expect(cardTokens(legend)).toContain("legendary");
     expect(themeTokens(legend)).not.toContain("legendary");
+  });
+});
+
+describe("commanderThemeTokens", () => {
+  const commanderTokens = (overrides: Partial<Card>) => commanderThemeTokens(card(overrides));
+
+  it("leaves out the commander's own keyword lines and type-line subtypes", () => {
+    const tokens = commanderTokens({
+      typeLine: "Legendary Creature — Bird Bard",
+      oracleText: ZINNIA_TEXT,
+    });
+    expect(tokens).toContain("create token");
+    expect(tokens).toContain("base power 1");
+    expect(tokens).not.toContain("flying");
+    expect(tokens).not.toContain("bird");
+    expect(tokens).not.toContain("bard");
+  });
+
+  it("leaves out a line of several keywords, with or without reminder text", () => {
+    const tokens = commanderTokens({
+      oracleText:
+        "Flying, first strike, lifelink\nWard {2} (Whenever this creature becomes the target of a spell or ability an opponent controls, counter it unless that player pays {2}.)\nProtection from red, hexproof",
+    });
+    expect([...tokens]).toEqual([]);
+  });
+
+  it("keeps a keyword on a line that does more than list keywords", () => {
+    const tokens = commanderTokens({ oracleText: "Creatures you control have flying." });
+    expect(tokens).toContain("flying");
+    expect(commanderTokens({ oracleText: "Flying, haste\nWhenever this attacks, draw a card." })).toContain(
+      "draw a card",
+    );
+  });
+
+  it("keeps a tribe the rules text names", () => {
+    const tokens = commanderTokens({
+      typeLine: "Legendary Creature — Elf Druid",
+      oracleText: "Other Elves you control get +1/+1.",
+    });
+    expect(tokens).toContain("elf");
+    expect(tokens).not.toContain("druid");
   });
 });
 
@@ -230,6 +284,161 @@ describe("rewardedTokens", () => {
       card({ oracleText: "When this creature enters, tap target creature." }),
     );
     expect(tokens.size).toBe(0);
+  });
+});
+
+const ZINNIA_TEXT =
+  "Flying\nZinnia gets +X/+0, where X is the number of other creatures you control with base power 1.\nCreature spells you cast gain offspring {2} as you cast them. (You may pay an additional {2} as you cast a creature spell. If you do, when that creature enters, create a 1/1 token copy of it.)";
+const PANHARMONICON_TEXT =
+  "If an artifact or creature entering the battlefield causes a triggered ability of a permanent you control to trigger, that ability triggers an additional time.";
+const TEYSA_TEXT =
+  "Whenever a creature you control dies, create a 1/1 white Spirit creature token with flying.\nIf a creature dying causes a triggered ability of a permanent you control to trigger, that ability triggers an additional time.";
+
+describe("power conditions", () => {
+  it("takes a base power the rules text names", () => {
+    expect(themeTokens(card({ oracleText: ZINNIA_TEXT }))).toContain("base power 1");
+    expect(rewardedTokens(card({ oracleText: ZINNIA_TEXT }))).toContain("base power 1");
+  });
+
+  it("takes a power bound with its direction", () => {
+    const text = "Whenever a creature with power 4 or greater enters the battlefield under your control, draw a card.";
+    expect(themeTokens(card({ oracleText: text }))).toContain("power 4 or greater");
+    expect(rewardedTokens(card({ oracleText: text }))).toContain("power 4 or greater");
+    expect(
+      themeTokens(card({ oracleText: "Creatures you control with power 2 or less have flying." })),
+    ).toContain("power 2 or less");
+  });
+
+  it("ignores a power that picks a target, an opponent's creature or a blocker", () => {
+    const texts = [
+      "Destroy target creature with power 4 or greater.",
+      "Creatures your opponents control with power 2 or less can't attack.",
+      "Creatures with power 3 or greater can't block this creature.",
+    ];
+    for (const oracleText of texts) {
+      expect([...themeTokens(card({ oracleText }))].filter((t) => t.includes("power"))).toEqual([]);
+    }
+  });
+
+  it("ignores a total power", () => {
+    const text = "Whenever you attack, if creatures you control have total power 6 or greater, draw a card.";
+    expect([...themeTokens(card({ oracleText: text }))].filter((t) => t.includes("power"))).toEqual([]);
+  });
+
+  it("ignores a bare power number", () => {
+    expect(themeTokens(card({ oracleText: "Target creature has power 3 until end of turn." }))).not.toContain("power 3");
+    expect(themeTokens(card({ oracleText: "Creatures you control have power 3." }))).not.toContain("power 3");
+  });
+
+  it("does not add power facts to a card's own tokens", () => {
+    const bear = card({ typeLine: "Creature — Bear", power: 1 });
+    expect([...cardTokens(bear)].filter((t) => t.includes("power"))).toEqual([]);
+  });
+});
+
+describe("fitsPowerCondition", () => {
+  it("fits a creature by its printed power", () => {
+    const bear = card({ power: 2 });
+    expect(fitsPowerCondition(bear, "base power 2")).toBe(true);
+    expect(fitsPowerCondition(bear, "base power 1")).toBe(false);
+    expect(fitsPowerCondition(bear, "power 2 or less")).toBe(true);
+    expect(fitsPowerCondition(bear, "power 1 or less")).toBe(false);
+    expect(fitsPowerCondition(bear, "power 2 or greater")).toBe(true);
+    expect(fitsPowerCondition(bear, "power 3 or greater")).toBe(false);
+  });
+
+  it("does not fit a creature whose power is not a fixed number", () => {
+    const star = card({ typeLine: "Creature — Elemental" });
+    expect(fitsPowerCondition(star, "base power 1")).toBe(false);
+    expect(fitsPowerCondition(star, "power 4 or greater")).toBe(false);
+  });
+
+  it("fits a card that creates a creature token of that power", () => {
+    const makesSoldiers = card({
+      typeLine: "Sorcery",
+      oracleText: "Create two 1/1 white Soldier creature tokens.",
+    });
+    expect(fitsPowerCondition(makesSoldiers, "base power 1")).toBe(true);
+    expect(fitsPowerCondition(makesSoldiers, "power 2 or greater")).toBe(false);
+  });
+
+  it("fits a card with offspring through its token copy", () => {
+    expect(fitsPowerCondition(card({ oracleText: ZINNIA_TEXT }), "base power 1")).toBe(true);
+  });
+
+  it("does not fit a non-creature by its power", () => {
+    const vehicle = card({ typeLine: "Artifact — Vehicle", power: 1 });
+    expect(fitsPowerCondition(vehicle, "base power 1")).toBe(false);
+  });
+
+  it("does not fit a token that is not a power condition", () => {
+    expect(fitsPowerCondition(card({ power: 1 }), "elf")).toBe(false);
+  });
+});
+
+describe("fitsToken", () => {
+  it("fits a token the card has or a power condition it meets", () => {
+    const elf = card({ typeLine: "Creature — Elf", power: 2 });
+    expect(fitsToken(elf, "elf")).toBe(true);
+    expect(fitsToken(elf, "base power 2")).toBe(true);
+    expect(fitsToken(elf, "base power 1")).toBe(false);
+    expect(fitsToken(elf, "goblin")).toBe(false);
+  });
+});
+
+const EZURI_TEXT =
+  "Whenever another creature you control enters, you get an experience counter.\nAt the beginning of combat on your turn, put a +1/+1 counter on up to one target creature you control with power less than or equal to the number of experience counters you have.";
+
+describe("ETB multipliers", () => {
+  it.each([
+    ["offspring", ZINNIA_TEXT],
+    ["a token copy", "When this creature enters, create a token that's a copy of it."],
+    ["token copies", "Whenever you cast a creature spell, create two tokens that are copies of it."],
+    ["a creature entering trigger", EZURI_TEXT],
+  ])("rewards creature etb for %s, not etb", (_, oracleText) => {
+    const rewarded = rewardedTokens(card({ oracleText }));
+    expect(rewarded).toContain("creature etb");
+    expect(rewarded).not.toContain("etb");
+  });
+
+  it("does not make offspring or token copies a theme token", () => {
+    const texts = [
+      ZINNIA_TEXT,
+      "When this creature enters, create a token that's a copy of it.",
+      "Whenever you cast a creature spell, create two tokens that are copies of it.",
+    ];
+    for (const oracleText of texts) {
+      expect(themeTokens(card({ oracleText }))).not.toContain("creature etb");
+    }
+  });
+
+  it("rewards etb for a doubled trigger of any permanent", () => {
+    const rewarded = rewardedTokens(card({ oracleText: PANHARMONICON_TEXT }));
+    expect(rewarded).toContain("etb");
+    expect(rewarded).not.toContain("creature etb");
+  });
+
+  it("rewards etb for a trigger on any permanent entering", () => {
+    const rewarded = rewardedTokens(
+      card({ oracleText: "Whenever another permanent enters under your control, scry 1." }),
+    );
+    expect(rewarded).toContain("etb");
+    expect(rewarded).not.toContain("creature etb");
+  });
+
+  it("makes etb a theme token for an enters-trigger doubler", () => {
+    expect(themeTokens(card({ oracleText: PANHARMONICON_TEXT }))).toContain("etb");
+  });
+
+  it("makes creature etb, not etb, a theme token for a creature entering trigger", () => {
+    const tokens = themeTokens(card({ oracleText: EZURI_TEXT }));
+    expect(tokens).toContain("creature etb");
+    expect(tokens).not.toContain("etb");
+  });
+
+  it("does not take a dying trigger doubler for an etb one", () => {
+    expect(themeTokens(card({ oracleText: TEYSA_TEXT }))).not.toContain("etb");
+    expect(rewardedTokens(card({ oracleText: TEYSA_TEXT }))).not.toContain("etb");
   });
 });
 
@@ -323,6 +532,23 @@ describe("tokenStrengths", () => {
     expect(
       strength({ typeLine: "Instant", oracleText: "Tap target creature." }, "tap creature"),
     ).toBe(1);
+  });
+
+  it("strengthens creature etb by its clause", () => {
+    const repeating = "Whenever another creature you control enters, you gain 1 life.";
+    expect(strength({ oracleText: repeating }, "creature etb")).toBe(REPEATABLE_STRENGTH);
+    expect(
+      strength({ oracleText: "When this creature enters, you gain 1 life." }, "creature etb"),
+    ).toBe(1);
+    expect(
+      strength(
+        {
+          oracleText:
+            "Whenever another creature you control enters, you gain 1 life.\nWhenever an opponent's creature enters, each opponent loses 1 life.",
+        },
+        "creature etb",
+      ),
+    ).toBe(REPEATABLE_STRENGTH * MULTIPLAYER_STRENGTH);
   });
 
   it("ranks each end step over your end step over your next end step", () => {

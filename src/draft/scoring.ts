@@ -1,7 +1,7 @@
 import type { Card } from "../lib/types";
 import { rampFit } from "./rampScore";
 import { TRIBAL_SATURATION, type ThemeProfile } from "./themes";
-import { cardTokens, namedTribes, servesTribe, tokenStrengths } from "./tokens";
+import { fitsToken, namedTribes, servesTribe, tokenStrengths } from "./tokens";
 
 const CURVE_FIT_WEIGHT = 2;
 const ROLE_GAP_WEIGHT = 2;
@@ -53,12 +53,10 @@ function themeFit(
   let themeScore = 0;
   const matchedTokens: string[] = [];
   const strengths = tokenStrengths(card);
-  for (const token of cardTokens(card)) {
-    const weight = profile.tokenWeights.get(token);
-    if (weight) {
-      themeScore += weight * (strengths.get(token) ?? 1);
-      matchedTokens.push(token);
-    }
+  for (const [token, weight] of profile.tokenWeights) {
+    if (!fitsToken(card, token)) continue;
+    themeScore += weight * (strengths.get(token) ?? 1);
+    matchedTokens.push(token);
   }
   matchedTokens.sort();
   return { themeScore, matchedTokens };

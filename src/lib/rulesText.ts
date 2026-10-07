@@ -1,5 +1,5 @@
 /** A line without its parenthesised reminder text. */
-function withoutReminder(line: string): string {
+export function withoutReminder(line: string): string {
   let text = "";
   let depth = 0;
   for (const ch of line) {

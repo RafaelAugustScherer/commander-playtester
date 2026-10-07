@@ -16,6 +16,7 @@ interface ScryfallCard {
   cmc?: number;
   type_line?: string;
   oracle_text?: string;
+  power?: string;
   colors?: string[];
   color_identity?: string[];
   produced_mana?: string[];
@@ -23,6 +24,7 @@ interface ScryfallCard {
   card_faces?: Array<{
     type_line?: string;
     oracle_text?: string;
+    power?: string;
     colors?: string[];
     image_uris?: { normal?: string };
   }>;
@@ -50,6 +52,8 @@ export function toCard(sc: ScryfallCard): Card {
       .filter(Boolean)
       .join("\n") ??
     "";
+  const printedPower = sc.power ?? sc.card_faces?.[0]?.power;
+  const power = printedPower && /^\d+$/.test(printedPower) ? Number(printedPower) : undefined;
   const colors = sc.colors ?? sc.card_faces?.[0]?.colors ?? [];
   const colorIdentity = sc.color_identity ?? [];
   const producedMana = sc.produced_mana ?? [];
@@ -62,6 +66,7 @@ export function toCard(sc: ScryfallCard): Card {
     manaValue,
     typeLine,
     oracleText,
+    power,
     colors,
     colorIdentity,
     producedMana,

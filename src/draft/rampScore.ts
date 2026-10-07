@@ -1,4 +1,4 @@
-import type { Card } from "../lib/types";
+import { isCreature, type Card } from "../lib/types";
 import { isLastingRamp, manaAbilityLines } from "../lib/ramp";
 import { TRIBAL_SATURATION, type ThemeProfile } from "./themes";
 import { namedCreatureTypes } from "./tokens";
@@ -22,7 +22,7 @@ export function rampFit(card: Card, profile: ThemeProfile): number {
   );
   const tribal = 1 + (TRIBAL_RAMP_STRENGTH - 1) * tribeScaling(card, profile);
   const colour =
-    /\bCreature\b/.test(card.typeLine) && !profile.colorIdentity.includes("G")
+    isCreature(card) && !profile.colorIdentity.includes("G")
       ? CREATURE_RAMP_WITHOUT_GREEN
       : 1;
   const pace = (RAMP_TARGET * Math.min(profile.nonlandCount, NONLAND_TARGET)) / NONLAND_TARGET;

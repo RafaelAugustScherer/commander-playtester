@@ -1,21 +1,41 @@
-import type { Card } from "../lib/types";
+import { cardKey, isCreature, type Card } from "../lib/types";
 import { CREATURE_TYPES } from "./creatureTypes";
-import { rulesLines } from "../lib/rulesText";
+import { fitsPowerCondition, powerConditions } from "./powerTokens";
+import { rulesLines, withoutReminder } from "../lib/rulesText";
 
 /**
  * One curated oracle-text signal. Matching `pattern` contributes `token` to the
  * deck's theme and fits it; matching `enabler` (or `typeLineEnabler`) only fits
  * it — fodder a theme wants, which does not make a theme of its own
- * (`deck-draft/ADR-0005`).
+ * (`deck-draft/ADR-0005`). `enabler` fits only where `enablerTypeLine` matches
+ * too, when it is set. Matching `reward` makes a commander reward the token
+ * without making it a theme signal.
  */
 export interface OracleTextPattern {
   token: string;
   /** One phrase, or several alternatives. */
   pattern: RegExp | RegExp[];
   enabler?: RegExp;
+  enablerTypeLine?: RegExp;
   typeLineEnabler?: RegExp;
+  reward?: RegExp;
   /** Free-text searches that together reach every match; defaults to the token. */
   search?: string[];
+}
+
+const PERMANENT_ETB_MULTIPLIER = /\bentering\b[^.]*\btriggers? an additional time\b/i;
+const ETB_ENABLER = /\bwhen\b(?![^.,]*\blands?\b)[^.,]*\benters\b/i;
+
+const COMBAT_KEYWORDS = [
+  "flying", "deathtouch", "lifelink", "trample", "menace", "first strike", "double strike",
+  "haste", "vigilance", "indestructible", "hexproof",
+];
+const FLASH = "flash";
+const DEFENDER = "defender";
+const RULES_KEYWORDS = [...COMBAT_KEYWORDS, FLASH, DEFENDER, "reach"];
+
+function keywordEntry(keyword: string): OracleTextPattern {
+  return { token: keyword, pattern: new RegExp(`\\b${keyword}\\b`, "i") };
 }
 
 const OTHER_COUNTER_KINDS = [
@@ -71,23 +91,13 @@ export const ORACLE_TEXT_PATTERNS: OracleTextPattern[] = [
     token: "cast from graveyard",
     pattern: /\bcast\b[^.]* from (?:your|a) graveyard/i,
   },
-  { token: "flying", pattern: /\bflying\b/i },
-  { token: "deathtouch", pattern: /\bdeathtouch\b/i },
-  { token: "lifelink", pattern: /\blifelink\b/i },
-  { token: "trample", pattern: /\btrample\b/i },
-  { token: "menace", pattern: /\bmenace\b/i },
-  { token: "first strike", pattern: /\bfirst strike\b/i },
-  { token: "double strike", pattern: /\bdouble strike\b/i },
-  { token: "haste", pattern: /\bhaste\b/i },
-  { token: "vigilance", pattern: /\bvigilance\b/i },
-  { token: "indestructible", pattern: /\bindestructible\b/i },
-  { token: "hexproof", pattern: /\bhexproof\b/i },
+  ...COMBAT_KEYWORDS.map(keywordEntry),
   {
     token: "extra combat step",
     pattern: /\badditional combat phase\b|\bextra combat\b/i,
   },
   { token: "equip", pattern: /\bequip\b/i },
-  { token: "flash", pattern: /\bflash\b/i },
+  keywordEntry(FLASH),
   { token: "convoke", pattern: /\bconvoke\b/i },
   {
     token: "tap creature",
@@ -105,11 +115,21 @@ export const ORACLE_TEXT_PATTERNS: OracleTextPattern[] = [
   {
     token: "etb",
     pattern: [
-      /\bwhenever (?:a|an|another|one or more)\b(?![^.,]*\blands?\b)[^.,]*\benters?\b/i,
+      /\bwhenever (?:a|an|another|one or more)\b(?![^.,]*\blands?\b)(?![^.,]*\bcreatures?\b)[^.,]*\benters?\b/i,
       /\bexile\b[^.]*\breturn (?:it|that card|them|those cards|the exiled cards?)\b[^.]* to the battlefield\b/i,
+      PERMANENT_ETB_MULTIPLIER,
     ],
-    enabler: /\bwhen\b(?![^.,]*\blands?\b)[^.,]*\benters\b/i,
+    enabler: ETB_ENABLER,
+    reward: PERMANENT_ETB_MULTIPLIER,
     search: ["enter", "return battlefield"],
+  },
+  {
+    token: "creature etb",
+    pattern: /\bwhenever (?:a|an|another|one or more)\b[^.,]*\bcreatures?\b[^.,]*\benters?\b/i,
+    enabler: ETB_ENABLER,
+    enablerTypeLine: /\bCreature\b/,
+    reward: /\boffspring\b|\btokens? (?:that's a |that are )?cop(?:y|ies) of\b/i,
+    search: ["enter"],
   },
   {
     token: "dies",
@@ -129,7 +149,7 @@ export const ORACLE_TEXT_PATTERNS: OracleTextPattern[] = [
     enabler: /\btarget creature (?:you control )?(?:gets \+|gains\b)/i,
     search: ["target"],
   },
-  { token: "defender", pattern: /\bdefender\b/i },
+  keywordEntry(DEFENDER),
   { token: "aura", pattern: /\bauras?\b/i },
   { token: "equipment", pattern: /\bequipment\b|\bequipped\b/i },
   { token: "vehicle", pattern: /\bvehicles?\b|\bcrew(?:s|ed)?\b/i, search: ["vehicle", "crew"] },
@@ -243,23 +263,31 @@ function textThemeTokens(text: string, name: string): Set<string> {
   for (const { token, pattern } of ORACLE_TEXT_PATTERNS) {
     if (matches(pattern, text)) tokens.add(token);
   }
+  for (const condition of powerConditions(text)) tokens.add(condition);
   return tokens;
+}
+
+const KEYWORD_ABILITY = new RegExp(
+  `^(?:${RULES_KEYWORDS.join("|")}|hexproof from .+|ward\\b.*|protection from .+)$`,
+  "i",
+);
+
+function isKeywordLine(line: string): boolean {
+  const abilities = withoutReminder(line).split(/,\s*/);
+  return abilities.every((ability) => KEYWORD_ABILITY.test(ability));
 }
 
 // The same cards are scored round after round, so their tokens are kept.
 const themeTokenCache = new Map<string, ReadonlySet<string>>();
+const commanderTokenCache = new Map<string, ReadonlySet<string>>();
 const cardTokenCache = new Map<string, ReadonlySet<string>>();
-
-function cacheKey(card: Card): string {
-  return `${card.name}\u0000${card.typeLine}\u0000${card.oracleText}`;
-}
 
 /**
  * The tokens a card adds to a deck's theme: its permanent subtypes, the
  * creature types its rules text names, and its oracle-text signals.
  */
 export function themeTokens(card: Card): ReadonlySet<string> {
-  const key = cacheKey(card);
+  const key = cardKey(card);
   let tokens = themeTokenCache.get(key);
   if (!tokens) {
     const found = textThemeTokens(card.oracleText, card.name);
@@ -271,17 +299,47 @@ export function themeTokens(card: Card): ReadonlySet<string> {
 }
 
 /**
+ * The tokens a commander asks for: its oracle-text signals and the tribes its
+ * rules text names, but not its own keyword lines or type-line subtypes, which
+ * describe the commander rather than the deck it wants.
+ */
+export function commanderThemeTokens(card: Card): ReadonlySet<string> {
+  const key = cardKey(card);
+  let tokens = commanderTokenCache.get(key);
+  if (!tokens) {
+    const text = card.oracleText
+      .split("\n")
+      .filter((line) => !isKeywordLine(line))
+      .join("\n");
+    tokens = textThemeTokens(text, card.name);
+    commanderTokenCache.set(key, tokens);
+  }
+  return tokens;
+}
+
+function enablerFits(
+  { enabler, enablerTypeLine }: OracleTextPattern,
+  text: string,
+  typeLine: string,
+): boolean {
+  return !!enabler?.test(text) && (!enablerTypeLine || enablerTypeLine.test(typeLine));
+}
+
+/**
  * The tokens a card fits: its `themeTokens` plus those it only enables, such as
  * a creature with an enters trigger for a blink deck.
  */
 export function cardTokens(card: Card): ReadonlySet<string> {
-  const key = cacheKey(card);
+  const key = cardKey(card);
   let tokens = cardTokenCache.get(key);
   if (!tokens) {
     const found = new Set(themeTokens(card));
-    for (const { token, enabler, typeLineEnabler } of ORACLE_TEXT_PATTERNS) {
-      if (enabler?.test(card.oracleText) || typeLineEnabler?.test(card.typeLine)) {
-        found.add(token);
+    for (const pattern of ORACLE_TEXT_PATTERNS) {
+      if (
+        pattern.typeLineEnabler?.test(card.typeLine) ||
+        enablerFits(pattern, card.oracleText, card.typeLine)
+      ) {
+        found.add(pattern.token);
       }
     }
     tokens = found;
@@ -307,10 +365,10 @@ function clauseStrength(clause: string, oneShotCard: boolean): number {
   return strength;
 }
 
-function clauseTokens(clause: string, name: string): Set<string> {
-  const tokens = textThemeTokens(clause, name);
-  for (const { token, enabler } of ORACLE_TEXT_PATTERNS) {
-    if (enabler?.test(clause)) tokens.add(token);
+function clauseTokens(clause: string, card: Card): Set<string> {
+  const tokens = textThemeTokens(clause, card.name);
+  for (const pattern of ORACLE_TEXT_PATTERNS) {
+    if (enablerFits(pattern, clause, card.typeLine)) tokens.add(pattern.token);
   }
   return tokens;
 }
@@ -318,14 +376,14 @@ function clauseTokens(clause: string, name: string): Set<string> {
 const strengthCache = new Map<string, ReadonlyMap<string, number>>();
 
 export function tokenStrengths(card: Card): ReadonlyMap<string, number> {
-  const key = cacheKey(card);
+  const key = cardKey(card);
   let strengths = strengthCache.get(key);
   if (!strengths) {
     const found = new Map<string, number>();
     const oneShotCard = ONE_SHOT_CARD.test(card.typeLine);
     for (const clause of rulesLines(card)) {
       const strength = clauseStrength(clause, oneShotCard);
-      for (const token of clauseTokens(clause, card.name)) {
+      for (const token of clauseTokens(clause, card)) {
         found.set(token, Math.max(found.get(token) ?? 1, strength));
       }
     }
@@ -344,6 +402,10 @@ export function tokenStrengths(card: Card): ReadonlyMap<string, number> {
  */
 export function rewardedTokens(card: Card): Set<string> {
   const tokens = new Set<string>(namedCreatureTypes(card.oracleText, card.name));
+  for (const condition of powerConditions(card.oracleText)) tokens.add(condition);
+  for (const { token, reward } of ORACLE_TEXT_PATTERNS) {
+    if (reward?.test(card.oracleText)) tokens.add(token);
+  }
   for (const [clause] of card.oracleText.matchAll(/\bwhenever\b[^.,]*/gi)) {
     for (const token of textThemeTokens(clause, card.name)) tokens.add(token);
   }
@@ -361,7 +423,7 @@ export function creatureTypesOf(card: Card): string[] {
  * is every creature type, so it belongs to any tribe.
  */
 export function isOfTribe(card: Card, tribes: readonly string[]): boolean {
-  if (!/\bCreature\b/.test(card.typeLine)) return false;
+  if (!isCreature(card)) return false;
   if (/\bchangeling\b/i.test(card.oracleText)) return true;
   return creatureTypesOf(card).some((type) => tribes.includes(type));
 }
@@ -373,7 +435,7 @@ export function isOfTribe(card: Card, tribes: readonly string[]): boolean {
 export function servesTribe(card: Card, tribes: readonly string[]): boolean {
   if (namedTribes(card).some((type) => tribes.includes(type))) return true;
   return (
-    !/\bCreature\b/.test(card.typeLine) &&
+    !isCreature(card) &&
     subtypesFromTypeLine(card.typeLine).some((type) => tribes.includes(type))
   );
 }
@@ -384,6 +446,14 @@ export function servesTribe(card: Card, tribes: readonly string[]): boolean {
  */
 export function namedTribes(card: Card): string[] {
   return namedCreatureTypes(card.oracleText, card.name);
+}
+
+/**
+ * Whether a card fits a theme token: a token it has, or a power condition one of
+ * its creatures, or the creature tokens it makes, meets.
+ */
+export function fitsToken(card: Card, token: string): boolean {
+  return cardTokens(card).has(token) || fitsPowerCondition(card, token);
 }
 
 /**

@@ -20,7 +20,10 @@ function card(overrides: Partial<Card> = {}): Card {
 
 describe("scoreCandidate", () => {
   it("scores higher for a candidate matching a commander-only token than a non-commander one of equal strength", () => {
-    const commander = card({ typeLine: "Legendary Creature — Goblin" });
+    const commander = card({
+      typeLine: "Legendary Creature — Goblin",
+      oracleText: "Other Goblins you control get +1/+1.",
+    });
     const nonCommander = card({ typeLine: "Creature — Elf" });
     const profile = extractThemeProfile([commander], [nonCommander]);
 
@@ -41,7 +44,10 @@ describe("scoreCandidate", () => {
   });
 
   it("reports matched tokens for rationale chips", () => {
-    const commander = card({ typeLine: "Legendary Creature — Goblin" });
+    const commander = card({
+      typeLine: "Legendary Creature — Goblin",
+      oracleText: "Other Goblins you control get +1/+1.",
+    });
     const profile = extractThemeProfile([commander], []);
     const candidate = card({ typeLine: "Creature — Goblin" });
 
@@ -98,6 +104,38 @@ describe("scoreCandidate", () => {
     const profile = extractThemeProfile([], []);
     const blank = card({ typeLine: "", oracleText: "" });
     expect(() => scoreCandidate(blank, profile)).not.toThrow();
+  });
+
+  describe("power conditions", () => {
+    const commander = card({
+      name: "Power Commander",
+      typeLine: "Legendary Creature — Human",
+      oracleText: "Other creatures you control with base power 1 get +1/+1.",
+    });
+    const profile = extractThemeProfile([commander], []);
+    const withPower = (power: number) =>
+      card({ name: `Power ${power}`, typeLine: "Creature — Bear", power });
+
+    it("ranks a creature of the named power above an otherwise identical one", () => {
+      const fit = scoreCandidate(withPower(1), profile);
+      const miss = scoreCandidate(withPower(2), profile);
+      expect(fit.themeScore).toBeGreaterThan(miss.themeScore);
+      expect(fit.total).toBeGreaterThan(miss.total);
+    });
+
+    it("reports the power token as matched", () => {
+      expect(scoreCandidate(withPower(1), profile).matchedTokens).toContain("base power 1");
+      expect(scoreCandidate(withPower(2), profile).matchedTokens).not.toContain("base power 1");
+    });
+
+    it("counts a card that creates a creature token of that power", () => {
+      const maker = card({
+        name: "Soldier Maker",
+        typeLine: "Sorcery",
+        oracleText: "Create two 1/1 white Soldier creature tokens.",
+      });
+      expect(scoreCandidate(maker, profile).matchedTokens).toContain("base power 1");
+    });
   });
 
   describe("tribal payoffs", () => {

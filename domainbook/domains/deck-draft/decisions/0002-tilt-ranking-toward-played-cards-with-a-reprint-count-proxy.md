@@ -61,6 +61,9 @@ The alternatives were rejected:
   `ADR-0001`'s "reasonable thematic fit, not EDHREC-grade" limit without a data feed.
 - Bad: reprint count is a noisy proxy — long-reprinted commons are over-counted and recent
   staples under-counted, so it nudges rather than ranks.
+- Neutral: printing ids are missing on about a fifth of card records (7,494 of 35,879),
+  which then scored no popularity; every record carries a `printings` list of set codes, and
+  a card's count is now the larger of the two.
 - Bad: the proxy reads `metadata.source_printing_ids`, part of the introspected engine
   surface that can shift on a re-pin (`TDR-0001`); the index build must be re-checked when
   the engine is re-pinned (`ADR-0006`, `docs/engine-upgrade.md`).

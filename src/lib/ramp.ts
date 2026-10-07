@@ -1,4 +1,5 @@
 import { rulesLines } from "./rulesText";
+import { cardKey } from "./types";
 
 export type RampKind = "mana" | "land search" | "extra land" | "treasure";
 
@@ -100,8 +101,18 @@ export function rampKind(card: RampCard): RampKind | null {
   return null;
 }
 
+const lastingRampCache = new Map<string, boolean>();
+
 export function isLastingRamp(card: RampCard): boolean {
-  const kind = rampKind(card);
-  if (kind === "extra land") return !ONE_SHOT_SPELL.test(card.typeLine);
-  return kind === "land search" || kind === "mana";
+  const key = cardKey(card);
+  let lasting = lastingRampCache.get(key);
+  if (lasting === undefined) {
+    const kind = rampKind(card);
+    lasting =
+      kind === "extra land"
+        ? !ONE_SHOT_SPELL.test(card.typeLine)
+        : kind === "land search" || kind === "mana";
+    lastingRampCache.set(key, lasting);
+  }
+  return lasting;
 }

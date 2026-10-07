@@ -1,6 +1,6 @@
 import { isLastingRamp, manaSpent } from "../lib/ramp";
-import { isLand, type Card, type CardRole } from "../lib/types";
-import { creatureTypesOf, themeTokens, rewardedTokens } from "./tokens";
+import { isCreature, isLand, type Card, type CardRole } from "../lib/types";
+import { commanderThemeTokens, creatureTypesOf, themeTokens, rewardedTokens } from "./tokens";
 
 /** How many times a commander's tokens count against the same token from the 99. */
 export const COMMANDER_WEIGHT = 3;
@@ -66,7 +66,7 @@ export function extractThemeProfile(
   let rampCount = 0;
 
   for (const card of commanders) {
-    addTokenWeights(tokenWeights, themeTokens(card), COMMANDER_WEIGHT);
+    addTokenWeights(tokenWeights, commanderThemeTokens(card), COMMANDER_WEIGHT);
     addTokenWeights(tokenWeights, rewardedTokens(card), REWARD_WEIGHT);
     addCurveAndRoles(curve, roleCounts, card);
     if (!isLand(card)) {
@@ -87,7 +87,7 @@ export function extractThemeProfile(
     }
   }
   for (const card of [...commanders, ...others]) {
-    if (!/\bCreature\b/.test(card.typeLine)) continue;
+    if (!isCreature(card)) continue;
     creatureCount++;
     for (const type of creatureTypesOf(card)) {
       creatureTypes.set(type, (creatureTypes.get(type) ?? 0) + 1);
