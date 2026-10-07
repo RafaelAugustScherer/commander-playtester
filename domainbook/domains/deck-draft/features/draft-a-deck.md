@@ -162,6 +162,15 @@ that theme without making one: drafting them does not pull the deck toward it. A
 entering ("Whenever a token you control enters") is token making, so token makers fit it;
 it is not an enters trigger for blink.
 
+Spell keywords fit what feeds them, both ways (`deck-draft/ADR-0012`). Casting instants and
+sorceries ("instant or sorcery spell", magecraft) is a theme, and every instant and sorcery
+fits it. Countering, targeting or stopping those spells, or an opponent casting them, is not. So is reducing the cost of spells that include instants and sorceries; "Goblin
+spells cost {1} less" is not. Storm fits cost reduction and casting instants and sorceries.
+Delve fits milling and discarding. Kicker on an instant or sorcery fits cost reduction, and so
+does overload. A kicked-spell payoff ("Whenever you cast a kicked spell") rewards kicker.
+Each fit runs both ways: cost reducers fit a storm deck, mill cards fit a delve deck. An
+overloaded spell reaches every opponent, so everything it fits counts half again.
+
 A token counts double when the clause that carries it repeats — a "whenever" or "at the
 beginning of" trigger, or an activated ability, on a permanent — and half again when it
 reaches every opponent ("each opponent", "your opponents", "at the beginning of each…"); an
@@ -260,6 +269,31 @@ Example: The modes of a repeating trigger repeat
   Given a draft whose commander rewards tapping creatures
   When "Dreamshackle Geist" and "Citadel Siege" are scored
   Then their tap modes count as repeating
+
+Example: A spellslinger commander is offered spell payoffs
+  Given a draft whose commander is "Mizzix of the Izmagnus"
+  When rounds are suggested
+  Then cards such as "Guttersnipe" and "Mizzix's Mastery" fit its instant and sorcery theme
+
+Example: Storm rises with cost reduction
+  Given a deck with "Goblin Electromancer", which makes instants and sorceries cheaper
+  When "Grapeshot" and a sorcery without storm are scored
+  Then Grapeshot scores higher and shows "cost reduction" as a matched token
+
+Example: Delve rises with milling
+  Given a draft whose commander is "Sidisi, Brood Tyrant"
+  When "Treasure Cruise" is scored
+  Then it fits the deck's mill theme
+
+Example: A kicked-spell payoff is offered kicker spells
+  Given a draft whose commander is "Verazol, the Split Current"
+  When rounds are suggested
+  Then kicker instants and sorceries lead the instant and sorcery slots
+
+Example: A cost reduction for one creature type is not spell cost reduction
+  Given a deck with "Goblin Warchief"
+  When cards are scored
+  Then storm, kicker and overload spells do not gain from it
 ```
 
 ## Rule: A commander's own body is not its theme

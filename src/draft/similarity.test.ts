@@ -52,8 +52,8 @@ describe("cardSimilarity", () => {
   });
 
   it("is 0 for two cards with no tokens at all", () => {
-    const a = card({ typeLine: "Sorcery", oracleText: "" });
-    const b = card({ typeLine: "Instant", oracleText: "" });
+    const a = card({ typeLine: "Enchantment", oracleText: "" });
+    const b = card({ typeLine: "Land", oracleText: "" });
     expect(cardSimilarity(a, b)).toBe(0);
   });
 });

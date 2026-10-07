@@ -12,6 +12,24 @@ depth live there. A purely-internal PR that touches no product or architecture m
 skip its version with a `Skip-Docs: <reason>` trailer instead. There are no
 per-domain changelogs; this file is the single timeline (`ADR-0007`).
 
+## [0.38.0] - 2026-10-07
+
+### Added
+
+- Draft suggestions read casting instants and sorceries, spell cost reduction, storm, delve,
+  kicker and overload. Each keyword fits what feeds it, both ways: storm with cost reducers,
+  delve with milling, kicker and overload with cost reduction (`deck-draft/ADR-0012`).
+
+### Changed
+
+- An overloaded spell counts every theme it fits as reaching every opponent
+  (`deck-draft/ADR-0012`).
+
+### Fixed
+
+- A card name containing "Storm" no longer reads as storm or copying spells
+  (`deck-draft/features/draft-a-deck.md`).
+
 ## [0.37.0] - 2026-10-07
 
 ### Changed
