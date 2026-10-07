@@ -21,19 +21,51 @@ describe("extractThemeProfile", () => {
     const commander = card({
       name: "Commander",
       typeLine: "Legendary Creature — Goblin",
+      oracleText: "Sacrifice another creature: Gain 1 life.",
     });
     const profile = extractThemeProfile([commander], []);
-    expect(profile.tokenWeights.get("goblin")).toBe(COMMANDER_WEIGHT);
+    expect(profile.tokenWeights.get("sacrifice")).toBe(COMMANDER_WEIGHT);
+  });
+
+  it("leaves a commander's own keywords and creature types out of its theme", () => {
+    const commander = card({
+      name: "Commander",
+      typeLine: "Legendary Creature — Bird Bard",
+      oracleText:
+        "Flying, first strike\nCommander gets +1/+0 for each other creature you control.\nCreature spells you cast gain offspring {2} as you cast them. (You may pay an additional {2} as you cast a creature spell. If you do, when that creature enters, create a 1/1 token copy of it.)",
+    });
+    const profile = extractThemeProfile([commander], []);
+    expect([...profile.tokenWeights.keys()].sort()).toEqual([
+      "create token",
+      "creature etb",
+    ]);
+    expect(profile.creatureTypes.get("bird")).toBe(1);
+    expect(profile.creatureCount).toBe(1);
+  });
+
+  it("keeps a keyword the commander gives to other creatures", () => {
+    const commander = card({ oracleText: "Creatures you control have flying." });
+    const profile = extractThemeProfile([commander], []);
+    expect(profile.tokenWeights.get("flying")).toBe(COMMANDER_WEIGHT);
+  });
+
+  it("keeps a tribe the commander's rules text names", () => {
+    const commander = card({ oracleText: "Other Elves you control get +1/+1." });
+    const profile = extractThemeProfile([commander], []);
+    expect(profile.tokenWeights.get("elf")).toBe(COMMANDER_WEIGHT + REWARD_WEIGHT);
   });
 
   it("accumulates weight across commander and library copies of the same token", () => {
-    const commander = card({ typeLine: "Legendary Creature — Goblin" });
+    const commander = card({
+      typeLine: "Legendary Creature — Goblin",
+      oracleText: "Sacrifice another creature: Gain 1 life.",
+    });
     const others = [
-      card({ typeLine: "Creature — Goblin" }),
-      card({ typeLine: "Creature — Goblin" }),
+      card({ typeLine: "Creature — Goblin", oracleText: "Sacrifice a Food: Draw a card." }),
+      card({ typeLine: "Creature — Goblin", oracleText: "Sacrifice a Clue: Draw a card." }),
     ];
     const profile = extractThemeProfile([commander], others);
-    expect(profile.tokenWeights.get("goblin")).toBe(COMMANDER_WEIGHT + 2);
+    expect(profile.tokenWeights.get("sacrifice")).toBe(COMMANDER_WEIGHT + 2);
   });
 
   it("weights what a commander rewards above its other tokens", () => {

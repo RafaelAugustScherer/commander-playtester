@@ -38,6 +38,7 @@ export interface DraftCandidateData {
   manaValue: number;
   typeLine: string;
   oracleText: string;
+  power?: number;
   colorIdentity: string[];
 }
 
@@ -101,6 +102,7 @@ export interface CardFaceData {
     subtypes?: string[];
   };
   oracle_text?: string;
+  power?: { type: "Fixed"; value: number } | { type: "Variable"; value: string };
   triggers?: FaceTrigger[];
   static_abilities?: FaceStaticAbility[];
   abilities?: unknown[];

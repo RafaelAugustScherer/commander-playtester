@@ -10,6 +10,8 @@ export interface Card {
   manaValue: number;
   typeLine: string;
   oracleText: string;
+  /** Printed power, only when it is a fixed number. */
+  power?: number;
   colors: string[];
   /** True MTG color identity (mana cost + rules text), from Scryfall's `color_identity`. */
   colorIdentity: string[];

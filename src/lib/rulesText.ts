@@ -1,5 +1,5 @@
 /** A line without its parenthesised reminder text. */
-function withoutReminder(line: string): string {
+export function withoutReminder(line: string): string {
   let text = "";
   let depth = 0;
   for (const ch of line) {
@@ -10,6 +10,13 @@ function withoutReminder(line: string): string {
   return text.split(" ").filter(Boolean).join(" ");
 }
 
-export function rulesLines(card: { oracleText: string }): string[] {
-  return card.oracleText.split("\n").map(withoutReminder).filter(Boolean);
+const rulesLinesCache = new Map<string, readonly string[]>();
+
+export function rulesLines(card: { oracleText: string }): readonly string[] {
+  let lines = rulesLinesCache.get(card.oracleText);
+  if (!lines) {
+    lines = card.oracleText.split("\n").map(withoutReminder).filter(Boolean);
+    rulesLinesCache.set(card.oracleText, lines);
+  }
+  return lines;
 }

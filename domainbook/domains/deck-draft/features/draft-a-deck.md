@@ -164,6 +164,22 @@ beginning of" trigger, or an activated ability, on a permanent — and again whe
 every opponent ("each opponent", "your opponents", "at the beginning of each…"); an effect
 on every player does not count as reaching opponents (`deck-draft/ADR-0008`).
 
+A power the rules text names is a mechanic too: "base power 1", "power 2 or less" or "power
+4 or greater" make a `theme token` such as `base power 1`, unless the sentence picks a target,
+names an opponent's creatures or concerns blocking, or asks for a total power. A card fits it when it is a creature with
+that printed power (a `*` power fits nothing) or creates a creature token of that power, so a
+commander that pays off small creatures is offered small creatures. Each power token's pool
+is the most-played creatures of that power in the deck's colour identity.
+
+Enters triggers split by what enters. `etb` is any permanent entering ("Whenever another
+permanent enters", a trigger that fires an additional time for a permanent entering) and
+blink; `creature etb` is a creature entering ("Whenever another creature you control
+enters"), which offspring and token copies of creatures also reward but never add to a
+deck's theme, so a populate or copy-token card in the 99 does not pull the deck toward it.
+A commander rewarding `creature etb` is
+offered creatures with an enters trigger, not artifacts or enchantments that happen to say
+"When this enters"; a creature with one fits both tokens, any other permanent only `etb`.
+
 Tapping creatures includes tapping one from a list of permanent types ("tap target
 artifact, creature, or land"), counting an opponent's tapped creatures, and rewarding an
 opponent's creature becoming tapped. Each mechanic's pool keeps its most-played cards
@@ -195,10 +211,45 @@ Example: A tribe the commander names is a reward
   When rounds are suggested
   Then Angels, Demons and Dragons are offered, though Kaalia is none of them
 
+Example: A named power is a reward
+  Given a draft whose commander counts other creatures with base power 1
+  When a creature with power 1 and an otherwise identical one with power 2 are scored
+  Then the power 1 creature scores higher and shows "base power 1" as a matched token
+
+Example: An enters multiplier rewards enters triggers
+  Given a draft whose commander gives creature spells offspring
+  When a creature with an enters trigger and one without are scored
+  Then the creature with the enters trigger scores higher
+
+Example: A creature-only enters multiplier ignores other permanents
+  Given a draft whose commander gives creature spells offspring
+  When a creature and an enchantment, each with "When this enters", are scored
+  Then only the creature gains from the commander's enters reward
+
 Example: An enabler fits a theme without making one
   Given a deck with no blink or enters-matters card
   When the author adds creatures that only have enters triggers
   Then later rounds are not pulled toward blink cards
+```
+
+## Rule: A commander's own body is not its theme
+
+What a commander asks for sets its theme, not what it is. Its own keyword lines ("Flying",
+"Flying, first strike", "Ward {2}", "Protection from red") and its type-line creature types
+add nothing to the draft's theme; a keyword it gives to other creatures ("Creatures you
+control have flying") and a tribe its rules text names ("Elves you control") do
+(`deck-draft/ADR-0010`). The cards from the 99 keep theirs, at the usual weight.
+
+```gherkin
+Example: A flying Bird commander does not call for fliers or Birds
+  Given a draft whose commander is a Bird with "Flying" that counts creatures of base power 1
+  When rounds are suggested
+  Then the theme holds base power 1 and what its text creates, and neither flying nor Bird
+
+Example: A given keyword is a theme
+  Given a draft whose commander says "Creatures you control have flying"
+  When rounds are suggested
+  Then fliers are favoured
 ```
 
 ## Rule: A tribe's lords rise with the tribe
@@ -359,9 +410,10 @@ Example: Turning ramp off leaves it out
 
 When two candidates fit the theme about equally, the one that is more played wins. The
 `synergy score` has no play-rate data to read, so a card's reprint count stands in for
-popularity: it both fills each theme's candidate pool with the most-printed matches and
-tilts the final ranking toward them (`deck-draft/ADR-0002`). It is a nudge over comparable
-fits, not an override — a clearly stronger theme match still leads.
+popularity, counting the larger of a card's printings and its set codes: it both fills each
+theme's candidate pool with the most-printed matches and tilts the final ranking toward
+them (`deck-draft/ADR-0002`). It is a nudge over comparable fits, not an override — a
+clearly stronger theme match still leads.
 
 ```gherkin
 Example: A staple outranks a vanilla card of equal theme fit

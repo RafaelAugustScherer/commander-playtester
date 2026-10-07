@@ -100,8 +100,17 @@ export function rampKind(card: RampCard): RampKind | null {
   return null;
 }
 
+const lastingRampCache = new WeakMap<RampCard, boolean>();
+
 export function isLastingRamp(card: RampCard): boolean {
-  const kind = rampKind(card);
-  if (kind === "extra land") return !ONE_SHOT_SPELL.test(card.typeLine);
-  return kind === "land search" || kind === "mana";
+  let lasting = lastingRampCache.get(card);
+  if (lasting === undefined) {
+    const kind = rampKind(card);
+    lasting =
+      kind === "extra land"
+        ? !ONE_SHOT_SPELL.test(card.typeLine)
+        : kind === "land search" || kind === "mana";
+    lastingRampCache.set(card, lasting);
+  }
+  return lasting;
 }

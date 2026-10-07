@@ -15,6 +15,22 @@ describe("toCard", () => {
     expect(card.roles).toContain("ramp");
   });
 
+  it("carries a fixed printed power, from the card or its front face", () => {
+    expect(toCard({ name: "Bear", cmc: 2, type_line: "Creature — Bear", power: "2" }).power).toBe(2);
+    expect(
+      toCard({
+        name: "Front // Back",
+        cmc: 3,
+        card_faces: [{ type_line: "Creature — Human", power: "1" }, { type_line: "Land" }],
+      }).power,
+    ).toBe(1);
+  });
+
+  it("leaves power unset when it is not a fixed number", () => {
+    expect(toCard({ name: "Star", cmc: 3, type_line: "Creature — Elemental", power: "*" }).power).toBeUndefined();
+    expect(toCard({ name: "Sol Ring", cmc: 1, type_line: "Artifact" }).power).toBeUndefined();
+  });
+
   it("merges oracle text from both faces of a DFC", () => {
     const card = toCard({
       name: "Front // Back",

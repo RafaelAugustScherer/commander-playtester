@@ -11,7 +11,9 @@ interface FakeCard {
   coreTypes: string[];
   subtypes?: string[];
   oracleText: string;
+  power?: number;
   printings: number;
+  printingSets?: number;
   colorIdentity?: string[];
 }
 
@@ -52,6 +54,7 @@ function face(card: FakeCard): CardFaceData {
       subtypes: card.subtypes ?? [],
     },
     oracle_text: card.oracleText,
+    power: card.power === undefined ? undefined : { type: "Fixed", value: card.power },
     triggers: [],
   };
 }
@@ -100,7 +103,11 @@ function fakeEngine(cards: FakeCard[]) {
         card.name.toLowerCase(),
         {
           card_type: face(card).card_type,
-          metadata: { source_printing_ids: Array(card.printings).fill("id") },
+          metadata:
+            card.printingSets === undefined
+              ? { source_printing_ids: Array(card.printings).fill("id") }
+              : undefined,
+          printings: card.printingSets === undefined ? undefined : Array(card.printingSets).fill("SET"),
         },
       ]),
     ),
@@ -142,6 +149,75 @@ describe("createDraftRanker theme pools", () => {
     expect(searchedTexts).toContain("tap");
     expect(searchedTexts).not.toContain("tap creature");
     expect(candidates.map((c) => c.name)).toEqual([TAPPER.name]);
+  });
+});
+
+describe("createDraftRanker printing counts", () => {
+  it("counts a card's set-code list when it has no printing ids", () => {
+    const withoutIds: FakeCard = { ...TAPPER, name: "Old Frost Warden", printingSets: 20 };
+    const withIds: FakeCard = { ...TAPPER, name: "New Frost Warden", printings: 2 };
+    const { queries, cardDataJson } = fakeEngine([HYLDA, withIds, withoutIds]);
+    const { candidates } = createDraftRanker(queries, cardDataJson).rankCardCandidates({
+      commanders: [HYLDA.name],
+      mainboard: [],
+      profile: hyldaProfile(),
+      target: "focused",
+      customization: DEFAULT_CUSTOMIZATION,
+      exclude: [HYLDA.name.toLowerCase()],
+      slotTypes: ["creature"],
+    });
+    expect(candidates.map((c) => c.name)).toEqual([withoutIds.name]);
+  });
+});
+
+describe("createDraftRanker power pools", () => {
+  const POWER_COMMANDER: FakeCard = {
+    name: "Small Fry Captain",
+    supertypes: ["Legendary"],
+    coreTypes: ["Creature"],
+    subtypes: ["Human"],
+    oracleText: "Other creatures you control with base power 1 get +1/+1.",
+    power: 2,
+    printings: 1,
+  };
+  const BIG_FILLERS: FakeCard[] = FILLERS.map((filler) => ({ ...filler, power: 3 }));
+  const RARE_SMALL: FakeCard = {
+    name: "Rare Small Fry",
+    coreTypes: ["Creature"],
+    subtypes: ["Bird"],
+    oracleText: "Vigilance",
+    power: 1,
+    printings: 1,
+  };
+
+  it("reaches a little-printed creature of the named power past popular ones of another", () => {
+    const { queries, cardDataJson } = fakeEngine([POWER_COMMANDER, RARE_SMALL, ...BIG_FILLERS]);
+    const ranker = createDraftRanker(queries, cardDataJson);
+    const commander = draftCandidateCard({
+      name: POWER_COMMANDER.name,
+      manaValue: 3,
+      typeLine: "Legendary Creature — Human",
+      oracleText: POWER_COMMANDER.oracleText,
+      power: 2,
+      colorIdentity: ["W"],
+    });
+    const profile = extractThemeProfile([commander], []);
+
+    const { candidates } = ranker.rankCardCandidates({
+      commanders: [POWER_COMMANDER.name],
+      mainboard: [],
+      profile: {
+        ...profile,
+        tokenWeights: [...profile.tokenWeights],
+        creatureTypes: [...profile.creatureTypes],
+      },
+      target: "focused",
+      customization: DEFAULT_CUSTOMIZATION,
+      exclude: [POWER_COMMANDER.name.toLowerCase()],
+      slotTypes: ["creature"],
+    });
+
+    expect(candidates.map((c) => c.name)).toEqual([RARE_SMALL.name]);
   });
 });
 

@@ -12,6 +12,30 @@ depth live there. A purely-internal PR that touches no product or architecture m
 skip its version with a `Skip-Docs: <reason>` trailer instead. There are no
 per-domain changelogs; this file is the single timeline (`ADR-0007`).
 
+## [0.36.0] - 2026-10-06
+
+### Added
+
+- Draft suggestions reward creatures whose printed power meets a power the commander or the
+  deck's cards name ("base power 1", "power 2 or less", "power 4 or greater"), including
+  cards that create creature tokens of that power
+  (`deck-draft/features/draft-a-deck.md`).
+
+### Changed
+
+- A card's popularity in the draft counts the larger of its printings and its set codes, so
+  cards missing printing ids are no longer treated as unplayed
+  (`deck-draft/ADR-0002`).
+- A commander's own keyword lines and type-line creature types no longer weigh in its theme;
+  a keyword it gives to other creatures and a tribe its text names still do
+  (`deck-draft/ADR-0010`).
+- Enters multipliers count as rewards: a commander whose creature entering matters
+  (offspring, creature token copies, "Whenever another creature … enters") rewards a new
+  `creature etb` token, which only creatures with enters triggers fit and which offspring and
+  token copies reward without adding to a deck's theme; one that doubles any
+  permanent's enters triggers rewards `etb`, which "Whenever a creature enters" no longer
+  signals (`deck-draft/features/draft-a-deck.md`).
+
 ## [0.35.0] - 2026-10-03
 
 ### Added

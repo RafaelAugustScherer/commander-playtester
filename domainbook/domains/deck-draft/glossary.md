@@ -116,10 +116,13 @@ such as Equip included), with the commander counted three times. It sets how muc
 
 A signal pulled from a card that the score matches on: a creature subtype (a tribe like
 Goblin, from the type line or named in the rules text), a keyword, or a salient
-oracle-text phrase (`+1/+1 counter`, `sacrifice`, `tap creature`, `etb`). The set of tokens
+oracle-text phrase (`+1/+1 counter`, `sacrifice`, `tap creature`, `etb` for any permanent
+entering, `creature etb` for a creature entering), or a power the
+rules text names (`base power 1`, `power 4 or greater`), which a creature of that printed
+power, or a card creating a creature token of it, fits. The set of tokens
 the heuristic recognises sets its ceiling. A card that only *enables* a token — an enters
-trigger for `etb`, a legendary type line for `legendary` — fits it without adding it to the
-deck's theme (`deck-draft/ADR-0005`).
+trigger for `etb` (and, on a creature, `creature etb`), a legendary type line for
+`legendary` — fits it without adding it to the deck's theme (`deck-draft/ADR-0005`).
 
 - **Aliases:** theme signal
 - **Status:** draft
@@ -129,7 +132,9 @@ deck's theme (`deck-draft/ADR-0005`).
 The rule that `theme token`s coming from the `commander card` count for more than those
 from the other 99 when scoring a candidate, so the commander leads the deck's direction.
 What the commander rewards — the mechanic its "whenever …" trigger conditions name and the
-tribes its text names — counts for more again (`deck-draft/ADR-0005`).
+tribes its text names — counts for more again (`deck-draft/ADR-0005`). The commander's own
+keyword lines and type-line creature types are not part of what it counts
+(`deck-draft/ADR-0010`).
 
 - **Status:** draft
 - **Example:** With an Elf commander, Elf-tribal candidates outrank cards that only match

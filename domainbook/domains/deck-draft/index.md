@@ -73,7 +73,9 @@ whole card pool by heart.
   `color identity` is fixed before any other suggestion is made (`draft-a-deck`).
 - What the commander rewards — the mechanic its trigger conditions name and the tribes its
   text names — outweighs what its rewards are, so a tap commander is offered tappers, not
-  just token makers (`deck-draft/ADR-0005`). A token carried by a repeatable clause or one
+  just token makers (`deck-draft/ADR-0005`). A power it names ("base power 1") rewards
+  creatures of that power, and enters multipliers reward `etb` (any permanent) or
+  `creature etb` (a creature entering; offspring and creature token copies reward it). A token carried by a repeatable clause or one
   that reaches every opponent counts for more, so engines outrank one-shot effects
   (`deck-draft/ADR-0008`). Ramp is scored apart from theme, by how much mana the deck
   wants to spend, at a steady pace through the draft (`deck-draft/ADR-0009`).

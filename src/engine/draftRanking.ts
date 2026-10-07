@@ -9,6 +9,7 @@ import type {
   SearchCardRow,
 } from "./draftQueries";
 import { frontFace } from "../lib/cardName";
+import type { Card } from "../lib/types";
 import { bracketTilt } from "../draft/bracket";
 import {
   draftCandidateCard,
@@ -18,7 +19,14 @@ import {
 import type { ThemeProfile } from "../draft/themes";
 import { isUtilityLand } from "../draft/lands";
 import { isSuggestable } from "../draft/customization";
-import { cardTokens, isOfTribe, mentionsSubtype, tokenSearches } from "../draft/tokens";
+import {
+  cardTokens,
+  fitsPowerToken,
+  isOfTribe,
+  isPowerToken,
+  mentionsSubtype,
+  tokenSearches,
+} from "../draft/tokens";
 import {
   DRAFT_CARD_TYPES,
   allocateSlots,
@@ -62,6 +70,7 @@ const TYPE_LINE_FILTER: Record<DraftCardType, string> = {
 interface CardRecord {
   card_type?: CardFaceData["card_type"];
   metadata?: { source_printing_ids?: unknown };
+  printings?: unknown;
 }
 
 export interface DraftRanker {
@@ -85,6 +94,7 @@ export function candidateData(
     manaValue: card.mana_value,
     typeLine: cardTypeLine(face.card_type),
     oracleText: face.oracle_text ?? "",
+    power: face.power?.type === "Fixed" ? face.power.value : undefined,
     colorIdentity: card.color_identity,
   };
 }
@@ -126,14 +136,26 @@ function subtypeTypesOf(records: Record<string, CardRecord>): Map<string, DraftC
 
 // Lowercase card name -> number of printings, our proxy for how played a card
 // is (EDHREC-style play-rate data is not in the card database). Built once from
-// the same card-data JSON the engine loads — no network, no Scryfall.
+// the same card-data JSON the engine loads — no network, no Scryfall. Printing
+// ids are missing on about a fifth of records; the set-code list is on all.
 function printingCountsOf(records: Record<string, CardRecord>): Map<string, number> {
   const counts = new Map<string, number>();
   for (const [key, record] of Object.entries(records)) {
     const ids = record?.metadata?.source_printing_ids;
-    counts.set(key.toLowerCase(), Array.isArray(ids) ? ids.length : 0);
+    counts.set(
+      key.toLowerCase(),
+      Math.max(
+        Array.isArray(ids) ? ids.length : 0,
+        Array.isArray(record?.printings) ? record.printings.length : 0,
+      ),
+    );
   }
   return counts;
+}
+
+function fitsToken(card: Card, token: string, searches: string[] | null): boolean {
+  if (isPowerToken(token)) return fitsPowerToken(card, token);
+  return !searches || cardTokens(card).has(token);
 }
 
 export function createDraftRanker(
@@ -150,11 +172,18 @@ export function createDraftRanker(
   const typeCache = new Map<string, DraftCandidateData[]>();
   const subtypeCache = new Map<string, DraftCandidateData[]>();
   const faceCache = new Map<string, CardFaceData | null>();
+  const candidateCache = new Map<string, DraftCandidateData | null>();
   const signalCache = new Map<string, TypeCounts>();
 
   function popularityBonus(name: string): number {
     const printings = printingCounts.get(name.trim().toLowerCase()) ?? 0;
     return POPULARITY_WEIGHT * Math.log2(1 + printings);
+  }
+
+  function candidateOf(row: SearchCardRow): DraftCandidateData | null {
+    const key = row.name.toLowerCase();
+    if (!candidateCache.has(key)) candidateCache.set(key, candidateData(queries, row));
+    return candidateCache.get(key) ?? null;
   }
 
   function faceOf(name: string): CardFaceData | null {
@@ -206,6 +235,23 @@ export function createDraftRanker(
     return { target: counts, nonbasicLandTarget: nonbasicLands, have, basicLands };
   }
 
+  function searchedRows(texts: string[], identity: string[]): SearchCardRow[] {
+    const seen = new Set<string>();
+    return texts
+      .flatMap((text) => queries.search_cards_js({ text, limit: TOKEN_MATCH_SCAN }).results)
+      .filter((card) => {
+        const name = card.name.toLowerCase();
+        if (seen.has(name)) return false;
+        seen.add(name);
+        return (
+          card.legalities?.commander === "legal" &&
+          wholeCardNames.has(name) &&
+          card.color_identity.every((color) => identity.includes(color))
+        );
+      })
+      .sort((a, b) => popularityBonus(b.name) - popularityBonus(a.name));
+  }
+
   // A curated oracle-text token searches its own words, then keeps only the
   // rows its pattern really matches, so the slice is the most-played fits
   // rather than every card that happens to say "tap" (deck-draft/ADR-0005).
@@ -214,26 +260,15 @@ export function createDraftRanker(
     let candidates = themeCache.get(key);
     if (!candidates) {
       const searches = tokenSearches(token);
-      const seen = new Set<string>();
-      const rows = (searches ?? [token])
-        .flatMap((text) => queries.search_cards_js({ text, limit: TOKEN_MATCH_SCAN }).results)
-        .filter((card) => {
-          const name = card.name.toLowerCase();
-          if (seen.has(name)) return false;
-          seen.add(name);
-          return (
-            card.legalities?.commander === "legal" &&
-            wholeCardNames.has(name) &&
-            card.color_identity.every((color) => identity.includes(color))
-          );
-        })
-        .sort((a, b) => popularityBonus(b.name) - popularityBonus(a.name));
+      const rows = isPowerToken(token)
+        ? typeLineRows("Creature", identity)
+        : searchedRows(searches ?? [token], identity);
       candidates = [];
       for (const row of rows) {
         if (candidates.length >= THEME_CANDIDATES_PER_TOKEN) break;
-        const candidate = candidateData(queries, row);
+        const candidate = candidateOf(row);
         if (!candidate) continue;
-        if (searches && !cardTokens(draftCandidateCard(candidate)).has(token)) continue;
+        if (!fitsToken(draftCandidateCard(candidate), token, searches)) continue;
         candidates.push(candidate);
       }
       themeCache.set(key, candidates);
@@ -261,7 +296,7 @@ export function createDraftRanker(
       candidates = typeLineRows(subtype, identity)
         .slice(0, THEME_CANDIDATES_PER_TOKEN)
         .flatMap((row) => {
-          const candidate = candidateData(queries, row);
+          const candidate = candidateOf(row);
           return candidate ? [candidate] : [];
         });
       subtypeCache.set(key, candidates);
@@ -307,7 +342,7 @@ export function createDraftRanker(
     const candidates: DraftCandidateData[] = [];
     for (const row of typeLineRows(TYPE_LINE_FILTER[type], identity)) {
       if (candidates.length >= TYPE_CANDIDATES_PER_TYPE) break;
-      const candidate = candidateData(queries, row);
+      const candidate = candidateOf(row);
       if (candidate && isDraftableAs(candidate.typeLine, type)) candidates.push(candidate);
     }
     typeCache.set(key, candidates);

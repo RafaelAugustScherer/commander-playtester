@@ -1,6 +1,6 @@
 import type { Card } from "../lib/types";
 import { CREATURE_TYPES } from "./creatureTypes";
-import { rulesLines } from "../lib/rulesText";
+import { rulesLines, withoutReminder } from "../lib/rulesText";
 
 /**
  * One curated oracle-text signal. Matching `pattern` contributes `token` to the
@@ -17,6 +17,10 @@ export interface OracleTextPattern {
   /** Free-text searches that together reach every match; defaults to the token. */
   search?: string[];
 }
+
+const CREATURE_ETB_MULTIPLIER = /\boffspring\b|\btokens? (?:that's a |that are )?cop(?:y|ies) of\b/i;
+const PERMANENT_ETB_MULTIPLIER = /\bentering\b[^.]*\btriggers? an additional time\b/i;
+const ETB_ENABLER = /\bwhen\b(?![^.,]*\blands?\b)[^.,]*\benters\b/i;
 
 const OTHER_COUNTER_KINDS = [
   "age", "blaze", "bounty", "charge", "coin", "corpse", "credit", "death", "delay",
@@ -105,11 +109,17 @@ export const ORACLE_TEXT_PATTERNS: OracleTextPattern[] = [
   {
     token: "etb",
     pattern: [
-      /\bwhenever (?:a|an|another|one or more)\b(?![^.,]*\blands?\b)[^.,]*\benters?\b/i,
+      /\bwhenever (?:a|an|another|one or more)\b(?![^.,]*\blands?\b)(?![^.,]*\bcreatures?\b)[^.,]*\benters?\b/i,
       /\bexile\b[^.]*\breturn (?:it|that card|them|those cards|the exiled cards?)\b[^.]* to the battlefield\b/i,
+      PERMANENT_ETB_MULTIPLIER,
     ],
-    enabler: /\bwhen\b(?![^.,]*\blands?\b)[^.,]*\benters\b/i,
+    enabler: ETB_ENABLER,
     search: ["enter", "return battlefield"],
+  },
+  {
+    token: "creature etb",
+    pattern: /\bwhenever (?:a|an|another|one or more)\b[^.,]*\bcreatures?\b[^.,]*\benters?\b/i,
+    search: ["enter"],
   },
   {
     token: "dies",
@@ -238,16 +248,73 @@ function matches(pattern: RegExp | RegExp[], text: string): boolean {
   return Array.isArray(pattern) ? pattern.some((p) => p.test(text)) : pattern.test(text);
 }
 
+const POWER_CONDITION = /(?<!\btotal )\b(base )?power (\d+)( or (?:less|greater))?\b/gi;
+const POWER_TOKEN = /^(?:base power (\d+)|power (\d+) or (less|greater))$/;
+const TOKEN_MAKER_POWER = /\bcreates?\b[^.]*?\b(\d+)\/\d+\b[^.]*?\btokens?\b/gi;
+const NOT_A_CONDITION = /\btarget\b|\bopponents?\b|\bblock/i;
+
+function powerConditions(text: string): string[] {
+  const conditions: string[] = [];
+  for (const sentence of text.split(/[.\n]/)) {
+    if (NOT_A_CONDITION.test(sentence)) continue;
+    for (const [, base, power, suffix] of sentence.matchAll(POWER_CONDITION)) {
+      if (suffix) conditions.push(`power ${power}${suffix.toLowerCase()}`);
+      else if (base) conditions.push(`base power ${power}`);
+    }
+  }
+  return conditions;
+}
+
+/** Whether a theme token is a power condition such as `base power 1`. */
+export function isPowerToken(token: string): boolean {
+  return POWER_TOKEN.test(token);
+}
+
+/**
+ * Whether a card has a creature of the power a power token names: its own
+ * printed power, or that of a creature token its rules text creates.
+ */
+export function fitsPowerToken(card: Card, token: string): boolean {
+  const parsed = POWER_TOKEN.exec(token);
+  if (!parsed) return false;
+  const [, base, bound, direction] = parsed;
+  const wanted = Number(base ?? bound);
+  const powers: number[] = [];
+  if (card.power !== undefined && /\bCreature\b/.test(card.typeLine)) powers.push(card.power);
+  for (const [, power] of card.oracleText.matchAll(TOKEN_MAKER_POWER)) powers.push(Number(power));
+  return powers.some((power) => {
+    if (direction === "less") return power <= wanted;
+    if (direction === "greater") return power >= wanted;
+    return power === wanted;
+  });
+}
+
 function textThemeTokens(text: string, name: string): Set<string> {
   const tokens = new Set<string>(namedCreatureTypes(text, name));
   for (const { token, pattern } of ORACLE_TEXT_PATTERNS) {
     if (matches(pattern, text)) tokens.add(token);
   }
+  for (const condition of powerConditions(text)) tokens.add(condition);
   return tokens;
+}
+
+const EVERGREEN_KEYWORDS = [
+  "flying", "first strike", "double strike", "deathtouch", "lifelink", "trample", "menace",
+  "haste", "vigilance", "indestructible", "hexproof", "reach", "defender", "flash",
+];
+const KEYWORD_ABILITY = new RegExp(
+  `^(?:${EVERGREEN_KEYWORDS.join("|")}|hexproof from .+|ward\\b.*|protection from .+)$`,
+  "i",
+);
+
+function isKeywordLine(line: string): boolean {
+  const abilities = withoutReminder(line).split(/,\s*/);
+  return abilities.every((ability) => KEYWORD_ABILITY.test(ability));
 }
 
 // The same cards are scored round after round, so their tokens are kept.
 const themeTokenCache = new Map<string, ReadonlySet<string>>();
+const commanderTokenCache = new Map<string, ReadonlySet<string>>();
 const cardTokenCache = new Map<string, ReadonlySet<string>>();
 
 function cacheKey(card: Card): string {
@@ -271,6 +338,25 @@ export function themeTokens(card: Card): ReadonlySet<string> {
 }
 
 /**
+ * The tokens a commander asks for: its oracle-text signals and the tribes its
+ * rules text names, but not its own keyword lines or type-line subtypes, which
+ * describe the commander rather than the deck it wants.
+ */
+export function commanderThemeTokens(card: Card): ReadonlySet<string> {
+  const key = cacheKey(card);
+  let tokens = commanderTokenCache.get(key);
+  if (!tokens) {
+    const text = card.oracleText
+      .split("\n")
+      .filter((line) => !isKeywordLine(line))
+      .join("\n");
+    tokens = textThemeTokens(text, card.name);
+    commanderTokenCache.set(key, tokens);
+  }
+  return tokens;
+}
+
+/**
  * The tokens a card fits: its `themeTokens` plus those it only enables, such as
  * a creature with an enters trigger for a blink deck.
  */
@@ -283,6 +369,9 @@ export function cardTokens(card: Card): ReadonlySet<string> {
       if (enabler?.test(card.oracleText) || typeLineEnabler?.test(card.typeLine)) {
         found.add(token);
       }
+    }
+    if (/\bCreature\b/.test(card.typeLine) && ETB_ENABLER.test(card.oracleText)) {
+      found.add("creature etb");
     }
     tokens = found;
     cardTokenCache.set(key, tokens);
@@ -344,6 +433,9 @@ export function tokenStrengths(card: Card): ReadonlyMap<string, number> {
  */
 export function rewardedTokens(card: Card): Set<string> {
   const tokens = new Set<string>(namedCreatureTypes(card.oracleText, card.name));
+  for (const condition of powerConditions(card.oracleText)) tokens.add(condition);
+  if (CREATURE_ETB_MULTIPLIER.test(card.oracleText)) tokens.add("creature etb");
+  if (PERMANENT_ETB_MULTIPLIER.test(card.oracleText)) tokens.add("etb");
   for (const [clause] of card.oracleText.matchAll(/\bwhenever\b[^.,]*/gi)) {
     for (const token of textThemeTokens(clause, card.name)) tokens.add(token);
   }
