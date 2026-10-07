@@ -25,6 +25,8 @@ export interface OracleTextPattern {
 
 const PERMANENT_ETB_MULTIPLIER = /\bentering\b[^.]*\btriggers? an additional time\b/i;
 const ETB_ENABLER = /\bwhen\b(?![^.,]*\blands?\b)[^.,]*\benters\b/i;
+const ARTIFACT_TOKEN_MAKER =
+  /\bcreates?\b[^.]*\b(?:artifact|treasure|clue|food|blood|gold|powerstone|map|junk|incubator|lander)\b[^.]*\btokens?\b/i;
 
 const COMBAT_KEYWORDS = [
   "flying", "deathtouch", "lifelink", "trample", "menace", "first strike", "double strike",
@@ -59,7 +61,13 @@ export const ORACLE_TEXT_PATTERNS: OracleTextPattern[] = [
   { token: "+1/+1 counter", pattern: /\+1\/\+1 counters?\b/i },
   { token: "-1/-1 counter", pattern: /-1\/-1 counters?\b/i },
   { token: "sacrifice", pattern: /\bsacrifice[sd]?\b/i },
-  { token: "create token", pattern: /\bcreates?\b[^.]*\btokens?\b/i },
+  {
+    token: "create token",
+    pattern: [
+      /\bcreates?\b[^.]*\btokens?\b/i,
+      /\bwhenever (?:a|an|another|one or more)\b[^.,]*\btokens?\b[^.,]*\benters?\b/i,
+    ],
+  },
   {
     token: "draw a card",
     pattern: /\bdraws?\b (?:a|one|two|three|four|five|\d+|x) cards?/i,
@@ -75,6 +83,8 @@ export const ORACLE_TEXT_PATTERNS: OracleTextPattern[] = [
   {
     token: "artifact",
     pattern: /\bartifacts? you control\b|\bwhenever an(?:other)? artifact\b/i,
+    enabler: ARTIFACT_TOKEN_MAKER,
+    typeLineEnabler: /\bArtifact\b/,
   },
   {
     token: "enchantment",
@@ -102,8 +112,8 @@ export const ORACLE_TEXT_PATTERNS: OracleTextPattern[] = [
   {
     token: "tap creature",
     pattern: [
-      /\btap (?:an untapped|(?:another )?target|all|each) (?:\w+ )?(?:creatures?|permanents?)\b(?! you control)/i,
-      /\btap (?:up to \w+|any number of) (?:other )?target (?:\w+ )?(?:creatures?|permanents?)\b/i,
+      /\btap (?:an untapped|one or more untapped|(?:another )?target|all|each) (?:\w+ )?(?:creatures?|permanents?)\b(?! (?:you|they) control)/i,
+      /\btap (?:up to \w+|any number of|x|two|three|four) (?:other )?target (?:\w+ )?(?:creatures?|permanents?)\b/i,
       /\btap (?:another )?target (?:[\w-]+(?:,| or) )+(?:or )?(?:creatures?|permanents?)\b(?! you control)/i,
       /\btapped creatures? (?:your opponents|an opponent|target opponent|defending player) controls?\b/i,
       /\bcreatures? (?:your opponents|an opponent) controls? enters? (?:the battlefield )?tapped\b/i,
@@ -115,7 +125,7 @@ export const ORACLE_TEXT_PATTERNS: OracleTextPattern[] = [
   {
     token: "etb",
     pattern: [
-      /\bwhenever (?:a|an|another|one or more)\b(?![^.,]*\blands?\b)(?![^.,]*\bcreatures?\b)[^.,]*\benters?\b/i,
+      /\bwhenever (?:a|an|another|one or more)\b(?![^.,]*\b(?:land|creature|token)s?\b)[^.,]*\benters?\b/i,
       /\bexile\b[^.]*\breturn (?:it|that card|them|those cards|the exiled cards?)\b[^.]* to the battlefield\b/i,
       PERMANENT_ETB_MULTIPLIER,
     ],
@@ -348,7 +358,7 @@ export function cardTokens(card: Card): ReadonlySet<string> {
   return tokens;
 }
 
-export const REPEATABLE_STRENGTH = 1.5;
+export const REPEATABLE_STRENGTH = 2;
 export const MULTIPLAYER_STRENGTH = 1.5;
 
 const ONE_SHOT_CARD = /\b(?:Instant|Sorcery)\b/;
@@ -357,9 +367,15 @@ const ACTIVATED_CLAUSE = /^[^:."—•]*:/;
 const MULTIPLAYER_CLAUSE =
   /\b(?:each opponent|your opponents|all opponents|each other player|whenever an opponent|at the beginning of each)\b/i;
 
-function clauseStrength(clause: string, oneShotCard: boolean): number {
+const MODE_LABEL = /^•\s*(?:[^—.]{1,30}—\s*)?/;
+
+function isRepeatable(clause: string): boolean {
+  return TRIGGERED_CLAUSE.test(clause.trimStart()) || ACTIVATED_CLAUSE.test(clause);
+}
+
+function clauseStrength(clause: string, oneShotCard: boolean, modeOfRepeatable: boolean): number {
   let strength = 1;
-  const repeatable = TRIGGERED_CLAUSE.test(clause.trimStart()) || ACTIVATED_CLAUSE.test(clause);
+  const repeatable = modeOfRepeatable || isRepeatable(clause);
   if (!oneShotCard && repeatable) strength *= REPEATABLE_STRENGTH;
   if (MULTIPLAYER_CLAUSE.test(clause)) strength *= MULTIPLAYER_STRENGTH;
   return strength;
@@ -381,8 +397,12 @@ export function tokenStrengths(card: Card): ReadonlyMap<string, number> {
   if (!strengths) {
     const found = new Map<string, number>();
     const oneShotCard = ONE_SHOT_CARD.test(card.typeLine);
-    for (const clause of rulesLines(card)) {
-      const strength = clauseStrength(clause, oneShotCard);
+    let modesRepeat = false;
+    for (const line of rulesLines(card)) {
+      const isMode = line.startsWith("•");
+      const clause = isMode ? line.replace(MODE_LABEL, "") : line;
+      const strength = clauseStrength(clause, oneShotCard, isMode && modesRepeat);
+      if (!isMode) modesRepeat = isRepeatable(clause);
       for (const token of clauseTokens(clause, card)) {
         found.set(token, Math.max(found.get(token) ?? 1, strength));
       }

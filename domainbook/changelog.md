@@ -12,6 +12,27 @@ depth live there. A purely-internal PR that touches no product or architecture m
 skip its version with a `Skip-Docs: <reason>` trailer instead. There are no
 per-domain changelogs; this file is the single timeline (`ADR-0007`).
 
+## [0.37.0] - 2026-10-07
+
+### Changed
+
+- A repeating clause counts double in draft suggestions (was ×1.5), so engines such as
+  "Hylda's Crown of Winter" and "Opposition" gain on one-shots such as "Cryptic Command"
+  (`deck-draft/ADR-0011`).
+- Artifacts and cards that create artifact tokens fit an artifact theme, and "Whenever a token
+  you control enters" asks for token makers rather than blink
+  (`deck-draft/features/draft-a-deck.md`).
+
+### Fixed
+
+- The modes of a repeating trigger ("• Dragons — At the beginning of combat …") count as
+  repeating; "tap X target creatures" and "tap one or more untapped creatures" read as
+  tapping, and an opponent tapping their own creature no longer does
+  (`deck-draft/features/draft-a-deck.md`).
+- Mana abilities that use something up (sacrifice, exile, discard, collect evidence, removing
+  counters) no longer count as lasting ramp, so "Cryptex", "Lotus Petal" and Eldrazi Spawn
+  makers no longer get the ramp bonus (`deck-draft/features/draft-a-deck.md`).
+
 ## [0.36.0] - 2026-10-06
 
 ### Added

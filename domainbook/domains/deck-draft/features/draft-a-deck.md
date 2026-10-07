@@ -156,13 +156,20 @@ The heuristic reads mechanics beyond keywords and tribes: tapping creatures, ent
 blink, dies, attacks, spells that target your creatures, Auras, Equipment, Vehicles,
 defenders, goad, scry and surveil, Clues, Food, Blood, copied spells, energy, experience
 and other counters, and legendaries. Some cards only *enable* a mechanic — a creature with
-an enters trigger for a blink deck, a legendary creature for a legends deck. They fit that
-theme without making one: drafting them does not pull the deck toward it.
+an enters trigger for a blink deck, a legendary creature for a legends deck, any artifact or
+a card that creates artifact tokens (Treasure, Clues, Food…) for an artifact deck. They fit
+that theme without making one: drafting them does not pull the deck toward it. A token
+entering ("Whenever a token you control enters") is token making, so token makers fit it;
+it is not an enters trigger for blink.
 
-A token counts for more when the clause that carries it repeats — a "whenever" or "at the
-beginning of" trigger, or an activated ability, on a permanent — and again when it reaches
-every opponent ("each opponent", "your opponents", "at the beginning of each…"); an effect
-on every player does not count as reaching opponents (`deck-draft/ADR-0008`).
+A token counts double when the clause that carries it repeats — a "whenever" or "at the
+beginning of" trigger, or an activated ability, on a permanent — and half again when it
+reaches every opponent ("each opponent", "your opponents", "at the beginning of each…"); an
+effect on every player does not count as reaching opponents (`deck-draft/ADR-0008`). A
+token on an engine that repeats counts for more than on a one-shot that reaches every
+opponent: "Opposition" taps for more than "Cryptic Command" (`deck-draft/ADR-0011`). The modes ("• …") of a
+repeating trigger repeat too, with or without a label ("• Dragons — At the beginning of
+combat on each opponent's turn, …"); the modes of an instant or sorcery do not.
 
 A power the rules text names is a mechanic too: "base power 1", "power 2 or less" or "power
 4 or greater" make a `theme token` such as `base power 1`, unless the sentence picks a target,
@@ -181,15 +188,18 @@ offered creatures with an enters trigger, not artifacts or enchantments that hap
 "When this enters"; a creature with one fits both tokens, any other permanent only `etb`.
 
 Tapping creatures includes tapping one from a list of permanent types ("tap target
-artifact, creature, or land"), counting an opponent's tapped creatures, and rewarding an
-opponent's creature becoming tapped. Each mechanic's pool keeps its most-played cards
+artifact, creature, or land"), tapping several ("tap X target creatures"), counting an
+opponent's tapped creatures, rewarding an opponent's creature becoming tapped, and rewarding
+tapping several at once ("Whenever you tap one or more untapped creatures your opponents
+control"). An opponent tapping their own creature ("any opponent may tap an untapped creature
+they control") is not tapping. Each mechanic's pool keeps its most-played cards
 within the deck's colour identity, so cards of other colours never crowd out a fit.
 
 ```gherkin
 Example: A tap commander is offered cards that tap creatures
   Given a draft whose commander is "Hylda of the Icy Crown"
   When rounds are suggested
-  Then most non-land suggestions tap creatures, such as "Cryptic Command" or "Sleep"
+  Then most non-land suggestions tap creatures, such as "Hylda's Crown of Winter" or "Citadel Siege"
 
 Example: A repeatable engine outranks a one-shot effect
   Given a draft whose commander rewards tapping creatures
@@ -230,6 +240,26 @@ Example: An enabler fits a theme without making one
   Given a deck with no blink or enters-matters card
   When the author adds creatures that only have enters triggers
   Then later rounds are not pulled toward blink cards
+
+Example: Artifact token makers fit an artifact deck
+  Given a deck with "Kappa Cannoneer", which grows whenever an artifact you control enters
+  When a card that creates a Clue token and one that creates a Soldier token are scored
+  Then only the Clue maker fits the artifact theme
+
+Example: A token payoff asks for token makers
+  Given a deck with "Junk Winder", which taps a permanent whenever a token you control enters
+  When cards are scored
+  Then token makers fit the deck's token theme, and blink cards do not gain from it
+
+Example: A repeating engine outranks a one-shot that reaches every opponent
+  Given a draft whose commander is "Hylda of the Icy Crown"
+  When "Opposition" and "Cryptic Command" are scored
+  Then Opposition's tap counts for more
+
+Example: The modes of a repeating trigger repeat
+  Given a draft whose commander rewards tapping creatures
+  When "Dreamshackle Geist" and "Citadel Siege" are scored
+  Then their tap modes count as repeating
 ```
 
 ## Rule: A commander's own body is not its theme
@@ -289,9 +319,12 @@ pace ramp gets the whole bonus; ahead of it the bonus fades, and two cards ahead
 
 Only lasting ramp counts, both for the bonus and for the pace: a mana ability on a
 permanent that makes more mana than it costs, an extra land drop each turn, or a land put
-onto the battlefield, even by a sorcery. Treasure-only cards, one-shot spells and filters
-that turn one mana into another get no ramp bonus; Treasure decks still find Treasure
-makers through the `treasure` token.
+onto the battlefield, even by a sorcery. A mana ability whose cost uses something up —
+sacrificing, exiling or discarding, collecting evidence, removing counters — is not lasting:
+"Lotus Petal", "Elvish Spirit Guide", "Cryptex", charge-counter rocks and Eldrazi Spawn
+makers get no ramp bonus, while paying life, milling or tapping another creature still
+counts. Treasure-only cards, one-shot spells and filters that turn one mana into another get
+no ramp bonus; Treasure decks still find Treasure makers through the `treasure` token.
 
 ```gherkin
 Example: An expensive commander is offered cheap ramp
@@ -324,6 +357,11 @@ Example: Incidental Treasure and mana filters are not ramp
   Given a deck with a high mana appetite
   When an artifact that only creates Treasure tokens and "Prophetic Prism" are scored
   Then neither gets a ramp bonus
+
+Example: A rock that uses up the graveyard is not lasting ramp
+  Given a deck with a high mana appetite
+  When "Cryptex" and "Mind Stone" are scored
+  Then only "Mind Stone" gets a ramp bonus
 ```
 
 ## Rule: Tribal mode keeps creature slots on the chosen tribes
@@ -389,8 +427,8 @@ Example: Dungeon cards stay out by default
 A **Suggest ramp** checkbox in `customization` is on by default. While it is off, no
 lasting ramp is offered — not as a commander, not in any slot, even when it fits the theme.
 Lasting ramp is what the ramp score reads (`deck-draft/ADR-0009`): a mana ability that
-makes more mana than it costs, an extra land drop each turn, or a land put onto the
-battlefield. Treasure makers and one-shot mana spells are still offered. Turning it on or
+makes more mana than it costs without using anything up, an extra land drop each turn, or a
+land put onto the battlefield. Treasure makers and one-shot mana spells are still offered. Turning it on or
 off while drafting re-offers the current round at once.
 
 ```gherkin

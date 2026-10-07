@@ -178,6 +178,56 @@ describe("mechanic tokens", () => {
     expect(cardTokens(legend)).toContain("legendary");
     expect(themeTokens(legend)).not.toContain("legendary");
   });
+
+  it("takes a token entering for token making, not for enters triggers", () => {
+    const tokens = themeTokens(
+      card({
+        oracleText:
+          "Whenever a token you control enters, tap target nonland permanent an opponent controls.",
+      }),
+    );
+    expect(tokens).toContain("create token");
+    expect(tokens).not.toContain("etb");
+  });
+
+  it("lets artifacts and artifact token makers fit an artifact theme without signalling it", () => {
+    const rock = card({ typeLine: "Artifact", oracleText: "{T}: Add {C}{C}." });
+    expect(cardTokens(rock)).toContain("artifact");
+    expect(themeTokens(rock)).not.toContain("artifact");
+
+    const investigator = card({
+      oracleText:
+        "When this creature enters, investigate. (Create a Clue token. It's an artifact with \"{2}, Sacrifice this token: Draw a card.\")",
+    });
+    expect(cardTokens(investigator)).toContain("artifact");
+    expect(themeTokens(investigator)).not.toContain("artifact");
+
+    const soldierMaker = card({ oracleText: "Create a 1/1 white Soldier creature token." });
+    expect(cardTokens(soldierMaker)).not.toContain("artifact");
+  });
+
+  it("reads tapping several targets, and a payoff for tapping several creatures", () => {
+    expect(themeTokens(card({ typeLine: "Instant", oracleText: "Tap X target creatures." }))).toContain(
+      "tap creature",
+    );
+    expect(
+      themeTokens(
+        card({
+          oracleText: "Whenever you tap one or more untapped creatures your opponents control, draw a card.",
+        }),
+      ),
+    ).toContain("tap creature");
+  });
+
+  it("does not take an opponent tapping their own creature for tapping", () => {
+    const tokens = themeTokens(
+      card({
+        oracleText:
+          "At the beginning of each combat, if this creature is untapped, any opponent may tap an untapped creature they control. If they do, tap this creature.",
+      }),
+    );
+    expect(tokens).not.toContain("tap creature");
+  });
 });
 
 describe("commanderThemeTokens", () => {
@@ -523,6 +573,40 @@ describe("tokenStrengths", () => {
         "tap creature",
       ),
     ).toBe(REPEATABLE_STRENGTH);
+  });
+
+  it("strengthens the modes of a repeating trigger, whatever their label", () => {
+    expect(
+      strength(
+        {
+          oracleText:
+            "At the beginning of combat on your turn, choose up to one —\n• Tap target creature.\n• Target creature doesn't untap during its controller's next untap step.",
+        },
+        "tap creature",
+      ),
+    ).toBe(REPEATABLE_STRENGTH);
+    expect(
+      strength(
+        {
+          typeLine: "Enchantment",
+          oracleText:
+            "As this enchantment enters, choose Khans or Dragons.\n• Khans — At the beginning of combat on your turn, put two +1/+1 counters on target creature you control.\n• Dragons — At the beginning of combat on each opponent's turn, tap target creature that player controls.",
+        },
+        "tap creature",
+      ),
+    ).toBe(REPEATABLE_STRENGTH * MULTIPLAYER_STRENGTH);
+    expect(
+      strength({ typeLine: "Instant", oracleText: "Choose one —\n• Tap target creature.\n• Draw a card." }, "tap creature"),
+    ).toBe(1);
+  });
+
+  it("ranks a repeatable engine over a one-shot that reaches every opponent", () => {
+    const engine = strength(
+      { typeLine: "Enchantment", oracleText: "Tap an untapped creature you control: Tap target artifact, creature, or land." },
+      "tap creature",
+    );
+    const burst = strength({ typeLine: "Instant", oracleText: "Tap all creatures your opponents control." }, "tap creature");
+    expect(engine).toBeGreaterThan(burst);
   });
 
   it("strengthens an effect that reaches every opponent", () => {

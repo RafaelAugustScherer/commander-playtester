@@ -17,8 +17,9 @@ const EXTRA_LAND = /\bplay (?:an|two|three) additional lands?\b/i;
 const TREASURE = /\bcreates? [^.]*\btreasure tokens?\b/i;
 const KEYWORD_WITH_COST = /^[A-Z][a-z]+(?: [a-z]+)?$/;
 const FROM_HAND_COST = /\bdiscard this card\b/i;
+const USED_UP_COST = /\b(?:sacrifice|exile|discard|collect evidence|remove)\b/i;
 
-function costMana(cost: string): number {
+export function costMana(cost: string): number {
   let mana = 0;
   for (const symbol of cost.split("{").slice(1).map((part) => part.split("}")[0])) {
     if (/^\d+$/.test(symbol)) mana += Number(symbol);
@@ -75,6 +76,14 @@ function makesNetMana(line: string): boolean {
   return manaProduced(line) > activationMana(line);
 }
 
+function manaCostText(line: string): string {
+  return line.slice(0, line.search(MANA_WORDING)).split(/[".]/).pop() ?? "";
+}
+
+function usesNothingUp(line: string): boolean {
+  return !USED_UP_COST.test(manaCostText(line));
+}
+
 export function manaAbilityLines(card: RampCard): string[] {
   if (ONE_SHOT_SPELL.test(card.typeLine)) return [];
   return rulesLines(card).filter((line) => MANA_WORDING.test(line) && makesNetMana(line));
@@ -111,7 +120,8 @@ export function isLastingRamp(card: RampCard): boolean {
     lasting =
       kind === "extra land"
         ? !ONE_SHOT_SPELL.test(card.typeLine)
-        : kind === "land search" || kind === "mana";
+        : kind === "land search" ||
+          (kind === "mana" && manaAbilityLines(card).some(usesNothingUp));
     lastingRampCache.set(key, lasting);
   }
   return lasting;

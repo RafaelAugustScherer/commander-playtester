@@ -32,7 +32,9 @@ describe("isLastingRamp", () => {
   it.each([
     ["Artifact", "{T}: Add {C}{C}."],
     ["Artifact", "{1}, {T}: Add {W}{U}."],
-    ["Artifact", "{T}, Sacrifice this artifact: Add one mana of any color."],
+    ["Artifact", "{T}, Pay 1 life: Add one mana of any color."],
+    ["Artifact Creature — Insect", "{T}, Mill a card: Add {C}."],
+    ["Artifact", "{T}, Tap an untapped creature you control: Add one mana of any color."],
     ["Creature — Elf Druid", "{T}: Add an amount of {G} equal to this creature's power."],
     ["Legendary Creature — Human Druid", "You may play two additional lands on each of your turns."],
     ["Enchantment — Aura", "Whenever enchanted land is tapped for mana, its controller adds an additional {G}."],
@@ -49,6 +51,12 @@ describe("isLastingRamp", () => {
     ["Instant", "Add {R}{R}{R}."],
     ["Sorcery", "Draw a card. You may play an additional land this turn."],
     ["Creature — Snake", "Channel — {1}{G}, Discard this card: Add {G}{G}{G}."],
+    ["Artifact", "{T}, Sacrifice this artifact: Add one mana of any color."],
+    ["Artifact", "{T}, Collect evidence 3: Add one mana of any color. Put an unlock counter on this artifact."],
+    ["Creature — Elf Spirit", "Exile this card from your hand: Add {G}."],
+    ["Artifact", "Sacrifice a creature: Add {C}{C}."],
+    ["Artifact", "{T}, Remove a charge counter from this artifact: Add one mana of any color."],
+    ["Creature — Eldrazi Drone", "When this creature enters, create a 1/1 colorless Eldrazi Scion creature token. It has \"Sacrifice this token: Add {C}.\""],
     ["Artifact", "Search your library for an artifact card, put it into your hand. (Then put a land onto the battlefield.)"],
   ])("does not count a %s worded %j", (typeLine, oracleText) => {
     expect(isLastingRamp(card(typeLine, oracleText))).toBe(false);
