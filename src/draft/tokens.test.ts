@@ -44,7 +44,7 @@ describe("cardTokens", () => {
   });
 
   it("has no subtype tokens when the type line carries none", () => {
-    const tokens = cardTokens(card({ typeLine: "Sorcery" }));
+    const tokens = cardTokens(card({ typeLine: "Enchantment" }));
     expect(tokens.size).toBe(0);
   });
 
@@ -665,5 +665,86 @@ describe("tokenStrengths", () => {
     expect(
       strength({ typeLine: "Sorcery", oracleText: "Each player draws two cards." }, "draw a card"),
     ).toBe(1);
+  });
+});
+
+const MIZZIX_TEXT =
+  "Whenever you cast an instant or sorcery spell with mana value greater than the number of experience counters you have, you get an experience counter.\nInstant and sorcery spells you cast cost {1} less to cast for each experience counter you have.";
+const GRAPESHOT_TEXT =
+  "Grapeshot deals 1 damage to any target.\nStorm (When you cast this spell, copy it for each spell cast before it this turn. You may choose new targets for the copies.)";
+const TREASURE_CRUISE_TEXT =
+  "Delve (Each card you exile from your graveyard while casting this spell pays for {1}.)\nDraw three cards.";
+const BLUSTERSQUALL_TEXT =
+  "Tap target creature you don't control.\nOverload {3}{U} (You may cast this spell for its overload cost. If you do, change \"target\" in its text to \"each.\")";
+
+describe("spell keywords", () => {
+  const sorcery = (oracleText: string) => card({ typeLine: "Sorcery", oracleText });
+
+  it("reads casting instants and sorceries, and reducing their cost, from a commander", () => {
+    const tokens = commanderThemeTokens(card({ oracleText: MIZZIX_TEXT }));
+    expect(tokens).toContain("instant or sorcery");
+    expect(tokens).toContain("cost reduction");
+    expect(rewardedTokens(card({ oracleText: MIZZIX_TEXT }))).toContain("instant or sorcery");
+  });
+
+  it("fits every instant and sorcery to a deck that casts them", () => {
+    expect(fitsToken(card({ typeLine: "Instant" }), "instant or sorcery")).toBe(true);
+    expect(fitsToken(card({ typeLine: "Enchantment" }), "instant or sorcery")).toBe(false);
+  });
+
+  it("does not take an instant or sorcery card in a graveyard for casting them", () => {
+    const text = "Sacrifice this creature: You may cast target instant or sorcery card from your graveyard.";
+    expect(themeTokens(card({ oracleText: text }))).not.toContain("instant or sorcery");
+  });
+
+  it("takes only cost reductions that reach instants and sorceries", () => {
+    const reduces = (oracleText: string) => themeTokens(card({ oracleText })).has("cost reduction");
+    expect(reduces("Instant and sorcery spells you cast cost {1} less to cast.")).toBe(true);
+    expect(reduces("Blue spells you cast cost {1} less to cast.")).toBe(true);
+    expect(reduces("Spells cost {1} less to cast.")).toBe(true);
+    expect(reduces("Goblin spells you cast cost {1} less to cast.")).toBe(false);
+    expect(reduces("Creature spells you cast cost {1} less to cast.")).toBe(false);
+  });
+
+  it("reads storm as a keyword, not as a word in a card's name", () => {
+    expect(themeTokens(sorcery(GRAPESHOT_TEXT))).toContain("storm");
+    const comet = themeTokens(card({ typeLine: "Instant", oracleText: "Comet Storm deals X damage to each of them." }));
+    expect(comet).not.toContain("storm");
+    expect(comet).not.toContain("copy spell");
+  });
+
+  it("fits storm to what feeds it, and what feeds it to storm", () => {
+    expect(fitsToken(sorcery(GRAPESHOT_TEXT), "cost reduction")).toBe(true);
+    const electromancer = card({ oracleText: "Instant and sorcery spells you cast cost {1} less to cast." });
+    expect(fitsToken(electromancer, "storm")).toBe(true);
+    expect(fitsToken(electromancer, "overload")).toBe(true);
+  });
+
+  it("fits delve to milling, and milling to delve", () => {
+    expect(fitsToken(sorcery(TREASURE_CRUISE_TEXT), "mill")).toBe(true);
+    expect(fitsToken(sorcery(TREASURE_CRUISE_TEXT), "discard a card")).toBe(true);
+    expect(fitsToken(card({ oracleText: "When this creature enters, mill three cards." }), "delve")).toBe(true);
+    expect(tokenSearches("mill")).toContain("delve");
+  });
+
+  it("reads a kicked-spell payoff as rewarding kicker", () => {
+    const verazol = card({
+      oracleText: "Whenever you cast a kicked spell, you may remove two +1/+1 counters from this creature. If you do, copy that spell.",
+    });
+    expect(rewardedTokens(verazol)).toContain("kicker");
+    expect(themeTokens(sorcery("Kicker {2}{G}\nSearch your library for a basic land card."))).toContain("kicker");
+  });
+
+  it("fits only a kicked instant or sorcery to cost reduction", () => {
+    const text = "Multikicker {2}\nThis artifact enters with a charge counter on it for each time it was kicked.";
+    expect(fitsToken(sorcery(text), "cost reduction")).toBe(true);
+    expect(fitsToken(card({ typeLine: "Artifact", oracleText: text }), "cost reduction")).toBe(false);
+  });
+
+  it("counts everything an overloaded spell fits as reaching every opponent", () => {
+    const blustersquall = card({ typeLine: "Instant", oracleText: BLUSTERSQUALL_TEXT });
+    expect(tokenStrengths(blustersquall).get("tap creature")).toBe(MULTIPLAYER_STRENGTH);
+    expect(tokenStrengths(blustersquall).get("instant or sorcery")).toBe(MULTIPLAYER_STRENGTH);
+    expect(tokenStrengths(blustersquall).get("cost reduction")).toBe(MULTIPLAYER_STRENGTH);
   });
 });
