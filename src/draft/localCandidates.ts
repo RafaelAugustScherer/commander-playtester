@@ -1,6 +1,6 @@
 import type { DraftCandidateData } from "../engine/draftQueries";
 import { classifyRoles } from "../lib/roles";
-import type { Card } from "../lib/types";
+import { cardKey, type Card } from "../lib/types";
 import { scoreCandidate, type CandidateScore } from "./scoring";
 import type { ThemeProfile } from "./themes";
 
@@ -9,13 +9,14 @@ export interface LocallyRankedCandidate {
   score: CandidateScore;
 }
 
-const candidateCards = new WeakMap<DraftCandidateData, Card>();
+const candidateCards = new Map<string, Card>();
 
 export function draftCandidateCard(candidate: DraftCandidateData): Card {
-  let card = candidateCards.get(candidate);
+  const key = cardKey(candidate);
+  let card = candidateCards.get(key);
   if (!card) {
     card = buildCandidateCard(candidate);
-    candidateCards.set(candidate, card);
+    candidateCards.set(key, card);
   }
   return card;
 }

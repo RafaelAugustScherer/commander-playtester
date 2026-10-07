@@ -4,6 +4,7 @@ import { createDraftRanker } from "./draftRanking";
 import type { CardFaceData, DraftQueryExports, SearchCardRow } from "./draftQueries";
 import { extractThemeProfile } from "../draft/themes";
 import { draftCandidateCard } from "../draft/localCandidates";
+import type { DraftCardType } from "../draft/typeBalance";
 
 interface FakeCard {
   name: string;
@@ -190,8 +191,21 @@ describe("createDraftRanker power pools", () => {
     printings: 1,
   };
 
-  it("reaches a little-printed creature of the named power past popular ones of another", () => {
-    const { queries, cardDataJson } = fakeEngine([POWER_COMMANDER, RARE_SMALL, ...BIG_FILLERS]);
+  const RARE_TOKEN_MAKER: FakeCard = {
+    name: "Rare Small Muster",
+    coreTypes: ["Sorcery"],
+    oracleText: "Create two 1/1 white Soldier creature tokens.",
+    printings: 1,
+  };
+  const POPULAR_SORCERIES: FakeCard[] = Array.from({ length: 300 }, (_, i) => ({
+    name: `Popular Study ${i}`,
+    coreTypes: ["Sorcery"],
+    oracleText: "Scry 1.",
+    printings: 20,
+  }));
+
+  const suggest = (cards: FakeCard[], slotType: DraftCardType) => {
+    const { queries, cardDataJson } = fakeEngine([POWER_COMMANDER, ...cards]);
     const ranker = createDraftRanker(queries, cardDataJson);
     const commander = draftCandidateCard({
       name: POWER_COMMANDER.name,
@@ -202,22 +216,31 @@ describe("createDraftRanker power pools", () => {
       colorIdentity: ["W"],
     });
     const profile = extractThemeProfile([commander], []);
+    return ranker
+      .rankCardCandidates({
+        commanders: [POWER_COMMANDER.name],
+        mainboard: [],
+        profile: {
+          ...profile,
+          tokenWeights: [...profile.tokenWeights],
+          creatureTypes: [...profile.creatureTypes],
+        },
+        target: "focused",
+        customization: DEFAULT_CUSTOMIZATION,
+        exclude: [POWER_COMMANDER.name.toLowerCase()],
+        slotTypes: [slotType],
+      })
+      .candidates.map((c) => c.name);
+  };
 
-    const { candidates } = ranker.rankCardCandidates({
-      commanders: [POWER_COMMANDER.name],
-      mainboard: [],
-      profile: {
-        ...profile,
-        tokenWeights: [...profile.tokenWeights],
-        creatureTypes: [...profile.creatureTypes],
-      },
-      target: "focused",
-      customization: DEFAULT_CUSTOMIZATION,
-      exclude: [POWER_COMMANDER.name.toLowerCase()],
-      slotTypes: ["creature"],
-    });
+  it("reaches a little-printed creature of the named power past popular ones of another", () => {
+    expect(suggest([RARE_SMALL, ...BIG_FILLERS], "creature")).toEqual([RARE_SMALL.name]);
+  });
 
-    expect(candidates.map((c) => c.name)).toEqual([RARE_SMALL.name]);
+  it("reaches a little-printed maker of tokens of the named power", () => {
+    expect(suggest([RARE_TOKEN_MAKER, ...POPULAR_SORCERIES], "sorcery")).toEqual([
+      RARE_TOKEN_MAKER.name,
+    ]);
   });
 });
 

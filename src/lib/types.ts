@@ -50,3 +50,12 @@ export interface ResolvedDeck {
 export function isLand(card: Card): boolean {
   return /\bLand\b/.test(card.typeLine);
 }
+
+export function isCreature(card: Card): boolean {
+  return /\bCreature\b/.test(card.typeLine);
+}
+
+/** Identifies a card's name, type line and rules text, for keeping what is computed from them. */
+export function cardKey(card: { name?: string; typeLine: string; oracleText: string }): string {
+  return `${card.name ?? ""}\u0000${card.typeLine}\u0000${card.oracleText}`;
+}

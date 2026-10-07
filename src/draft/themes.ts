@@ -1,5 +1,5 @@
 import { isLastingRamp, manaSpent } from "../lib/ramp";
-import { isLand, type Card, type CardRole } from "../lib/types";
+import { isCreature, isLand, type Card, type CardRole } from "../lib/types";
 import { commanderThemeTokens, creatureTypesOf, themeTokens, rewardedTokens } from "./tokens";
 
 /** How many times a commander's tokens count against the same token from the 99. */
@@ -87,7 +87,7 @@ export function extractThemeProfile(
     }
   }
   for (const card of [...commanders, ...others]) {
-    if (!/\bCreature\b/.test(card.typeLine)) continue;
+    if (!isCreature(card)) continue;
     creatureCount++;
     for (const type of creatureTypesOf(card)) {
       creatureTypes.set(type, (creatureTypes.get(type) ?? 0) + 1);

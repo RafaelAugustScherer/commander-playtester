@@ -9,7 +9,6 @@ import type {
   SearchCardRow,
 } from "./draftQueries";
 import { frontFace } from "../lib/cardName";
-import type { Card } from "../lib/types";
 import { bracketTilt } from "../draft/bracket";
 import {
   draftCandidateCard,
@@ -19,14 +18,8 @@ import {
 import type { ThemeProfile } from "../draft/themes";
 import { isUtilityLand } from "../draft/lands";
 import { isSuggestable } from "../draft/customization";
-import {
-  cardTokens,
-  fitsPowerToken,
-  isOfTribe,
-  isPowerToken,
-  mentionsSubtype,
-  tokenSearches,
-} from "../draft/tokens";
+import { isPowerToken } from "../draft/powerTokens";
+import { fitsToken, isOfTribe, mentionsSubtype, tokenSearches } from "../draft/tokens";
 import {
   DRAFT_CARD_TYPES,
   allocateSlots,
@@ -70,7 +63,7 @@ const TYPE_LINE_FILTER: Record<DraftCardType, string> = {
 interface CardRecord {
   card_type?: CardFaceData["card_type"];
   metadata?: { source_printing_ids?: unknown };
-  printings?: unknown;
+  printings?: string[];
 }
 
 export interface DraftRanker {
@@ -144,18 +137,10 @@ function printingCountsOf(records: Record<string, CardRecord>): Map<string, numb
     const ids = record?.metadata?.source_printing_ids;
     counts.set(
       key.toLowerCase(),
-      Math.max(
-        Array.isArray(ids) ? ids.length : 0,
-        Array.isArray(record?.printings) ? record.printings.length : 0,
-      ),
+      Math.max(Array.isArray(ids) ? ids.length : 0, record?.printings?.length ?? 0),
     );
   }
   return counts;
-}
-
-function fitsToken(card: Card, token: string, searches: string[] | null): boolean {
-  if (isPowerToken(token)) return fitsPowerToken(card, token);
-  return !searches || cardTokens(card).has(token);
 }
 
 export function createDraftRanker(
@@ -260,20 +245,29 @@ export function createDraftRanker(
     let candidates = themeCache.get(key);
     if (!candidates) {
       const searches = tokenSearches(token);
-      const rows = isPowerToken(token)
-        ? typeLineRows("Creature", identity)
-        : searchedRows(searches ?? [token], identity);
+      const powerToken = isPowerToken(token);
+      const filtered = searches !== null || powerToken;
+      const rows = powerToken ? powerRows(identity) : searchedRows(searches ?? [token], identity);
       candidates = [];
       for (const row of rows) {
         if (candidates.length >= THEME_CANDIDATES_PER_TOKEN) break;
         const candidate = candidateOf(row);
         if (!candidate) continue;
-        if (!fitsToken(draftCandidateCard(candidate), token, searches)) continue;
+        if (filtered && !fitsToken(draftCandidateCard(candidate), token)) continue;
         candidates.push(candidate);
       }
       themeCache.set(key, candidates);
     }
     return candidates;
+  }
+
+  function powerRows(identity: string[]): SearchCardRow[] {
+    const tokenMakers = searchedRows(["create token"], identity);
+    const seen = new Set(tokenMakers.map((row) => row.name.toLowerCase()));
+    return [
+      ...tokenMakers,
+      ...typeLineRows("Creature", identity).filter((row) => !seen.has(row.name.toLowerCase())),
+    ].sort((a, b) => popularityBonus(b.name) - popularityBonus(a.name));
   }
 
   function typeLineRows(typeLine: string, identity: string[]): SearchCardRow[] {

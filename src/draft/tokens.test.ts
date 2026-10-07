@@ -3,7 +3,7 @@ import {
   cardTokens,
   creatureTypesOf,
   commanderThemeTokens,
-  fitsPowerToken,
+  fitsToken,
   isOfTribe,
   servesTribe,
   mentionsSubtype,
@@ -14,6 +14,7 @@ import {
   REPEATABLE_STRENGTH,
   MULTIPLAYER_STRENGTH,
 } from "./tokens";
+import { fitsPowerCondition } from "./powerTokens";
 import type { Card } from "../lib/types";
 
 function card(overrides: Partial<Card> = {}): Card {
@@ -335,21 +336,21 @@ describe("power conditions", () => {
   });
 });
 
-describe("fitsPowerToken", () => {
+describe("fitsPowerCondition", () => {
   it("fits a creature by its printed power", () => {
     const bear = card({ power: 2 });
-    expect(fitsPowerToken(bear, "base power 2")).toBe(true);
-    expect(fitsPowerToken(bear, "base power 1")).toBe(false);
-    expect(fitsPowerToken(bear, "power 2 or less")).toBe(true);
-    expect(fitsPowerToken(bear, "power 1 or less")).toBe(false);
-    expect(fitsPowerToken(bear, "power 2 or greater")).toBe(true);
-    expect(fitsPowerToken(bear, "power 3 or greater")).toBe(false);
+    expect(fitsPowerCondition(bear, "base power 2")).toBe(true);
+    expect(fitsPowerCondition(bear, "base power 1")).toBe(false);
+    expect(fitsPowerCondition(bear, "power 2 or less")).toBe(true);
+    expect(fitsPowerCondition(bear, "power 1 or less")).toBe(false);
+    expect(fitsPowerCondition(bear, "power 2 or greater")).toBe(true);
+    expect(fitsPowerCondition(bear, "power 3 or greater")).toBe(false);
   });
 
   it("does not fit a creature whose power is not a fixed number", () => {
     const star = card({ typeLine: "Creature — Elemental" });
-    expect(fitsPowerToken(star, "base power 1")).toBe(false);
-    expect(fitsPowerToken(star, "power 4 or greater")).toBe(false);
+    expect(fitsPowerCondition(star, "base power 1")).toBe(false);
+    expect(fitsPowerCondition(star, "power 4 or greater")).toBe(false);
   });
 
   it("fits a card that creates a creature token of that power", () => {
@@ -357,21 +358,31 @@ describe("fitsPowerToken", () => {
       typeLine: "Sorcery",
       oracleText: "Create two 1/1 white Soldier creature tokens.",
     });
-    expect(fitsPowerToken(makesSoldiers, "base power 1")).toBe(true);
-    expect(fitsPowerToken(makesSoldiers, "power 2 or greater")).toBe(false);
+    expect(fitsPowerCondition(makesSoldiers, "base power 1")).toBe(true);
+    expect(fitsPowerCondition(makesSoldiers, "power 2 or greater")).toBe(false);
   });
 
   it("fits a card with offspring through its token copy", () => {
-    expect(fitsPowerToken(card({ oracleText: ZINNIA_TEXT }), "base power 1")).toBe(true);
+    expect(fitsPowerCondition(card({ oracleText: ZINNIA_TEXT }), "base power 1")).toBe(true);
   });
 
   it("does not fit a non-creature by its power", () => {
     const vehicle = card({ typeLine: "Artifact — Vehicle", power: 1 });
-    expect(fitsPowerToken(vehicle, "base power 1")).toBe(false);
+    expect(fitsPowerCondition(vehicle, "base power 1")).toBe(false);
   });
 
   it("does not fit a token that is not a power condition", () => {
-    expect(fitsPowerToken(card({ power: 1 }), "elf")).toBe(false);
+    expect(fitsPowerCondition(card({ power: 1 }), "elf")).toBe(false);
+  });
+});
+
+describe("fitsToken", () => {
+  it("fits a token the card has or a power condition it meets", () => {
+    const elf = card({ typeLine: "Creature — Elf", power: 2 });
+    expect(fitsToken(elf, "elf")).toBe(true);
+    expect(fitsToken(elf, "base power 2")).toBe(true);
+    expect(fitsToken(elf, "base power 1")).toBe(false);
+    expect(fitsToken(elf, "goblin")).toBe(false);
   });
 });
 
@@ -521,6 +532,23 @@ describe("tokenStrengths", () => {
     expect(
       strength({ typeLine: "Instant", oracleText: "Tap target creature." }, "tap creature"),
     ).toBe(1);
+  });
+
+  it("strengthens creature etb by its clause", () => {
+    const repeating = "Whenever another creature you control enters, you gain 1 life.";
+    expect(strength({ oracleText: repeating }, "creature etb")).toBe(REPEATABLE_STRENGTH);
+    expect(
+      strength({ oracleText: "When this creature enters, you gain 1 life." }, "creature etb"),
+    ).toBe(1);
+    expect(
+      strength(
+        {
+          oracleText:
+            "Whenever another creature you control enters, you gain 1 life.\nWhenever an opponent's creature enters, each opponent loses 1 life.",
+        },
+        "creature etb",
+      ),
+    ).toBe(REPEATABLE_STRENGTH * MULTIPLAYER_STRENGTH);
   });
 
   it("ranks each end step over your end step over your next end step", () => {

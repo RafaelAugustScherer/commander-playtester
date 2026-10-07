@@ -169,7 +169,7 @@ A power the rules text names is a mechanic too: "base power 1", "power 2 or less
 names an opponent's creatures or concerns blocking, or asks for a total power. A card fits it when it is a creature with
 that printed power (a `*` power fits nothing) or creates a creature token of that power, so a
 commander that pays off small creatures is offered small creatures. Each power token's pool
-is the most-played creatures of that power in the deck's colour identity.
+is the most-played creatures and token makers that fit it in the deck's colour identity.
 
 Enters triggers split by what enters. `etb` is any permanent entering ("Whenever another
 permanent enters", a trigger that fires an additional time for a permanent entering) and
