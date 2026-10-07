@@ -42,18 +42,24 @@ has, and the reverse holds too.
 
 - New tokens:
   - `instant or sorcery`: "instant or sorcery spell(s)" and magecraft. Casting, copying and
-    cost reduction count. "Instant or sorcery card" (graveyard and library references) does
-    not. Every instant and sorcery enables it.
+    cost reduction count. These don't count:
+    - "Instant or sorcery card" (graveyard and library references).
+    - Countering, targeting or stopping such spells, or an opponent casting them (Azor, the
+      Lawbringer, Cursecatcher, Mage Hunter).
+
+    Every instant and sorcery enables it.
   - `cost reduction`: "spells (you cast) cost … less" for spells of every kind, for
     instants and sorceries, for noncreature spells or for a colour. "Goblin spells" and
     "creature spells" don't count.
-  - `storm`, `delve`, `kicker` and `overload`, read as keywords at the start of a line. Kicker
+  - `storm`, `delve`, `kicker` and `overload`, read as keywords at the start of a line. Storm
+    must stand alone or open its reminder, so "Storm Seeker deals …" is not storm. Kicker
     also reads "kicked", so a kicked-spell payoff rewards it. `copy spell` reads storm the
     same way.
 - Partners, fitted both ways:
   - storm with `cost reduction` and `instant or sorcery`
   - delve with `mill` and `discard a card`
-  - kicker with `cost reduction` (only when the kicker card is an instant or sorcery)
+  - kicker with `cost reduction`, through the existing enabler fields: an instant or sorcery
+    with kicker enables cost reduction, and a cost reducer enables kicker
   - overload with `cost reduction`
 - A partner's searches join its token's pool, so a mill deck's pool reaches delve cards.
 - An overloaded spell reaches every opponent: everything it fits counts ×1.5
@@ -119,8 +125,18 @@ Krenko, Urza and Muldrotha are unchanged.
   signalling it
 - which cost reductions count
 - storm read as a keyword, not as part of a name
-- each partner pair, both ways, and a partner's searches
-- the kicked-spell payoff, and kicker permanents not fitting cost reduction
+- the useful direction of each partner pair:
+  - storm and cost reducers, both ways
+  - spellslinger text → storm
+  - delve and mill, both ways
+  - discard → delve
+  - cost reducers → overload and kicker
+  - overload → cost reduction
+- the cost reduction token's searches
+- the kicked-spell payoff
+- kicker permanents, and "if it was kicked" without kicker, not fitting cost reduction
+- counters, locks and opponent triggers not signalling `instant or sorcery`, and a Storm name
+  not reading as storm
 - overload strength on every token an overloaded spell fits
 
 ## More Information

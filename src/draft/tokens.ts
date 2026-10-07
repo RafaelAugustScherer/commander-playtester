@@ -9,7 +9,7 @@ import { rulesLines, withoutReminder } from "../lib/rulesText";
  * it — fodder a theme wants, which does not make a theme of its own
  * (`deck-draft/ADR-0005`). `enabler` fits only where `enablerTypeLine` matches
  * too, when it is set. Matching `reward` makes a commander reward the token
- * without making it a theme signal.
+ * without making it a theme signal. A token and its `partners` fit each other.
  */
 export interface OracleTextPattern {
   token: string;
@@ -22,7 +22,6 @@ export interface OracleTextPattern {
   /** Free-text searches that together reach every match; defaults to the token. */
   search?: string[];
   partners?: string[];
-  partnerTypeLine?: RegExp;
 }
 
 const PERMANENT_ETB_MULTIPLIER = /\bentering\b[^.]*\btriggers? an additional time\b/i;
@@ -31,6 +30,11 @@ const ARTIFACT_TOKEN_MAKER =
   /\bcreates?\b[^.]*\b(?:artifact|treasure|clue|food|blood|gold|powerstone|map|junk|incubator|lander)\b[^.]*\btokens?\b/i;
 
 const INSTANT_OR_SORCERY = /\b(?:Instant|Sorcery)\b/;
+const STORM = /^storm(?:$| \()/im;
+const KICKER = /^(?:multi)?kicker\b/im;
+const OVERLOAD = /^overload\b/im;
+const COST_REDUCTION =
+  /(?:^|[.:]\s+|\b(?:sorcery|noncreature|white|blue|black|red|green|multicolored) )spells (?:you cast )?cost\b[^.]*\bless\b/im;
 
 const COMBAT_KEYWORDS = [
   "flying", "deathtouch", "lifelink", "trample", "menace", "first strike", "double strike",
@@ -174,35 +178,38 @@ export const ORACLE_TEXT_PATTERNS: OracleTextPattern[] = [
   { token: "blood", pattern: /\bblood tokens?\b/i },
   {
     token: "copy spell",
-    pattern: [/\bcop(?:y|ies)\b[^.]*\bspells?\b/i, /^storm\b/im],
+    pattern: [/\bcop(?:y|ies)\b[^.]*\bspells?\b/i, STORM],
     search: ["copy", "storm"],
   },
   {
     token: "instant or sorcery",
-    pattern: /\binstant (?:or|and) sorcery spells?\b|\bmagecraft\b/i,
+    pattern: [
+      /(?<!\b(?:counter|targets|can't cast|opponents? casts?)\b[^.,]{0,40})\binstant (?:or|and) sorcery spells?\b/i,
+      /\bmagecraft\b/i,
+    ],
     typeLineEnabler: INSTANT_OR_SORCERY,
     search: ["instant sorcery", "magecraft"],
   },
   {
     token: "cost reduction",
-    pattern:
-      /(?:^|[.:]\s+|\b(?:sorcery|noncreature|white|blue|black|red|green|multicolored) )spells (?:you cast )?cost\b[^.]*\bless\b/im,
-    search: ["cost less"],
+    pattern: COST_REDUCTION,
+    enabler: KICKER,
+    enablerTypeLine: INSTANT_OR_SORCERY,
+    search: ["cost less", "kicker"],
   },
   {
     token: "storm",
-    pattern: /^storm\b/im,
+    pattern: STORM,
     partners: ["cost reduction", "instant or sorcery"],
   },
   { token: "delve", pattern: /^delve\b/im, partners: ["mill", "discard a card"] },
   {
     token: "kicker",
-    pattern: [/^(?:multi)?kicker\b/im, /\bkicked\b/i],
-    partners: ["cost reduction"],
-    partnerTypeLine: INSTANT_OR_SORCERY,
-    search: ["kicker", "kicked"],
+    pattern: [KICKER, /\bkicked\b/i],
+    enabler: COST_REDUCTION,
+    search: ["kicker", "kicked", "cost less"],
   },
-  { token: "overload", pattern: /^overload\b/im, partners: ["cost reduction"] },
+  { token: "overload", pattern: OVERLOAD, partners: ["cost reduction"] },
   { token: "energy", pattern: /\{E\}|\benergy counters?\b/i },
   { token: "experience counter", pattern: /\bexperience counters?\b/i, search: ["experience"] },
   {
@@ -383,7 +390,6 @@ export function cardTokens(card: Card): ReadonlySet<string> {
   if (!tokens) {
     const found = new Set(themeTokens(card));
     for (const token of themeTokens(card)) {
-      if (PATTERNS_BY_TOKEN.get(token)?.partnerTypeLine?.test(card.typeLine) === false) continue;
       for (const partner of PARTNERS.get(token) ?? []) found.add(partner);
     }
     for (const pattern of ORACLE_TEXT_PATTERNS) {
@@ -408,17 +414,15 @@ const ACTIVATED_CLAUSE = /^[^:."—•]*:/;
 const MULTIPLAYER_CLAUSE =
   /\b(?:each opponent|your opponents|all opponents|each other player|whenever an opponent|at the beginning of each)\b/i;
 
-const OVERLOAD = /^overload\b/im;
-
 const MODE_LABEL = /^•\s*(?:[^—.]{1,30}—\s*)?/;
 
 function isRepeatable(clause: string): boolean {
   return TRIGGERED_CLAUSE.test(clause.trimStart()) || ACTIVATED_CLAUSE.test(clause);
 }
 
-function clauseStrength(clause: string, repeatable: boolean, reachesAll: boolean): number {
+function clauseStrength(clause: string, repeatable: boolean): number {
   let strength = repeatable ? REPEATABLE_STRENGTH : 1;
-  if (reachesAll || MULTIPLAYER_CLAUSE.test(clause)) strength *= MULTIPLAYER_STRENGTH;
+  if (MULTIPLAYER_CLAUSE.test(clause)) strength *= MULTIPLAYER_STRENGTH;
   return strength;
 }
 
@@ -432,7 +436,7 @@ function clauseTokens(clause: string, card: Card): Set<string> {
 
 const strengthCache = new Map<string, ReadonlyMap<string, number>>();
 
-function clauseStrengths(card: Card, overloaded: boolean): Map<string, number> {
+function clauseStrengths(card: Card): Map<string, number> {
   const found = new Map<string, number>();
   const oneShotCard = INSTANT_OR_SORCERY.test(card.typeLine);
   let headerRepeats = false;
@@ -441,7 +445,7 @@ function clauseStrengths(card: Card, overloaded: boolean): Map<string, number> {
     const clause = isMode ? line.replace(MODE_LABEL, "") : line;
     const repeats: boolean = isRepeatable(clause) || (isMode && headerRepeats);
     if (!isMode) headerRepeats = repeats;
-    const strength = clauseStrength(clause, !oneShotCard && repeats, overloaded);
+    const strength = clauseStrength(clause, !oneShotCard && repeats);
     for (const token of clauseTokens(clause, card)) {
       found.set(token, Math.max(found.get(token) ?? 1, strength));
     }
@@ -453,14 +457,9 @@ export function tokenStrengths(card: Card): ReadonlyMap<string, number> {
   const key = cardKey(card);
   let strengths = strengthCache.get(key);
   if (!strengths) {
-    const overloaded = OVERLOAD.test(card.oracleText);
-    const found = clauseStrengths(card, overloaded);
-    if (overloaded) {
-      for (const token of cardTokens(card)) {
-        if (!found.has(token)) found.set(token, MULTIPLAYER_STRENGTH);
-      }
-    }
-    strengths = found;
+    strengths = themeTokens(card).has("overload")
+      ? new Map([...cardTokens(card)].map((token) => [token, MULTIPLAYER_STRENGTH]))
+      : clauseStrengths(card);
     strengthCache.set(key, strengths);
   }
   return strengths;

@@ -164,7 +164,7 @@ it is not an enters trigger for blink.
 
 Spell keywords fit what feeds them, both ways (`deck-draft/ADR-0012`). Casting instants and
 sorceries ("instant or sorcery spell", magecraft) is a theme, and every instant and sorcery
-fits it. So is reducing the cost of spells that include instants and sorceries; "Goblin
+fits it. Countering, targeting or stopping those spells, or an opponent casting them, is not. So is reducing the cost of spells that include instants and sorceries; "Goblin
 spells cost {1} less" is not. Storm fits cost reduction and casting instants and sorceries.
 Delve fits milling and discarding. Kicker on an instant or sorcery fits cost reduction, and so
 does overload. A kicked-spell payoff ("Whenever you cast a kicked spell") rewards kicker.

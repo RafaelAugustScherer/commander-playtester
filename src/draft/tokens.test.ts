@@ -697,6 +697,21 @@ describe("spell keywords", () => {
     expect(themeTokens(card({ oracleText: text }))).not.toContain("instant or sorcery");
   });
 
+  it("does not take stopping or punishing instants and sorceries for casting them", () => {
+    const texts = [
+      "When Azor enters, each opponent can't cast instant or sorcery spells during that player's next turn.",
+      "Sacrifice this creature: Counter target red instant or sorcery spell.",
+      "Whenever an opponent casts or copies an instant or sorcery spell, they lose 1 life.",
+      "This spell costs {1}{U} less to cast if it targets an instant or sorcery spell. Counter target spell.",
+    ];
+    for (const oracleText of texts) {
+      expect(themeTokens(card({ oracleText }))).not.toContain("instant or sorcery");
+    }
+    expect(themeTokens(card({ oracleText: "Copy target instant or sorcery spell." }))).toContain(
+      "instant or sorcery",
+    );
+  });
+
   it("takes only cost reductions that reach instants and sorceries", () => {
     const reduces = (oracleText: string) => themeTokens(card({ oracleText })).has("cost reduction");
     expect(reduces("Instant and sorcery spells you cast cost {1} less to cast.")).toBe(true);
@@ -708,6 +723,9 @@ describe("spell keywords", () => {
 
   it("reads storm as a keyword, not as a word in a card's name", () => {
     expect(themeTokens(sorcery(GRAPESHOT_TEXT))).toContain("storm");
+    const seeker = themeTokens(card({ oracleText: "Storm Seeker deals damage to target player equal to the number of cards in that player's hand." }));
+    expect(seeker).not.toContain("storm");
+    expect(seeker).not.toContain("copy spell");
     const comet = themeTokens(card({ typeLine: "Instant", oracleText: "Comet Storm deals X damage to each of them." }));
     expect(comet).not.toContain("storm");
     expect(comet).not.toContain("copy spell");
@@ -718,12 +736,19 @@ describe("spell keywords", () => {
     const electromancer = card({ oracleText: "Instant and sorcery spells you cast cost {1} less to cast." });
     expect(fitsToken(electromancer, "storm")).toBe(true);
     expect(fitsToken(electromancer, "overload")).toBe(true);
+    expect(fitsToken(electromancer, "kicker")).toBe(true);
+    const guttersnipe = card({ oracleText: "Whenever you cast an instant or sorcery spell, this creature deals 2 damage to each opponent." });
+    expect(fitsToken(guttersnipe, "storm")).toBe(true);
+    expect(tokenSearches("cost reduction")).toEqual(
+      expect.arrayContaining(["cost less", "kicker", "storm", "overload"]),
+    );
   });
 
   it("fits delve to milling, and milling to delve", () => {
     expect(fitsToken(sorcery(TREASURE_CRUISE_TEXT), "mill")).toBe(true);
     expect(fitsToken(sorcery(TREASURE_CRUISE_TEXT), "discard a card")).toBe(true);
     expect(fitsToken(card({ oracleText: "When this creature enters, mill three cards." }), "delve")).toBe(true);
+    expect(fitsToken(card({ oracleText: "{T}: Draw a card, then discard a card." }), "delve")).toBe(true);
     expect(tokenSearches("mill")).toContain("delve");
   });
 
@@ -739,10 +764,13 @@ describe("spell keywords", () => {
     const text = "Multikicker {2}\nThis artifact enters with a charge counter on it for each time it was kicked.";
     expect(fitsToken(sorcery(text), "cost reduction")).toBe(true);
     expect(fitsToken(card({ typeLine: "Artifact", oracleText: text }), "cost reduction")).toBe(false);
+    const trickery = card({ typeLine: "Instant", oracleText: "Counter target spell if it was kicked." });
+    expect(fitsToken(trickery, "cost reduction")).toBe(false);
   });
 
   it("counts everything an overloaded spell fits as reaching every opponent", () => {
     const blustersquall = card({ typeLine: "Instant", oracleText: BLUSTERSQUALL_TEXT });
+    expect(fitsToken(blustersquall, "cost reduction")).toBe(true);
     expect(tokenStrengths(blustersquall).get("tap creature")).toBe(MULTIPLAYER_STRENGTH);
     expect(tokenStrengths(blustersquall).get("instant or sorcery")).toBe(MULTIPLAYER_STRENGTH);
     expect(tokenStrengths(blustersquall).get("cost reduction")).toBe(MULTIPLAYER_STRENGTH);
