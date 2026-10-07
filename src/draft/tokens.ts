@@ -114,7 +114,7 @@ export const ORACLE_TEXT_PATTERNS: OracleTextPattern[] = [
     pattern: [
       /\btap (?:an untapped|one or more untapped|(?:another )?target|all|each) (?:\w+ )?(?:creatures?|permanents?)\b(?! (?:you|they) control)/i,
       /\btap (?:up to \w+|any number of|x|two|three|four) (?:other )?target (?:\w+ )?(?:creatures?|permanents?)\b/i,
-      /\btap (?:another )?target (?:[\w-]+(?:,| or) )+(?:or )?(?:creatures?|permanents?)\b(?! you control)/i,
+      /\btap (?:another )?target (?:[\w-]+(?:,| or) )+(?:or )?(?:creatures?|permanents?)\b(?! (?:you|they) control)/i,
       /\btapped creatures? (?:your opponents|an opponent|target opponent|defending player) controls?\b/i,
       /\bcreatures? (?:your opponents|an opponent) controls? enters? (?:the battlefield )?tapped\b/i,
       /\bcreatures? (?:your opponents|an opponent) controls? becomes? tapped\b/i,
@@ -373,10 +373,8 @@ function isRepeatable(clause: string): boolean {
   return TRIGGERED_CLAUSE.test(clause.trimStart()) || ACTIVATED_CLAUSE.test(clause);
 }
 
-function clauseStrength(clause: string, oneShotCard: boolean, modeOfRepeatable: boolean): number {
-  let strength = 1;
-  const repeatable = modeOfRepeatable || isRepeatable(clause);
-  if (!oneShotCard && repeatable) strength *= REPEATABLE_STRENGTH;
+function clauseStrength(clause: string, repeatable: boolean): number {
+  let strength = repeatable ? REPEATABLE_STRENGTH : 1;
   if (MULTIPLAYER_CLAUSE.test(clause)) strength *= MULTIPLAYER_STRENGTH;
   return strength;
 }
@@ -397,12 +395,13 @@ export function tokenStrengths(card: Card): ReadonlyMap<string, number> {
   if (!strengths) {
     const found = new Map<string, number>();
     const oneShotCard = ONE_SHOT_CARD.test(card.typeLine);
-    let modesRepeat = false;
+    let headerRepeats = false;
     for (const line of rulesLines(card)) {
       const isMode = line.startsWith("•");
       const clause = isMode ? line.replace(MODE_LABEL, "") : line;
-      const strength = clauseStrength(clause, oneShotCard, isMode && modesRepeat);
-      if (!isMode) modesRepeat = isRepeatable(clause);
+      const repeats: boolean = isRepeatable(clause) || (isMode && headerRepeats);
+      if (!isMode) headerRepeats = repeats;
+      const strength = clauseStrength(clause, !oneShotCard && repeats);
       for (const token of clauseTokens(clause, card)) {
         found.set(token, Math.max(found.get(token) ?? 1, strength));
       }

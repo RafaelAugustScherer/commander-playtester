@@ -228,6 +228,13 @@ describe("mechanic tokens", () => {
     );
     expect(tokens).not.toContain("tap creature");
   });
+
+  it("does not take tapping a listed permanent type they control for tapping", () => {
+    const tokens = themeTokens(
+      card({ oracleText: "Tap target artifact or creature they control." }),
+    );
+    expect(tokens).not.toContain("tap creature");
+  });
 });
 
 describe("commanderThemeTokens", () => {

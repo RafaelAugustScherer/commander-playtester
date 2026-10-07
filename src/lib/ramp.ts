@@ -19,7 +19,7 @@ const KEYWORD_WITH_COST = /^[A-Z][a-z]+(?: [a-z]+)?$/;
 const FROM_HAND_COST = /\bdiscard this card\b/i;
 const USED_UP_COST = /\b(?:sacrifice|exile|discard|collect evidence|remove)\b/i;
 
-export function costMana(cost: string): number {
+function costMana(cost: string): number {
   let mana = 0;
   for (const symbol of cost.split("{").slice(1).map((part) => part.split("}")[0])) {
     if (/^\d+$/.test(symbol)) mana += Number(symbol);
@@ -76,12 +76,12 @@ function makesNetMana(line: string): boolean {
   return manaProduced(line) > activationMana(line);
 }
 
-function manaCostText(line: string): string {
+function manaAbilityCost(line: string): string {
   return line.slice(0, line.search(MANA_WORDING)).split(/[".]/).pop() ?? "";
 }
 
 function usesNothingUp(line: string): boolean {
-  return !USED_UP_COST.test(manaCostText(line));
+  return !USED_UP_COST.test(manaAbilityCost(line));
 }
 
 export function manaAbilityLines(card: RampCard): string[] {
@@ -110,18 +110,26 @@ export function rampKind(card: RampCard): RampKind | null {
   return null;
 }
 
+function lastingKind(card: RampCard, kind: RampKind | null): boolean {
+  switch (kind) {
+    case "land search":
+      return true;
+    case "extra land":
+      return !ONE_SHOT_SPELL.test(card.typeLine);
+    case "mana":
+      return manaAbilityLines(card).some(usesNothingUp);
+    default:
+      return false;
+  }
+}
+
 const lastingRampCache = new Map<string, boolean>();
 
 export function isLastingRamp(card: RampCard): boolean {
   const key = cardKey(card);
   let lasting = lastingRampCache.get(key);
   if (lasting === undefined) {
-    const kind = rampKind(card);
-    lasting =
-      kind === "extra land"
-        ? !ONE_SHOT_SPELL.test(card.typeLine)
-        : kind === "land search" ||
-          (kind === "mana" && manaAbilityLines(card).some(usesNothingUp));
+    lasting = lastingKind(card, rampKind(card));
     lastingRampCache.set(key, lasting);
   }
   return lasting;
