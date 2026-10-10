@@ -8,7 +8,8 @@ import type {
   RankCardCandidatesInput,
   RankCardCandidatesResult,
 } from "../engine/draftQueries";
-import { basicLandCount, primaryType, zeroCounts, type TypeBalance } from "./typeBalance";
+import { primaryType } from "./cardTypes";
+import { basicLandCount, zeroCounts, type TypeBalance } from "./typeBalance";
 
 function card(overrides: Partial<Card> = {}): Card {
   return {
@@ -16,6 +17,7 @@ function card(overrides: Partial<Card> = {}): Card {
     manaValue: 3,
     typeLine: "Creature — Bear",
     oracleText: "",
+    hasXCost: false,
     colors: ["G"],
     colorIdentity: ["G"],
     producedMana: [],
@@ -30,6 +32,7 @@ function commanderData(candidate: Card): DraftCandidateData {
     manaValue: candidate.manaValue,
     typeLine: candidate.typeLine,
     oracleText: candidate.oracleText,
+    hasXCost: candidate.hasXCost,
     colorIdentity: candidate.colorIdentity,
   };
 }
@@ -939,6 +942,7 @@ describe("DraftSession base card color identity", () => {
                   manaValue: 2,
                   typeLine: "Creature — Bear",
                   oracleText: "",
+                  hasXCost: false,
                   colorIdentity: identity,
                 },
               ]

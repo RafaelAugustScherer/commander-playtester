@@ -98,8 +98,8 @@ whole card pool by heart.
 
   Evasive creatures fit combat damage, and an {X} mana cost fits X spells. A commander's
   trigger on its own combat damage, or its own tutoring, does not seed a theme. A tap
-  ability rewards untapping, and a mechanic the commander carries as a keyword ability is
-  rewarded (`deck-draft/ADR-0014`).
+  ability rewards untapping, and the commander's own mutate or ninjutsu is rewarded
+  (`deck-draft/ADR-0014`).
 - Each round's three slots go to the card types the deck is shortest of against a
   commander-set `type balance`, and each slot's pool adds the most-printed cards of its
   type, so a spellslinger is offered spells and an enchantress enchantments. Basic lands
@@ -160,7 +160,7 @@ whole card pool by heart.
   surface them, mirroring `deck library`'s open question.
 - Mechanics no `theme token` reads yet: casting any spell or a creature spell, becoming
   tapped, being dealt damage, the Ring tempting you, committing a crime, and keywords such
-  as cascade, foretell and morph. 395 commanders still produce no token of their own
+  as cascade, foretell and morph. 396 commanders still produce no token of their own
   (`deck-draft/ADR-0014`).
 - Some commanders' own effects seed a token their decks don't follow. Derevi's decks are
   stax and tutors, not combat-damage payoffs. Lathril's ten-Elves drain pulls drain cards

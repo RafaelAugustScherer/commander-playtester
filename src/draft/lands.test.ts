@@ -8,6 +8,7 @@ function land(name: string, oracleText: string): Card {
     manaValue: 0,
     typeLine: "Land",
     oracleText,
+    hasXCost: false,
     colors: [],
     colorIdentity: [],
     producedMana: [],

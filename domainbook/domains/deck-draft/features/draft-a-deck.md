@@ -474,15 +474,16 @@ matter (`deck-draft/ADR-0014`).
 
 A commander's own text is read with four refinements (`deck-draft/ADR-0014`):
 
-- A commander's trigger on its own combat damage is not a combat-damage theme. It raises
-  the commander's protection need instead. A trigger on other creatures connecting is a
-  theme.
+- A commander's trigger on its own combat damage, by its name, "this creature" or "it", is
+  not a combat-damage theme. It raises the commander's protection need instead. A trigger
+  on other creatures connecting is a theme, even one the commander shares ("~ or another
+  Spirit").
 - A commander that tutors is not a tutor theme, as a commander that ramps is not a ramp
   theme. Tutors enter the theme only through the 99.
 - Untapping pays off a commander's non-mana tap ability, not its own untap effect.
-- A mechanic the commander carries as its own keyword ability ("Mutate {2}{U/B}{G}{G}",
-  "Commander ninjutsu {U}{B}") is one it rewards. Its own evasion keywords describe it, as
-  flying does, and are not its theme.
+- The commander's own mutate or ninjutsu ("Mutate {2}{U/B}{G}{G}", "Commander ninjutsu
+  {U}{B}") is one it rewards. Other keywords on it, such as kicker, pay off the commander
+  itself. Its own evasion keywords describe it, as flying does, and are not its theme.
 
 ```gherkin
 Example: A ninja commander is offered ninjas and evasive creatures
@@ -502,10 +503,20 @@ Example: A commander that tutors is not offered tutors for it
   Then tutoring is not part of it
   And untapping is rewarded, for her tap ability
 
+Example: A commander that shares a trigger with other creatures seeds combat damage
+  Given a draft whose commander is "Millicent, Restless Revenant"
+  When the deck's theme is weighed
+  Then combat damage to a player is part of it
+
 Example: A mutate commander rewards mutate
   Given a draft whose commander is "Brokkos, Apex of Forever"
   When what the commander rewards is read
   Then it rewards mutate
+
+Example: A kicker commander does not reward kicker
+  Given a draft whose commander is "Josu Vess, Lich Knight"
+  When what the commander rewards is read
+  Then it does not reward kicker
 
 Example: An X spell fits an X-spell deck by its mana cost
   Given a draft whose commander is "Zaxara, the Exemplary"

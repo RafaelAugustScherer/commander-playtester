@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { activationCost, ownNames, ruleClauses, withOwnName } from "./rulesText";
+import { activationCost, asSelf, ownNames, ruleClauses, withOwnName } from "./rulesText";
 
 describe("ownNames", () => {
   it("gives a legend its short name, before the comma or else its first word", () => {
@@ -31,6 +31,29 @@ describe("withOwnName", () => {
     const edgar = { name: "Edgar Markov", typeLine: "Legendary Creature — Vampire Knight" };
     expect(withOwnName("Whenever Edgar attacks, …", edgar, true)).toBe("Whenever ~ attacks, …");
     expect(withOwnName("Whenever Edgar attacks, …", edgar)).toBe("Whenever Edgar attacks, …");
+  });
+
+  it("reads a name only as a whole word", () => {
+    const azula = { name: "Fire Lord Azula", typeLine: "Legendary Creature — Human Noble" };
+    expect(withOwnName("Firebending 2\nWhenever Fire Lord Azula attacks, …", azula, true)).toBe(
+      "Firebending 2\nWhenever ~ attacks, …",
+    );
+  });
+});
+
+describe("asSelf", () => {
+  const legend = { name: "Otrimi, the Ever-Playful", typeLine: "Legendary Creature — Nightmare" };
+
+  it("reads the legend's names and \"this creature\" as ~", () => {
+    expect(asSelf("Whenever Otrimi or this creature attacks, …", legend)).toBe(
+      "Whenever ~ or ~ attacks, …",
+    );
+  });
+
+  it("leaves \"this creature\" in a granted ability's quotes", () => {
+    expect(asSelf('Elves you control have "Whenever this creature attacks, draw a card."', legend)).toBe(
+      'Elves you control have "Whenever this creature attacks, draw a card."',
+    );
   });
 });
 

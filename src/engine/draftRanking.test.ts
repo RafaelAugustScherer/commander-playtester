@@ -4,7 +4,7 @@ import { candidateData, createDraftRanker } from "./draftRanking";
 import type { CardFaceData, DraftQueryExports, SearchCardRow } from "./draftQueries";
 import { extractThemeProfile } from "../draft/themes";
 import { draftCandidateCard } from "../draft/localCandidates";
-import type { DraftCardType } from "../draft/typeBalance";
+import type { DraftCardType } from "../draft/cardTypes";
 
 interface FakeCard {
   name: string;
@@ -122,6 +122,7 @@ function hyldaProfile() {
     manaValue: 3,
     typeLine: "Legendary Creature — Human Warlock",
     oracleText: HYLDA.oracleText,
+    hasXCost: false,
     colorIdentity: ["W"],
   });
   const profile = extractThemeProfile([commander], []);
@@ -213,6 +214,7 @@ describe("createDraftRanker power pools", () => {
       typeLine: "Legendary Creature — Human",
       oracleText: POWER_COMMANDER.oracleText,
       power: 2,
+      hasXCost: false,
       colorIdentity: ["W"],
     });
     const profile = extractThemeProfile([commander], []);

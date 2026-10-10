@@ -13,7 +13,8 @@ import type { BracketTarget } from "./bracket";
 import { isSuggestable, type DraftCustomization } from "./customization";
 import { draftCandidateCard } from "./localCandidates";
 import { hasChooseABackground, isBackground } from "./partners";
-import type { DraftCardType, TypeBalance } from "./typeBalance";
+import type { DraftCardType } from "./cardTypes";
+import type { TypeBalance } from "./typeBalance";
 
 /** The engine calls the draft pipeline needs — narrow enough to fake in tests. */
 export interface DraftEngine {

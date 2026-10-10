@@ -23,6 +23,7 @@ function card(overrides: Partial<Card> = {}): Card {
     manaValue: 2,
     typeLine: "Creature — Bear",
     oracleText: "",
+    hasXCost: false,
     colors: [],
     colorIdentity: [],
     producedMana: [],
@@ -44,7 +45,7 @@ describe("cardTokens", () => {
   });
 
   it("has no subtype tokens when the type line carries none", () => {
-    const tokens = cardTokens(card({ typeLine: "Land" }));
+    const tokens = themeTokens(card({ typeLine: "Enchantment" }));
     expect(tokens.size).toBe(0);
   });
 
@@ -333,8 +334,8 @@ describe("rewardedTokens", () => {
           "Whenever Lathril, Blade of the Elves deals combat damage to a player, create that many 1/1 green Elf Warrior creature tokens.\n{T}, Tap ten untapped Elves you control: Each opponent loses 10 life and you gain 10 life.",
       }),
     );
-    expect(tokens).toContain("elf");
-    expect(tokens).not.toContain("warrior");
+    // The tribe it names, not its tokens' Warrior; untapping, for its tap ability.
+    expect([...tokens].sort()).toEqual(["elf", "untap"]);
   });
 
   it("ignores one-shot when triggers", () => {
@@ -891,6 +892,7 @@ describe("mechanics from deck-draft/ADR-0014", () => {
   it("fits every noncreature spell to a deck that casts them, but not a creature or land", () => {
     expect(fitsToken(card({ typeLine: "Artifact" }), "noncreature spell")).toBe(true);
     expect(fitsToken(card({ typeLine: "Instant" }), "noncreature spell")).toBe(true);
+    expect(fitsToken(card({ typeLine: "Legendary Planeswalker — Teferi" }), "noncreature spell")).toBe(true);
     expect(fitsToken(card({ typeLine: "Artifact Creature — Golem" }), "noncreature spell")).toBe(false);
     expect(fitsToken(card({ typeLine: "Land" }), "noncreature spell")).toBe(false);
   });
@@ -921,6 +923,27 @@ describe("what a commander's own text seeds (deck-draft/ADR-0014)", () => {
     expect(rewardedTokens(others)).toContain("combat damage");
   });
 
+  it.each([
+    ["Whenever this creature deals combat damage to a player, draw a card."],
+    ["Whenever Kitsune enters or deals combat damage to a player, draw a card."],
+    ["When Kitsune enters and whenever it deals combat damage to a player, create a Blood token."],
+  ])("reads %j as the commander's own trigger", (oracleText) => {
+    const own = legend("Kitsune, Dragon's Daughter", oracleText);
+    expect(commanderThemeTokens(own)).not.toContain("combat damage");
+    expect(rewardedTokens(own)).not.toContain("combat damage");
+  });
+
+  it.each([
+    ["When Derevi enters and whenever a creature you control deals combat damage to a player, untap target permanent."],
+    ["Whenever Millicent or another Spirit you control deals combat damage to a player, create a Spirit token."],
+    ['Rogues you control have "Whenever this creature deals combat damage to a player, draw a card."'],
+    ["Whenever a creature you control with a counter on it deals combat damage to a player, draw a card."],
+  ])("reads %j as other creatures connecting", (oracleText) => {
+    const commander = legend("Derevi Millicent", oracleText);
+    expect(commanderThemeTokens(commander)).toContain("combat damage");
+    expect(rewardedTokens(commander)).toContain("combat damage");
+  });
+
   it("does not take tutoring as a theme from a commander that tutors", () => {
     const sisay = legend(
       "Captain Sisay",
@@ -933,6 +956,10 @@ describe("what a commander's own text seeds (deck-draft/ADR-0014)", () => {
   it("rewards untapping for a tap ability, not for the commander's own untap effect", () => {
     const tapper = legend("Captain Sisay", "{2}, {T}, Sacrifice a creature: Draw a card.");
     expect(rewardedTokens(tapper)).toContain("untap");
+    const parley = legend("Selvala", "Parley — {T}: Each player draws a card.");
+    expect(rewardedTokens(parley)).toContain("untap");
+    const tapsElves = legend("Elf Lord", "Tap an untapped Elf you control, {T}: Draw a card.");
+    expect(rewardedTokens(tapsElves)).toContain("untap");
     const manaAbility = legend("Mana Elder", "{T}: Add {G}.");
     expect(rewardedTokens(manaAbility)).not.toContain("untap");
     const untapper = legend("Untapper", "Whenever you cast a spell, untap target permanent.");
@@ -940,16 +967,32 @@ describe("what a commander's own text seeds (deck-draft/ADR-0014)", () => {
     expect(rewardedTokens(untapper)).not.toContain("untap");
   });
 
-  it("rewards a mechanic the commander carries as a keyword ability", () => {
-    expect(rewardedTokens(legend("Mutant", "Mutate {2}{U/B}{G}{G}\nWhenever this creature mutates, draw a card."))).toContain("mutate");
-    expect(rewardedTokens(legend("Mutant", "Mutate {2}{U/B}{G}{G}"))).toContain("mutate");
-    expect(rewardedTokens(legend("Shadow", "Commander ninjutsu {U}{B}"))).toContain("ninjutsu");
-    expect(rewardedTokens(legend("Flier", "Flying")).size).toBe(0);
-    expect(rewardedTokens(legend("Exiler", "Exile target creature.")).size).toBe(0);
+  it.each([
+    ["Mutate {2}{U/B}{G}{G}", ["mutate"]],
+    ["Commander ninjutsu {U}{B}", ["ninjutsu"]],
+    ["Ninjutsu {1}{U}", ["ninjutsu"]],
+    ["Kicker {2}{G}", []],
+    ["Convoke", []],
+    ["Delve", []],
+    ["Flying", []],
+    ["Exile target creature.", []],
+  ])("rewards %j with %j, the mechanics a mutate or ninjutsu commander is built on", (oracleText, rewarded) => {
+    expect([...rewardedTokens(legend("Keyword Bearer", oracleText))]).toEqual(rewarded);
   });
 
   it("leaves out the commander's own evasion keyword", () => {
     const walker = legend("Walker", "Islandwalk\nWhenever this creature attacks, draw a card.");
     expect(commanderThemeTokens(walker)).not.toContain("evasion");
+  });
+
+  it("does not read a short name as a keyword or eat into a word with it", () => {
+    const shadow = legend("Shadow, Mysterious Assassin", "Whenever Shadow attacks, draw a card.");
+    expect(commanderThemeTokens(shadow)).not.toContain("evasion");
+    const azula = card({
+      name: "Fire Lord Azula",
+      typeLine: "Legendary Creature — Human Noble",
+      oracleText: "Firebending 2\nWhenever you cast a spell while Fire Lord Azula is attacking, copy that spell.",
+    });
+    expect(commanderThemeTokens(azula)).toContain("attacks");
   });
 });

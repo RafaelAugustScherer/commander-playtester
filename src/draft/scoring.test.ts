@@ -10,6 +10,7 @@ function card(overrides: Partial<Card> = {}): Card {
     manaValue: 2,
     typeLine: "Creature — Bear",
     oracleText: "",
+    hasXCost: false,
     colors: [],
     colorIdentity: [],
     producedMana: [],

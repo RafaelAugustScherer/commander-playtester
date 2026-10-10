@@ -195,8 +195,8 @@ and never passes three, so however many cards carry a broad token, the commander
 keep leading (`deck-draft/ADR-0013`). A few tokens read a commander's own text
 differently (`deck-draft/ADR-0014`). Its trigger on its own combat damage is not a `combat
 damage` theme, and tutoring is never a theme it seeds. A non-mana tap ability rewards
-`untap`, but its own untap effect does not seed it. A mechanic it carries as its own
-keyword ability ("Mutate {2}{U/B}{G}{G}") is rewarded.
+`untap`, but its own untap effect does not seed it. Its own mutate or ninjutsu ("Mutate
+{2}{U/B}{G}{G}") is rewarded.
 
 - **Status:** draft
 - **Example:** With an Elf commander, Elf-tribal candidates outrank cards that only match

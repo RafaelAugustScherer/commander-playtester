@@ -26,7 +26,7 @@ describe("toCard", () => {
     ).toBe(1);
   });
 
-  it("marks an {X} in the mana cost, from the card or its front face", () => {
+  it("marks an {X} in the front face's mana cost, as the engine reads it", () => {
     expect(toCard({ name: "Blaze", cmc: 1, mana_cost: "{X}{R}", type_line: "Sorcery" }).hasXCost).toBe(true);
     expect(
       toCard({
@@ -35,6 +35,14 @@ describe("toCard", () => {
         card_faces: [{ mana_cost: "{X}{X}{G}", type_line: "Sorcery" }, { mana_cost: "{2}", type_line: "Instant" }],
       }).hasXCost,
     ).toBe(true);
+    expect(
+      toCard({
+        name: "Fixed // Variable",
+        cmc: 2,
+        mana_cost: "{1}{R} // {X}{U}",
+        card_faces: [{ mana_cost: "{1}{R}", type_line: "Instant" }, { mana_cost: "{X}{U}", type_line: "Instant" }],
+      }).hasXCost,
+    ).toBe(false);
     expect(toCard({ name: "Bear", cmc: 2, mana_cost: "{1}{G}", type_line: "Creature — Bear" }).hasXCost).toBe(false);
   });
 

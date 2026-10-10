@@ -17,7 +17,7 @@ import { BRACKET_TARGETS, DEFAULT_BRACKET_TARGET, type BracketTarget } from "./b
 import { DraftCandidateCard } from "./DraftCandidateCard";
 import { QuickDraft, QuickDraftToggle } from "./QuickDraft";
 import { TribalToggle, TribePicker } from "./TribalPicker";
-import { DRAFT_CARD_TYPES, type DraftCardType } from "./typeBalance";
+import { DRAFT_CARD_TYPES, type DraftCardType } from "./cardTypes";
 import { CardNameInput } from "../components/CardNameInput";
 import { XpCheckbox } from "../components/XpCheckbox";
 import { SearchableSelect } from "../components/SearchableSelect";

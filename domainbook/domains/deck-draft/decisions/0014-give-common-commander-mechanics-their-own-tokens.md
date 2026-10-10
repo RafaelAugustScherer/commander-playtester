@@ -63,6 +63,11 @@ effect (weight 3), and Brokkos got no mutate offers at all.
   - a non-mana tap ability rewards `untap`, and the commander's own untap effect does not
     seed it.
 - **Mutate**: reward a commander's own mutate, or leave it an effect.
+- **Keyword lines**, after a code review found the first generic rule (any line holding
+  only a keyword named after a token) also rewarding kicker (7 commanders), convoke (4),
+  storm (Aeve) and delve (Tasigur), whose keyword mostly pays off the commander itself:
+  - keep rewarding every such keyword;
+  - reward only mutate and ninjutsu, each token reading its own keyword line.
 - **The remaining gap**:
   - accept it and document it;
   - test a lower commander-effect weight for the new tokens;
@@ -70,20 +75,20 @@ effect (weight 3), and Brokkos got no mutate offers at all.
 
 ## Decision Outcome
 
-The author chose three of the four narrowings (all but evasion from spells), a mutate
-reward through a generic rule that names no cards, and to accept and document the
+The author chose three of the four narrowings (all but evasion from spells), a reward for
+a commander's own mutate and ninjutsu that names no cards, and to accept and document the
 remaining gap.
 
-**New tokens** (`src/draft/tokens.ts`). The commander counts give how many of the 3,538
+**New tokens** (`src/draft/tokenRules.ts`, read by `src/draft/tokens.ts`). The commander counts give how many of the 3,538
 commander-eligible cards seed each token as an effect (weight 3), and how many reward it
 (5 more).
 
 | Token | Reads | Also fits | Commanders (effect / reward) |
 |---|---|---|---|
-| `combat damage` | "deals combat damage to a player / an opponent / one of your opponents" | an evasive creature (enabler); `evasion` (partner) | 114 / 106 |
-| `evasion` | "can't be blocked"; fear, intimidate, shadow, skulk, horsemanship, landwalk | — | 108 / 2 |
+| `combat damage` | "deals combat damage to a player / an opponent / one of your opponents" | `evasion` (partner), so every evasive card | 109 / 101 |
+| `evasion` | "can't be blocked"; fear, intimidate, shadow, skulk, horsemanship, landwalk | — | 107 / 1 |
 | `ninjutsu` | ninjutsu | `evasion` (partner) | 6 / 6 |
-| `noncreature spell` | casting or copying noncreature spells; prowess. Not countering, targeting or taxing them | every noncreature, nonland spell (type line) | 106 / 58 |
+| `noncreature spell` | casting or copying noncreature spells; prowess. Not countering, targeting or taxing them | every noncreature spell by the rules, planeswalkers included (`isNoncreatureSpell`) | 106 / 58 |
 | `second spell` | "second spell" each turn | `cost reduction` (partner) | 23 / 22 |
 | `extra draw` | "second card" drawn each turn | `draw a card` (partner) | 23 / 23 |
 | `anthem` | "creatures / tokens you control get +N/+N" | `create token` (partner) | 92 / 0 |
@@ -91,35 +96,50 @@ commander-eligible cards seed each token as an effect (weight 3), and how many r
 | `impulse draw` | exiling the top card to play it, or playing cards from exile | — | 76 / 10 |
 | `lands matter` | "lands you control" (plural), land cards from a graveyard, playing lands from somewhere | `landfall` (partner) | 50 / 0 |
 | `clone` | a copy of a creature | — | 77 / 0 |
-| `x spell` | "{X} in its mana cost", "spells with {X}" | a card with {X} in its mana cost | 8 / 3 |
-| `untap` | untapping a target, all or several | — | 0 / 348 |
+| `x spell` | "{X} in its mana cost", "spells with {X}" | a card with {X} in its front face's mana cost | 8 / 3 |
+| `untap` | untapping a target, all or several | — | 0 / 367 |
 | `tutor` | searching the library for a card that is not a land | — | 0 / 0 |
 | `mutate` | mutate | — | 6 / 6 |
 | `explore` | explore | — | 6 / 1 |
 
 `dies` also reads Teysa's "a creature dying causes…", and rewards it. Improvise reads as
-`artifact`. A card's {X} comes from the engine's mana-cost shards, or from Scryfall's mana
-cost (`Card.hasXCost`).
+`artifact`. A card's {X} comes from its front face's mana cost (`Card.hasXCost`). The
+engine's shards and Scryfall's mana cost go through one helper (`costHasX`), so the two
+agree on split cards, and the Scryfall card cache moves to v4 so cached cards gain it.
 
-**A commander's own text is read with each token's `commanderPattern`**, when the token
-has one. It is matched against the text with the commander's short name read as "~"
-("Thada Adel", "Lathril"):
+Each token is one rule (`TokenRule`) with a field per role:
 
-- `combat damage` leaves out "~ deals combat damage". A commander that triggers on its own
-  combat damage already wants to connect, which raises its protection target
-  (`deck-draft/ADR-0013`). Edric's and Yuriko's triggers on other creatures still seed it.
+- `signal` adds the token to a deck's theme and fits it;
+- `fitsText` and `fitsCard` only fit it;
+- `rewards` makes a commander reward it;
+- `commander` replaces `signal` for a commander's own text.
+
+**A commander's own text is read as its own effects** (`asSelf`). Every name it calls
+itself, short name included ("Thada Adel", "Lathril"), and "this creature" outside a
+granted ability's quotes read as "~". Each name is read as a whole word, so a short name
+never eats into another word ("Fire" in "Firebending"). Three tokens read that text their
+own way:
+
+- `combat damage` leaves out a trigger whose subject is the commander alone: "Whenever ~
+  deals", "Whenever ~ enters or deals", "When ~ enters and whenever it deals". A
+  commander that triggers on its own combat damage already wants to connect, which raises
+  its protection target (`deck-draft/ADR-0013`), and `wantsToConnect` reads it the same
+  way. Triggers on other creatures still seed it: Edric's and Yuriko's, Derevi's "a
+  creature you control" and Millicent's "~ or another Spirit".
 - `tutor` is never seeded by a commander. A commander that tutors is its deck's tutor, as
   a commander that ramps is its ramp (`deck-draft/ADR-0009`). Tutors enter the theme only
   through the 99.
 - `untap` is never seeded by a commander's own untap effect. Instead, a non-mana activated
-  ability with {T} in its cost rewards it, since untapping repeats that ability.
+  ability with {T} in its cost rewards it, since untapping repeats that ability. The cost
+  is read as `activationCost` reads it, after an ability word ("Parley — {T}: …").
 
-**A mechanic the commander carries as a keyword ability is rewarded.** The rule is
-generic: a line that holds only a keyword and its mana cost ("Mutate {2}{U/B}{G}{G}",
-"Commander ninjutsu {U}{B}") rewards the token of that name. Keywords that only describe
-the commander (flying, hexproof, ward, protection) are left out, as `deck-draft/ADR-0010`
-left them out of its theme. The same list now holds the evasion keywords, so Thada's
-islandwalk no longer reads as an `evasion` theme.
+**A commander's own mutate or ninjutsu is rewarded.** Each of the two tokens reads its own
+keyword line through `rewards` ("Mutate {2}{U/B}{G}{G}", "Ninjutsu {1}{U}", "Commander
+ninjutsu {U}{B}"), so no card is named. Other keyword lines, such as kicker, convoke, storm
+and delve, reward nothing. Keywords that only describe the commander (flying, hexproof,
+ward, protection) stay out of its theme, as `deck-draft/ADR-0010` left them out. The same
+list now holds the evasion keywords, so Thada's islandwalk no longer reads as an `evasion`
+theme.
 
 **Calibration.** The twenty mechanic commanders are seeded with their two most-included
 non-ramp EDHREC cards, like the twelve of `deck-draft/ADR-0011`. **Mean inclusion** is the
@@ -135,12 +155,12 @@ credits on-theme cards played at 10–30%.
 | + untap from tap abilities | 58 | 9.8% | — |
 | + no evasion from spells | 59 | 10.1% | — |
 | + all four | 64 | 10.6% | — |
-| **chosen: three narrowings and the mutate reward** | **64** | **10.5%** | **50** |
+| **chosen: three narrowings and the mutate and ninjutsu reward** | **64** | **10.5%** | **52** |
 
 | Variant (twelve `deck-draft/ADR-0011` commanders) | Top (of 240) | Mean inclusion | Draft (of 360) | Protection | Off target | Card advantage | Ramp |
 |---|---|---|---|---|---|---|---|
 | 0.39.0 | 55 | 14.9% | 51 | 4.8 | 1.89 | 12.3 | 6.7 |
-| **this ADR** | **53** | **14.5%** | **50** | **4.5** | **2.16** | **12.1** | **6.5** |
+| **this ADR** | **53** | **14.5%** | **50** | **4.5** | **2.16** | **12.0** | **6.6** |
 
 The bucket columns come from the same 22 random-pick drafts as in `deck-draft/ADR-0013`.
 
@@ -150,7 +170,7 @@ This table gives each commander's offers over 30 draft rounds that fit its mecha
 | Commander | Fit | Commander | Fit |
 |---|---|---|---|
 | Edric | 14 → 81 of 83 | Vito | 63 → 76 of 87 |
-| Satoru | 4 → 74 of 83 | Prosper | 31 → 76 of 83 |
+| Satoru | 4 → 80 of 83 | Prosper | 31 → 76 of 83 |
 | Yuriko | 4 → 50 of 82 | Alandra | 35 → 78 of 87 |
 | Kykar | 61 → 78 of 82 | Teysa | 2 → 52 of 83 |
 | Elsha | 55 → 79 of 82 | Aesi | 16 → 49 of 83 |
@@ -164,8 +184,8 @@ Sisay's tutor, Derevi's untap and Thada's evasion stay at 0 by these decisions.
 ### Consequences
 
 - Good: the mechanics surface in the decks built on them. Draft hits on the twenty rise
-  from 44 to 50; Brokkos alone goes from 1 to 7.
-- Good: the commanders that seed no token of their own fall from 454 to 395.
+  from 44 to 52; Brokkos alone goes from 1 to 7.
+- Good: the commanders that seed no token of their own fall from 454 to 396.
 - Good: each narrowing wins back a commander without a list of names. Against the tokens
   added alone, Thada's Top goes from 0 to 2, Sisay's from 4 to 7, and Brokkos's from 6 to 8.
 - Bad: Top on the twenty is still below 0.39.0 (67 to 64), and mean inclusion too (11.1% to
@@ -179,7 +199,7 @@ Sisay's tutor, Derevi's untap and Thada's evasion stay at 0 by these decisions.
   The author accepted this and left it as an open question.
 - Bad: on the twelve, Top falls from 55 to 53, Draft from 51 to 50 and protection from 4.8
   to 4.5 per deck, because more themed cards outscore protection.
-- Neutral: `untap` is now rewarded by 348 commanders with a tap ability, the broadest new
+- Neutral: `untap` is now rewarded by 367 commanders with a tap ability, the broadest new
   reward. Krenko, Lathril, Chulane and Vraska are among them.
 - Neutral: `tutor` is never seeded by a commander, so tutors gather only from the 99, as
   ramp did before its bucket.
@@ -189,8 +209,21 @@ Sisay's tutor, Derevi's untap and Thada's evasion stay at 0 by these decisions.
   Urborg Syphon-Mage, Mirkwood Bats). Without the drain its ten-Elves ability seeds, the
   draft holds 16. Krenko's Goblins hold at 21 of 36, though their share of creature offers
   dips from 61% to 56%.
-- Good: the type mix in `npm run draft-balance` comes closer to EDHREC. Mean error per
-  type goes from 2.33 to 2.24.
+- Neutral: an evasive card fits `combat damage` only through its `evasion` partner, with no
+  strength of its own, so 154 cards rank a little lower for a combat-damage deck. Edric's
+  fit holds at 81 of 83.
+- Neutral: the type mix in `npm run draft-balance` keeps its mean error per type of 2.33.
+  Atraxa's draft comes closer to EDHREC (3.1 → 2.6) and Teferi's moves away (4.0 → 4.6).
+  Neither commander's text names a card type, so its target follows the cards drafted,
+  and the random picks there carry any change in what is offered.
+- Good: reading a commander's names as whole words, through a whole "whenever" clause,
+  fixes misreadings. Cecily, Immard, Mr. Foxglove and Sophina, whose names hold a comma
+  or a period, now reward `attacks`, and Fire Lord Azula keeps it. No short name reads as
+  a keyword ("Shadow").
+- Good: a combat trigger a commander grants in quotes no longer makes it want to connect
+  (Commander Mustard, Grothama, Magar, Mari, Sygg, The Pride of Hull Clade).
+- Bad: Frodo, Sauron's Bane grants its own trigger in quotes, so it no longer wants to
+  connect either.
 - Bad: `explore` gives Hakbal no explore offers, because its Merfolk tribe outweighs it.
   `mutate` gives Brokkos only 5 of 82, though its Draft hits rise.
 
@@ -200,11 +233,22 @@ Sisay's tutor, Derevi's untap and Thada's evasion stay at 0 by these decisions.
   - "mechanics from deck-draft/ADR-0014": what each new token reads and leaves out (taxing
     or countering noncreature spells, land tutors), and evasive creatures, noncreature
     spells and {X} costs fitting without signalling;
-  - "what a commander's own text seeds": its own combat trigger, tutoring, a tap ability
-    against an untap effect and a mana ability, mutate and commander ninjutsu as keywords,
-    and its own evasion keyword.
-- `src/lib/scryfall.test.ts` and `src/engine/draftRanking.test.ts`: {X} read from the mana
-  cost, from Scryfall and from the engine's shards.
+  - "what a commander's own text seeds":
+    - its own combat trigger, written with its name, "this creature" or "it", against
+      triggers on other creatures, mixed subjects and granted abilities;
+    - tutoring;
+    - a tap ability (after an ability word, or with another cost) against an untap effect
+      and a mana ability;
+    - exactly what each keyword line rewards: mutate and ninjutsu, not kicker, convoke or
+      delve;
+    - its own evasion keyword, and a short name that is a keyword or part of one.
+- `src/lib/rulesText.test.ts`: names read as whole words; `asSelf` reads "this creature"
+  as "~" outside quotes only.
+- `src/draft/protection.test.ts`: a commander's "this creature" trigger wants to connect,
+  and a trigger it grants to other creatures does not.
+- `src/draft/cardTypes.test.ts`: which type lines are noncreature spells.
+- `src/lib/scryfall.test.ts` and `src/engine/draftRanking.test.ts`: {X} read from the
+  front face's mana cost, from Scryfall and from the engine's shards.
 - `npm run draft-balance` still passes its type-lean assertions.
 
 ## More Information

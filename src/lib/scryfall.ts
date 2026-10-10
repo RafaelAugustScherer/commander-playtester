@@ -4,6 +4,7 @@ import type {
   ParsedDecklist,
   ResolvedDeck,
 } from "./types";
+import { costHasX } from "./types";
 import { classifyRoles } from "./roles";
 import { frontFace } from "./cardName";
 
@@ -60,7 +61,8 @@ export function toCard(sc: ScryfallCard): Card {
   const colorIdentity = sc.color_identity ?? [];
   const producedMana = sc.produced_mana ?? [];
   const manaValue = sc.cmc ?? 0;
-  const hasXCost = /\{X\}/.test(sc.mana_cost ?? sc.card_faces?.[0]?.mana_cost ?? "");
+  const frontCost = sc.card_faces?.[0]?.mana_cost ?? sc.mana_cost ?? "";
+  const hasXCost = costHasX(frontCost.match(/[^{}]+/g) ?? []);
   const imageUrl =
     sc.image_uris?.normal ?? sc.card_faces?.[0]?.image_uris?.normal;
 

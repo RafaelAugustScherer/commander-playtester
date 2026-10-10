@@ -10,6 +10,7 @@ function card(overrides: Partial<Card> = {}): Card {
     manaValue: 2,
     typeLine: "Artifact",
     oracleText: "",
+    hasXCost: false,
     colors: ["U"],
     colorIdentity: ["U"],
     producedMana: [],
@@ -24,6 +25,7 @@ function candidate(source: Card): DraftCandidateData {
     manaValue: source.manaValue,
     typeLine: source.typeLine,
     oracleText: source.oracleText,
+    hasXCost: false,
     colorIdentity: source.colorIdentity,
   };
 }

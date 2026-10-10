@@ -9,7 +9,8 @@ import type {
   RankCardCandidatesInput,
   RankCardCandidatesResult,
 } from "../engine/draftQueries";
-import { zeroCounts, type DraftCardType, type TypeBalance } from "./typeBalance";
+import type { DraftCardType } from "./cardTypes";
+import { zeroCounts, type TypeBalance } from "./typeBalance";
 
 function fixedBalance(): TypeBalance {
   return {
@@ -47,6 +48,7 @@ function card(overrides: Partial<Card> = {}): Card {
     manaValue: 2,
     typeLine: "Creature — Elf",
     oracleText: "",
+    hasXCost: false,
     colors: ["G"],
     colorIdentity: ["G"],
     producedMana: [],
@@ -61,6 +63,7 @@ function commanderData(candidate: Card): DraftCandidateData {
     manaValue: candidate.manaValue,
     typeLine: candidate.typeLine,
     oracleText: candidate.oracleText,
+    hasXCost: candidate.hasXCost,
     colorIdentity: candidate.colorIdentity,
   };
 }

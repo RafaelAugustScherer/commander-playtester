@@ -1,4 +1,4 @@
-import { aimsAtOpponents, rulesText, sentences, withOwnName } from "../lib/rulesText";
+import { aimsAtOpponents, asSelf, rulesText, sentences } from "../lib/rulesText";
 import { isLand, memoizeByCard, type Card } from "../lib/types";
 import { linearStep } from "./curves";
 import { commanderThemeTokens } from "./tokens";
@@ -46,7 +46,7 @@ const TAX_FREE = [
 
 // A commander that wants to connect: it triggers on attacking or on its own
 // combat damage, or it cares about Auras or Equipment.
-const CONNECTS = /\bwhenever (?:~|this creature) [^.,]*\b(?:attacks|deals combat damage)\b|\battacks alone\b/i;
+const CONNECTS = /\bwhenever ~ [^.,]*\b(?:attacks|deals combat damage)\b|\battacks alone\b/i;
 const CONNECT_TOKENS = ["aura", "equipment"];
 
 const CHEAP_COMMANDER_MV = 3;
@@ -70,7 +70,7 @@ export const isProtection = memoizeByCard((card: Card): boolean => {
 /** Whether a commander wants to connect: voltron, Auras, Equipment, attack triggers. */
 export function wantsToConnect(commander: Card): boolean {
   const tokens = commanderThemeTokens(commander);
-  const text = withOwnName(rulesText(commander), commander, true);
+  const text = asSelf(rulesText(commander), commander);
   return CONNECTS.test(text) || CONNECT_TOKENS.some((t) => tokens.has(t));
 }
 

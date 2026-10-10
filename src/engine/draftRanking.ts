@@ -9,6 +9,7 @@ import type {
   SearchCardRow,
 } from "./draftQueries";
 import { frontFace } from "../lib/cardName";
+import { costHasX } from "../lib/types";
 import { bracketTilt } from "../draft/bracket";
 import {
   draftCandidateCard,
@@ -20,16 +21,14 @@ import { isUtilityLand } from "../draft/lands";
 import { isSuggestable } from "../draft/customization";
 import { isPowerToken } from "../draft/powerTokens";
 import { fitsToken, isOfTribe, mentionsSubtype, tokenSearches } from "../draft/tokens";
+import { DRAFT_CARD_TYPES, primaryType, type DraftCardType } from "../draft/cardTypes";
 import {
-  DRAFT_CARD_TYPES,
   allocateSlots,
   cardTypeSignals,
   isBasicLandName,
-  primaryType,
   targetMix,
   typeWeights,
   zeroCounts,
-  type DraftCardType,
   type TypeBalance,
   type TypeCounts,
 } from "../draft/typeBalance";
@@ -88,7 +87,7 @@ export function candidateData(
     typeLine: cardTypeLine(face.card_type),
     oracleText: face.oracle_text ?? "",
     power: face.power?.type === "Fixed" ? face.power.value : undefined,
-    hasXCost: face.mana_cost?.shards?.includes("X") ?? false,
+    hasXCost: costHasX(face.mana_cost?.shards ?? []),
     colorIdentity: card.color_identity,
   };
 }
