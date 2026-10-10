@@ -276,7 +276,7 @@ describe("DraftSession", () => {
     expect(inputs[1].mainboard).toContain("Imperious Perfect");
     const firstElfWeight = new Map(inputs[0].profile.tokenWeights).get("elf") ?? 0;
     const nextElfWeight = new Map(inputs[1].profile.tokenWeights).get("elf") ?? 0;
-    expect(nextElfWeight).toBe(firstElfWeight + 1);
+    expect(nextElfWeight).toBeGreaterThan(firstElfWeight);
   });
 
   it("setBracketTarget updates the target used for subsequent rounds", async () => {

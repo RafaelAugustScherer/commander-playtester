@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { extractThemeProfile, COMMANDER_WEIGHT, REWARD_WEIGHT } from "./themes";
+import {
+  extractThemeProfile,
+  COMMANDER_WEIGHT,
+  DECK_TOKEN_CAP,
+  REWARD_WEIGHT,
+  deckTokenWeight,
+} from "./themes";
 import type { Card } from "../lib/types";
 
 function card(overrides: Partial<Card> = {}): Card {
@@ -65,7 +71,33 @@ describe("extractThemeProfile", () => {
       card({ typeLine: "Creature — Goblin", oracleText: "Sacrifice a Clue: Draw a card." }),
     ];
     const profile = extractThemeProfile([commander], others);
-    expect(profile.tokenWeights.get("sacrifice")).toBe(COMMANDER_WEIGHT + 2);
+    expect(profile.tokenWeights.get("sacrifice")).toBe(COMMANDER_WEIGHT + deckTokenWeight(2));
+  });
+
+  it("levels off what the 99 add to a token, however many carry it", () => {
+    const sacrificer = (n: number) =>
+      card({ name: `Sacrificer ${n}`, oracleText: "Sacrifice a creature: Scry 1." });
+    const weightWith = (count: number) =>
+      extractThemeProfile([], Array.from({ length: count }, (_, n) => sacrificer(n)))
+        .tokenWeights.get("sacrifice") ?? 0;
+    expect(weightWith(1)).toBeCloseTo(deckTokenWeight(1));
+    expect(weightWith(3)).toBeGreaterThan(weightWith(1));
+    expect(weightWith(40)).toBeLessThanOrEqual(DECK_TOKEN_CAP);
+    expect(weightWith(40) - weightWith(20)).toBeLessThan(0.01);
+  });
+
+  it("keeps what a commander rewards above any token the 99 build up", () => {
+    const commander = card({
+      typeLine: "Legendary Creature — Human Warlock",
+      oracleText: "Whenever you tap an untapped creature an opponent controls, draw a card.",
+    });
+    const flyers = Array.from({ length: 40 }, (_, n) =>
+      card({ name: `Flyer ${n}`, oracleText: "Flying" }),
+    );
+    const profile = extractThemeProfile([commander], flyers);
+    expect(profile.tokenWeights.get("tap creature")).toBeGreaterThan(
+      profile.tokenWeights.get("flying") ?? 0,
+    );
   });
 
   it("weights what a commander rewards above its other tokens", () => {
@@ -84,7 +116,7 @@ describe("extractThemeProfile", () => {
   it("gives a non-commander's trigger condition no extra weight", () => {
     const other = card({ oracleText: "Whenever you tap an untapped creature an opponent controls, scry 1." });
     const profile = extractThemeProfile([], [other]);
-    expect(profile.tokenWeights.get("tap creature")).toBe(1);
+    expect(profile.tokenWeights.get("tap creature")).toBe(deckTokenWeight(1));
   });
 
   it("leaves tokens a card only enables out of the theme", () => {
@@ -107,16 +139,10 @@ describe("extractThemeProfile", () => {
     expect(profile.curve.reduce((a, b) => a + b, 0)).toBe(3);
   });
 
-  it("counts roles from the resolved cards", () => {
-    const others = [
-      card({ roles: ["ramp"] }),
-      card({ roles: ["ramp"] }),
-      card({ roles: ["draw"] }),
-    ];
-    const profile = extractThemeProfile([], others);
-    expect(profile.roleCounts.ramp).toBe(2);
-    expect(profile.roleCounts.draw).toBe(1);
-    expect(profile.roleCounts.removal).toBe(0);
+  it("counts removal from the resolved cards, commanders included", () => {
+    const commander = card({ roles: ["removal"] });
+    const others = [card({ roles: ["removal"] }), card({ roles: ["draw"] })];
+    expect(extractThemeProfile([commander], others).removalCount).toBe(2);
   });
 
   it("derives color identity from the commanders' colorIdentity only, not colors", () => {
@@ -151,7 +177,7 @@ describe("extractThemeProfile", () => {
       const rock = card({ manaValue: 1, roles: ["ramp"], oracleText: "{T}: Add {C}{C}." });
       const profile = extractThemeProfile([], [rock, card({ manaValue: 4 })]);
       expect(profile.manaAppetite).toBe(4);
-      expect(profile.rampCount).toBe(1);
+      expect(profile.buckets.ramp.count).toBe(1);
       expect(profile.nonlandCount).toBe(2);
     });
 

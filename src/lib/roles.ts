@@ -1,6 +1,8 @@
 import type { Card, CardRole } from "./types";
 import { isLand } from "./types";
+import { drawsCards } from "./draw";
 import { rampKind } from "./ramp";
+import { aimsAtYourOwn, rulesText, sentences } from "./rulesText";
 
 /**
  * Infer card roles from type line + oracle text. These are deliberately
@@ -14,14 +16,14 @@ export function classifyRoles(input: {
   producedMana: string[];
 }): CardRole[] {
   const roles: CardRole[] = [];
-  const text = input.oracleText.toLowerCase();
+  const text = rulesText(input).toLowerCase();
   const typeLine = input.typeLine;
 
   const land = /\bLand\b/.test(typeLine);
   if (land) roles.push("land");
 
   if (!land && isRamp(input)) roles.push("ramp");
-  if (isDraw(text)) roles.push("draw");
+  if (drawsCards(text)) roles.push("draw");
   if (isRemoval(text)) roles.push("removal");
 
   if (roles.length === 0) roles.push("other");
@@ -42,18 +44,36 @@ function isRamp(input: {
   return true;
 }
 
-function isDraw(text: string): boolean {
-  // "draw a card", "draw two cards", "draw X cards". Exclude pure "draw step".
-  return /draw (a|one|two|three|four|five|\d+|x) cards?/.test(text);
-}
+
+const REMOVAL = [
+  // Destroy or exile, one target or up to a few.
+  /\b(?:destroy|exile) (?:up to (?:one|two|three|x) )?(?:other )?target\b/,
+  /\bcounter target\b/,
+  /\bdeals? (?:\d+|x) damage to (?:any target|(?:up to \w+ )?(?:other )?target)/,
+  /\b(?:each|target) (?:opponent|player) sacrifices\b/,
+  /\btarget creature (?:an opponent controls )?gets -(?:\d+|x)\/-(?:\d+|x)\b/,
+  // Fight and bite.
+  /\bfights? (?:up to one |another )?target\b/,
+  /\bdeals damage equal to its power to (?:up to one |another )?target\b/,
+  // Board wipes: every creature or permanent of a kind, not cards in a zone.
+  /\b(?:destroy|exile) all (?:other )?(?:nonland |non-[\w-]+ |attacking |tapped )?(?:creatures|permanents|artifacts|enchantments|planeswalkers)\b/,
+  /\beach (?:other )?creature gets -/,
+  /\bdeals? (?:\d+|x) damage to each creature\b/,
+  /\breturn all (?:nonland )?(?:creatures|permanents)\b/,
+];
+
+// Answers that count only when they point away from your own things.
+const AIMED_REMOVAL = [
+  /\breturn (?:up to \w+ )?target (?:nonland )?(?:creature|permanent|artifact|enchantment|planeswalker)s?\b[^.]* to (?:its|their) owner's hand\b/,
+  /\b(?:shuffles?|puts?) target (?:nonland )?(?:creature|permanent|artifact|enchantment)\b[^.]* (?:into|on (?:the )?(?:top|bottom) of) (?:its|their) owner's library\b/,
+  /\bthe owner of target (?:nonland )?(?:creature|permanent)\b[^.]* shuffles it into\b/,
+];
 
 function isRemoval(text: string): boolean {
-  return (
-    /destroy target/.test(text) ||
-    /exile target/.test(text) ||
-    /counter target/.test(text) ||
-    /deals? \d+ damage to (target|any target)/.test(text) ||
-    /(each|target) (opponent|player) sacrifices/.test(text)
+  if (REMOVAL.some((pattern) => pattern.test(text))) return true;
+  return sentences(text).some(
+    (sentence) =>
+      !aimsAtYourOwn(sentence) && AIMED_REMOVAL.some((pattern) => pattern.test(sentence)),
   );
 }
 

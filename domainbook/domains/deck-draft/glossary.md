@@ -93,13 +93,61 @@ The self-built ranking of a candidate card against the cards already in the deck
 sum of the `theme token`s it shares (with `commander weighting` applied, and each token
 strengthened when a repeatable or every-opponent clause carries it,
 `deck-draft/ADR-0008`), plus fit for
-the deck's role gaps and mana curve, plus a ramp bonus set by its `mana appetite`
-(`deck-draft/ADR-0009`), plus a `tribal payoff` bonus, plus the `bracket
+the deck's removal gap and mana curve, plus a bonus from each `fundamentals bucket` the
+card fills while the deck is short of it — ramp set by its `mana appetite`
+(`deck-draft/ADR-0009`), `protection` and `card advantage` (`deck-draft/ADR-0013`) —
+plus a `tribal payoff` bonus, plus the `bracket
 target` tilt, plus a small tilt toward more-played cards by reprint count
 (`deck-draft/ADR-0002`). The engine supplies
 no such score; this context owns it (`deck-draft/ADR-0001`).
 
 - **Status:** draft
+
+## Fundamentals bucket
+
+A kind of card most decks need whatever their theme — ramp, `protection`, `card
+advantage` — scored apart from `theme token`s. Each bucket has a target for the whole
+deck and keeps pace with the draft: the deck should hold its target by its sixty-third
+nonland card, in proportion along the way. Ramp earns its whole bonus at or behind that
+pace and fades to nothing two cards ahead (`deck-draft/ADR-0009`). Protection and card
+advantage earn their whole bonus at pace, half again for each card behind (up to three
+times), and half for each card ahead, never reaching zero (`deck-draft/ADR-0013`).
+
+- **Aliases:** bucket, fundamentals
+- **Status:** draft
+- **Example:** With ten nonland cards drafted and no protection, a deck with a seven-mana
+  commander still gets the whole bonus for "Lightning Greaves".
+
+## Protection
+
+A card that keeps your commander or creatures on the battlefield: it gives them hexproof,
+shroud, indestructible or protection (an Equipment, an Aura, a spell), phases them out,
+redirects a spell, or is an umbra. A creature's own hexproof is not protection for the
+deck. Its `fundamentals bucket` target is two for every deck, plus up to six more with the
+commander's need: full for a commander that wants to connect — one that triggers on
+attacking or on its own combat damage, or cares about Auras or Equipment — and otherwise
+rising with the commander's mana value, from none at three to full at six. A commander
+with its own hexproof, shroud, indestructible, ward or protection, or one that comes back
+without commander tax (commander ninjutsu, dash, eminence, putting itself onto the
+battlefield from the command zone), counts only a quarter of its mana value
+(`deck-draft/ADR-0013`).
+
+- **Status:** draft
+- **Example:** "Etali, Primal Conqueror" (seven mana, no protection of its own) aims for
+  eight protection pieces; "The Ur-Dragon", whose eminence works from the command zone,
+  three and a half.
+
+## Card advantage
+
+Drawing more cards than a turn's draw: an engine that draws again and again (a trigger or
+an activated ability on a permanent — "Rhystic Study", "Skullclamp") counts one; a one-shot
+that draws two or more ("Harmonize") counts a half; a cantrip, looting, drawing for a
+discard, or draw that goes to every player counts nothing. Its `fundamentals bucket`
+target is seven, the median of EDHREC average decks counted the same way
+(`deck-draft/ADR-0013`).
+
+- **Status:** draft
+- **Example:** "Phyrexian Arena" counts one, "Night's Whisper" a half, "Ponder" nothing.
 
 ## Mana appetite
 
@@ -119,7 +167,11 @@ Goblin, from the type line or named in the rules text), a keyword, or a salient
 oracle-text phrase (`+1/+1 counter`, `sacrifice`, `tap creature`, `etb` for any permanent
 entering, `creature etb` for a creature entering), or a power the
 rules text names (`base power 1`, `power 4 or greater`), which a creature of that printed
-power, or a card creating a creature token of it, fits. The set of tokens
+power, or a card creating a creature token of it, fits. Tokens are read
+from rules text without its reminder text; a keyword whose meaning lives in its reminder
+text signals what it does instead ("Persist" reads as `-1/-1 counter`, "Flashback" as `cast
+from graveyard`), so a Treasure's reminder no longer reads as `sacrifice`
+(`deck-draft/ADR-0013`). The set of tokens
 the heuristic recognises sets its ceiling. A card that only *enables* a token — an enters
 trigger for `etb` (and, on a creature, `creature etb`), a legendary type line for
 `legendary` — fits it without adding it to the deck's theme (`deck-draft/ADR-0005`).
@@ -134,7 +186,9 @@ from the other 99 when scoring a candidate, so the commander leads the deck's di
 What the commander rewards — the mechanic its "whenever …" trigger conditions name and the
 tribes its text names — counts for more again (`deck-draft/ADR-0005`). The commander's own
 keyword lines and type-line creature types are not part of what it counts
-(`deck-draft/ADR-0010`).
+(`deck-draft/ADR-0010`). What the 99 add to a token levels off after a handful of cards
+and never passes three, so however many cards carry a broad token, the commander's tokens
+keep leading (`deck-draft/ADR-0013`).
 
 - **Status:** draft
 - **Example:** With an Elf commander, Elf-tribal candidates outrank cards that only match

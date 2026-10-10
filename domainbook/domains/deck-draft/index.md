@@ -82,6 +82,14 @@ whole card pool by heart.
   delve, kicker, overload) and cost reduction fit what feeds them, both ways, so storm rises
   with cost reducers and delve with milling (`deck-draft/ADR-0012`). Ramp is scored apart from theme, by how much mana the deck
   wants to spend, at a steady pace through the draft (`deck-draft/ADR-0009`).
+- What the 99 add to a theme levels off after a handful of cards, so the theme stops
+  growing as the deck fills and the commander keeps leading. Tokens are read from rules
+  text without reminder text; keywords signal what they do. Next to ramp, two more
+  `fundamentals bucket`s are scored apart from theme: `protection`, whose target grows with
+  how much the commander needs it (wanting to connect, or a high mana value without its own
+  protection), and `card advantage`, aiming at EDHREC's median of seven. Each bucket's bonus
+  grows while the deck is behind its pace and halves for every card it gets ahead, with no
+  hard cap (`deck-draft/ADR-0013`).
 - Each round's three slots go to the card types the deck is shortest of against a
   commander-set `type balance`, and each slot's pool adds the most-printed cards of its
   type, so a spellslinger is offered spells and an enchantress enchantments. Basic lands
@@ -140,3 +148,11 @@ whole card pool by heart.
   one dropped, or simply walk the global ranking.
 - Whether to hard-filter unsupported cards (`coverage`) out of suggestions or only
   surface them, mirroring `deck library`'s open question.
+- Mechanics no `theme token` reads yet — combat damage to a player (about 260 commanders),
+  "can't be blocked" (180), noncreature spells and prowess (115), anthems (80) — and the 454
+  commanders that produce no curated token at all (`deck-draft/ADR-0013`).
+- Card advantage overshoots its target (about 12 per drafted deck against 7), because many
+  offered cards draw on the side; a `fundamentals bucket` only adds, so it cannot pull that
+  down (`deck-draft/ADR-0013`).
+- Whether the `bracket target` tilt (−2 per tier past the target) is large enough to steer
+  against any theme.

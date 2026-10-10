@@ -12,6 +12,31 @@ depth live there. A purely-internal PR that touches no product or architecture m
 skip its version with a `Skip-Docs: <reason>` trailer instead. There are no
 per-domain changelogs; this file is the single timeline (`ADR-0007`).
 
+## [0.39.0] - 2026-10-10
+
+### Added
+
+- Draft suggestions keep a base of protection and card advantage: each is a fundamentals
+  bucket with a target, like ramp. Protection's target grows with how much the commander
+  needs it; card advantage aims at seven. A bucket's bonus grows while the deck is behind
+  its pace and halves for each card it gets ahead, with no hard cap (`deck-draft/ADR-0013`).
+
+### Changed
+
+- What the 99 add to a draft's theme levels off after a handful of cards, so broad themes
+  (tokens, sacrifice, draw, flying) no longer bury what the commander asks for late in a
+  draft (`deck-draft/ADR-0013`).
+- Draft themes are read from rules text without reminder text; keywords such as persist,
+  afterlife and flashback signal what they do (`deck-draft/ADR-0013`).
+- Removal also counts X damage, "up to one target", bounce, tuck, shrink, fight and board
+  wipes, in goldfishing as in the draft (`deck-draft/ADR-0013`).
+
+### Fixed
+
+- A commander with ward no longer reads as rewarding spells that target its creatures, and
+  Treasure, Clue, Food and Blood makers no longer read as sacrifice, draw or lifegain cards
+  (`deck-draft/ADR-0013`).
+
 ## [0.38.0] - 2026-10-07
 
 ### Added

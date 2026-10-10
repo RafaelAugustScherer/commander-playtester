@@ -59,3 +59,15 @@ export function isCreature(card: Card): boolean {
 export function cardKey(card: { name?: string; typeLine: string; oracleText: string }): string {
   return `${card.name ?? ""}\u0000${card.typeLine}\u0000${card.oracleText}`;
 }
+
+/** `read`, remembered per card (`cardKey`): for readings of card text rerun every round. */
+export function memoizeByCard<C extends { name?: string; typeLine: string; oracleText: string }, T>(
+  read: (card: C) => T,
+): (card: C) => T {
+  const cache = new Map<string, T>();
+  return (card) => {
+    const key = cardKey(card);
+    if (!cache.has(key)) cache.set(key, read(card));
+    return cache.get(key) as T;
+  };
+}

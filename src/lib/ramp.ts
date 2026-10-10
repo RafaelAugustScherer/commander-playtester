@@ -1,5 +1,5 @@
-import { rulesLines } from "./rulesText";
-import { cardKey } from "./types";
+import { activationCost, rulesLines } from "./rulesText";
+import { memoizeByCard } from "./types";
 
 export type RampKind = "mana" | "land search" | "extra land" | "treasure";
 
@@ -35,13 +35,6 @@ function keywordCostMana(line: string): number {
   const keyword = line.slice(0, brace).trim();
   if (!KEYWORD_WITH_COST.test(keyword) || keyword === "Ward") return 0;
   return costMana(line.slice(brace));
-}
-
-function activationCost(line: string): string | null {
-  const colon = line.indexOf(":");
-  if (colon < 0) return null;
-  const cost = line.slice(0, colon).split("—").pop() ?? "";
-  return /[."•]/.test(cost) ? null : cost;
 }
 
 export function activationMana(line: string): number {
@@ -123,14 +116,6 @@ function lastingKind(card: RampCard, kind: RampKind | null): boolean {
   }
 }
 
-const lastingRampCache = new Map<string, boolean>();
-
-export function isLastingRamp(card: RampCard): boolean {
-  const key = cardKey(card);
-  let lasting = lastingRampCache.get(key);
-  if (lasting === undefined) {
-    lasting = lastingKind(card, rampKind(card));
-    lastingRampCache.set(key, lasting);
-  }
-  return lasting;
-}
+export const isLastingRamp = memoizeByCard((card: RampCard): boolean =>
+  lastingKind(card, rampKind(card)),
+);
