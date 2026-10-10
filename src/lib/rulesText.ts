@@ -42,13 +42,38 @@ export function ownNames(card: { name: string; typeLine?: string }, short = fals
   });
 }
 
-/** `text` with the card's own names (`ownNames`) read as "~". */
+export function escapeRegExp(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/**
+ * `text` with the card's own names (`ownNames`) read as "~", each as a whole
+ * word, so a short name never eats into another ("Fire" in "Firebending").
+ */
 export function withOwnName(
   text: string,
   card: { name: string; typeLine?: string },
   short = false,
 ): string {
-  return ownNames(card, short).reduce((out, name) => out.split(name).join("~"), text);
+  return ownNames(card, short).reduce(
+    (out, name) => out.replace(new RegExp(String.raw`(?<!\w)${escapeRegExp(name)}(?!\w)`, "g"), "~"),
+    text,
+  );
+}
+
+const THIS_CREATURE = /\bthis creature\b/gi;
+
+/**
+ * `text` as a legend reads its own effects: its names, short name included
+ * (`ownNames`), and "this creature" as "~", so "Whenever this creature deals
+ * combat damage" reads as its own trigger. Inside quotes "this creature" is the
+ * creature an ability is granted to, so it stays.
+ */
+export function asSelf(text: string, card: { name: string; typeLine?: string }): string {
+  return withOwnName(text, card, true)
+    .split('"')
+    .map((part, i) => (i % 2 === 0 ? part.replace(THIS_CREATURE, "~") : part))
+    .join('"');
 }
 
 /** The sentences of a text, split at full stops and line breaks. */

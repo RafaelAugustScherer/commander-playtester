@@ -1,305 +1,35 @@
 import { cardKey, isCreature, type Card } from "../lib/types";
 import { CREATURE_TYPES } from "./creatureTypes";
 import { fitsPowerCondition, powerConditions } from "./powerTokens";
-import { ruleClauses, rulesLines, rulesText, withOwnName, withoutReminder } from "../lib/rulesText";
+import {
+  asSelf,
+  escapeRegExp,
+  ruleClauses,
+  rulesLines,
+  rulesText,
+  withOwnName,
+  withoutReminder,
+} from "../lib/rulesText";
+import { RULES_KEYWORDS, TOKEN_RULES, type TextTest, type TokenRule } from "./tokenRules";
 
-/**
- * One curated oracle-text signal. Matching `pattern` contributes `token` to the
- * deck's theme and fits it; matching `enabler` (or `typeLineEnabler`) only fits
- * it — fodder a theme wants, which does not make a theme of its own
- * (`deck-draft/ADR-0005`). `enabler` fits only where `enablerTypeLine` matches
- * too, when it is set. Matching `reward` makes a commander reward the token
- * without making it a theme signal. A token and its `partners` fit each other.
- */
-export interface OracleTextPattern {
-  token: string;
-  /** One phrase, or several alternatives. */
-  pattern: RegExp | RegExp[];
-  enabler?: RegExp | RegExp[];
-  enablerTypeLine?: RegExp;
-  typeLineEnabler?: RegExp;
-  reward?: RegExp;
-  /** Free-text searches that together reach every match; defaults to the token. */
-  search?: string[];
-  partners?: string[];
-}
-
-const PERMANENT_ETB_MULTIPLIER = /\bentering\b[^.]*\btriggers? an additional time\b/i;
-const ETB_ENABLER = /\bwhen\b(?![^.,]*\blands?\b)[^.,]*\benters\b/i;
-const ARTIFACT_TOKEN_MAKER = [
-  /\bcreates?\b[^.]*\b(?:artifact|treasure|clue|food|blood|gold|powerstone|map|junk|incubator|lander)\b[^.]*\btokens?\b/i,
-  /\b(?:investigates?|incubates?)\b/i,
-];
-
-const INSTANT_OR_SORCERY = /\b(?:Instant|Sorcery)\b/;
-const STORM = /^storm(?:$| \()/im;
-const KICKER = /^(?:multi)?kicker\b/im;
-const OVERLOAD = /^overload\b/im;
-const COST_REDUCTION =
-  /(?:^|[.:]\s+|\b(?:sorcery|noncreature|white|blue|black|red|green|multicolored) )spells (?:you cast )?cost\b[^.]*\bless\b/im;
-
-const COMBAT_KEYWORDS = [
-  "flying", "deathtouch", "lifelink", "trample", "menace", "first strike", "double strike",
-  "haste", "vigilance", "indestructible", "hexproof",
-];
-const FLASH = "flash";
-const DEFENDER = "defender";
-const RULES_KEYWORDS = [...COMBAT_KEYWORDS, FLASH, DEFENDER, "reach"];
-
-function keywordEntry(keyword: string): OracleTextPattern {
-  return { token: keyword, pattern: new RegExp(`\\b${keyword}\\b`, "i") };
-}
-
-const OTHER_COUNTER_KINDS = [
-  "age", "blaze", "bounty", "charge", "coin", "corpse", "credit", "death", "delay",
-  "despair", "divinity", "doom", "dream", "echo", "egg", "elixir", "ember", "eon",
-  "fade", "fate", "flood", "fuse", "gem", "gold", "growth", "hatchling", "hit",
-  "hourglass", "hunger", "husk", "ice", "incarnation", "infection", "intel",
-  "javelin", "judgment", "ki", "level", "lore", "luck", "mine", "muster", "night",
-  "oil", "omen", "page", "pain", "petal", "plague", "poison", "polyp", "pupa", "quest",
-  "rad", "ritual", "shell", "shield", "silver", "sleep", "slime", "slumber", "spore",
-  "stash", "storage", "strife", "study", "stun", "tide", "time", "tower", "training",
-  "trap", "unity", "valor", "velocity", "verse", "wind", "wish",
-];
-
-/**
- * The tunable lever of synergy quality (`deck-draft/ADR-0001`): salient
- * oracle-text phrases mapped to the theme token they signal. Case-insensitive,
- * no `g` flag (so `.test()` stays stateless across cards).
- */
-const CURATED_PATTERNS: OracleTextPattern[] = [
-  { token: "+1/+1 counter", pattern: /\+1\/\+1 counters?\b/i },
-  { token: "-1/-1 counter", pattern: /-1\/-1 counters?\b/i },
-  { token: "sacrifice", pattern: /\bsacrifice[sd]?\b/i },
-  {
-    token: "create token",
-    pattern: [
-      /\bcreates?\b[^.]*\btokens?\b/i,
-      /\bwhenever (?:a|an|another|one or more)\b[^.,]*\btokens?\b[^.,]*\benters?\b/i,
-    ],
-  },
-  {
-    token: "draw a card",
-    pattern: /\bdraws?\b (?:a|one|two|three|four|five|\d+|x) cards?/i,
-  },
-  { token: "discard a card", pattern: /\bdiscards?\b[^.]*\bcards?\b/i },
-  {
-    token: "landfall",
-    pattern: /\blandfall\b|\bwhenever (?:a|one or more) lands? (?:you control )?enters?\b/i,
-  },
-  { token: "graveyard", pattern: /\bgraveyard\b/i },
-  { token: "gain life", pattern: /\bgains?\b[^.]*\blife\b/i },
-  { token: "mill", pattern: /\bmill(?:s|ed|ing)?\b/i },
-  {
-    token: "artifact",
-    pattern: /\bartifacts? you control\b|\bwhenever an(?:other)? artifact\b/i,
-    enabler: ARTIFACT_TOKEN_MAKER,
-    typeLineEnabler: /\bArtifact\b/,
-  },
-  {
-    token: "enchantment",
-    pattern: /\benchantments? you control\b|\bwhenever an(?:other)? enchantment\b/i,
-  },
-  { token: "treasure", pattern: /\btreasure tokens?\b/i },
-  { token: "exile", pattern: /\bexile\b/i },
-  { token: "proliferate", pattern: /\bproliferate\b/i },
-  {
-    token: "reanimate",
-    pattern: /return target creature card from (?:your|a) graveyard to the battlefield/i,
-  },
-  {
-    token: "cast from graveyard",
-    pattern: /\bcast\b[^.]* from (?:your|a) graveyard/i,
-  },
-  ...COMBAT_KEYWORDS.map(keywordEntry),
-  {
-    token: "extra combat step",
-    pattern: /\badditional combat phase\b|\bextra combat\b/i,
-  },
-  { token: "equip", pattern: /\bequip\b/i },
-  keywordEntry(FLASH),
-  { token: "convoke", pattern: /\bconvoke\b/i },
-  {
-    token: "tap creature",
-    pattern: [
-      /\btap (?:an untapped|one or more untapped|(?:another )?target|all|each) (?:\w+ )?(?:creatures?|permanents?)\b(?! (?:you|they) control)/i,
-      /\btap (?:up to \w+|any number of|x|two|three|four) (?:other )?target (?:\w+ )?(?:creatures?|permanents?)\b/i,
-      /\btap (?:another )?target (?:[\w-]+(?:,| or) )+(?:or )?(?:creatures?|permanents?)\b(?! (?:you|they) control)/i,
-      /\btapped creatures? (?:your opponents|an opponent|target opponent|defending player) controls?\b/i,
-      /\bcreatures? (?:your opponents|an opponent) controls? enters? (?:the battlefield )?tapped\b/i,
-      /\bcreatures? (?:your opponents|an opponent) controls? becomes? tapped\b/i,
-      /\bdoesn't untap during (?:its|their) controller's untap step\b/i,
-    ],
-    search: ["tap"],
-  },
-  {
-    token: "etb",
-    pattern: [
-      /\bwhenever (?:a|an|another|one or more)\b(?![^.,]*\b(?:land|creature|token)s?\b)[^.,]*\benters?\b/i,
-      /\bexile\b[^.]*\breturn (?:it|that card|them|those cards|the exiled cards?)\b[^.]* to the battlefield\b/i,
-      PERMANENT_ETB_MULTIPLIER,
-    ],
-    enabler: ETB_ENABLER,
-    reward: PERMANENT_ETB_MULTIPLIER,
-    search: ["enter", "return battlefield"],
-  },
-  {
-    token: "creature etb",
-    pattern: /\bwhenever (?:a|an|another|one or more)\b[^.,]*\bcreatures?\b[^.,]*\benters?\b/i,
-    enabler: ETB_ENABLER,
-    enablerTypeLine: /\bCreature\b/,
-    reward: /\boffspring\b|\btokens? (?:that's a |that are )?cop(?:y|ies) of\b/i,
-    search: ["enter"],
-  },
-  {
-    token: "dies",
-    pattern: /\bwhenever (?:a|an|another|one or more)\b[^.,]*\bdie(?:s)?\b/i,
-    enabler: /\bwhen\b[^.,]*\bdies\b/i,
-    search: ["dies"],
-  },
-  {
-    token: "attacks",
-    pattern: /\bwhenever\b[^.,]*\battacks?\b/i,
-    search: ["attack"],
-  },
-  {
-    token: "targets",
-    pattern:
-      /\bspells? that targets?\b|\bbecomes the target of (?:a|an)\b[^.,]*\bspell\b|\bheroic\b/i,
-    enabler: /\btarget creature (?:you control )?(?:gets \+|gains\b)/i,
-    search: ["target"],
-  },
-  keywordEntry(DEFENDER),
-  { token: "aura", pattern: /\bauras?\b/i },
-  { token: "equipment", pattern: /\bequipment\b|\bequipped\b/i },
-  { token: "vehicle", pattern: /\bvehicles?\b|\bcrew(?:s|ed)?\b/i, search: ["vehicle", "crew"] },
-  { token: "goad", pattern: /\bgoad(?:s|ed)?\b/i },
-  { token: "scry", pattern: /\bscry\b|\bsurveil\b/i, search: ["scry", "surveil"] },
-  { token: "clue", pattern: /\bclues?\b|\binvestigates?\b/i, search: ["clue", "investigate"] },
-  { token: "food", pattern: /\bfood\b/i },
-  { token: "blood", pattern: /\bblood tokens?\b/i },
-  {
-    token: "copy spell",
-    pattern: [/\bcop(?:y|ies)\b[^.]*\bspells?\b/i, STORM],
-    search: ["copy", "storm"],
-  },
-  {
-    token: "instant or sorcery",
-    pattern: [
-      /(?<!\b(?:counter|targets|can't cast|opponents? casts?)\b[^.,]{0,40})\binstant (?:or|and) sorcery spells?\b/i,
-      /\bmagecraft\b/i,
-    ],
-    typeLineEnabler: INSTANT_OR_SORCERY,
-    search: ["instant sorcery", "magecraft"],
-  },
-  {
-    token: "cost reduction",
-    pattern: COST_REDUCTION,
-    enabler: KICKER,
-    enablerTypeLine: INSTANT_OR_SORCERY,
-    search: ["cost less", "kicker"],
-  },
-  {
-    token: "storm",
-    pattern: STORM,
-    partners: ["cost reduction", "instant or sorcery"],
-  },
-  { token: "delve", pattern: /^delve\b/im, partners: ["mill", "discard a card"] },
-  {
-    token: "kicker",
-    pattern: [KICKER, /\bkicked\b/i],
-    enabler: COST_REDUCTION,
-    search: ["kicker", "kicked", "cost less"],
-  },
-  { token: "overload", pattern: OVERLOAD, partners: ["cost reduction"] },
-  { token: "energy", pattern: /\{E\}|\benergy counters?\b/i },
-  { token: "experience counter", pattern: /\bexperience counters?\b/i, search: ["experience"] },
-  {
-    token: "counters",
-    pattern: new RegExp(`\\b(?:${OTHER_COUNTER_KINDS.join("|")}) counters?\\b`, "i"),
-    enabler: /\bproliferate\b/i,
-    search: ["counter"],
-  },
-  {
-    token: "legendary",
-    pattern: /\blegendary (?:creatures?|spells?|permanents?|cards?)\b|\bhistoric\b/i,
-    typeLineEnabler: /\bLegendary\b/,
-    search: ["legendary", "historic"],
-  },
-];
-
-/**
- * Keywords whose meaning lives in their reminder text, which token reading
- * skips: each signals the tokens its own effect is about, so persist still
- * reads as -1/-1 counters while a Treasure's reminder no longer reads as
- * sacrifice (`deck-draft/ADR-0013`).
- */
-const KEYWORD_TOKENS: Array<[RegExp, string[]]> = [
-  [/\b(?:persist|wither)\b/i, ["-1/-1 counter"]],
-  [/\binfect\b/i, ["-1/-1 counter", "counters"]],
-  [/\btoxic\b/i, ["counters"]],
-  [
-    /\b(?:undying|megamorph|backup|bloodthirst|renown|riot|unleash|reinforce|tribute|ravenous|amplify|adapt|monstrosity|bolster|support|outlast|modular|explores?|awaken)\b/i,
-    ["+1/+1 counter"],
-  ],
-  [/\b(?:evolve|graft)\b/i, ["+1/+1 counter", "creature etb"]],
-  [/\bdevour\b/i, ["+1/+1 counter", "sacrifice"]],
-  [/\b(?:fabricate|amass)\b/i, ["+1/+1 counter", "create token"]],
-  [/\b(?:mentor|training|dethrone)\b/i, ["+1/+1 counter", "attacks"]],
-  [/\b(?:exalted|battle cry|melee|provoke|annihilator|firebending)\b/i, ["attacks"]],
-  [/\b(?:myriad|mobilize)\b/i, ["attacks", "create token"]],
-  [
-    /\b(?:afterlife|offspring|living weapon|squad|job select|populate|investigate|incubate)\b|\bfor mirrodin!/i,
-    ["create token"],
-  ],
-  [/\b(?:embalm|eternalize|encore)\b/i, ["create token", "graveyard"]],
-  [
-    /\b(?:flashback|escape|disturb|retrace|jump-start|harmonize|mayhem)\b/i,
-    ["cast from graveyard", "graveyard"],
-  ],
-  [/\b(?:unearth|scavenge|soulshift|recover)\b/i, ["graveyard"]],
-  [/\bdredge\b/i, ["mill", "graveyard"]],
-  [/\bmadness\b/i, ["discard a card", "graveyard"]],
-  [/\bcycling\b/i, ["draw a card", "discard a card"]],
-  [/\b\w+cycling\b/i, ["discard a card"]],
-  [/\bconnives?\b/i, ["draw a card", "discard a card"]],
-  [/\b(?:exploit|bargain|offering|blitz|evoke)\b/i, ["sacrifice"]],
-  [/\bcasualty\b/i, ["sacrifice", "copy spell"]],
-  [/\bepic\b/i, ["copy spell"]],
-  [
-    /\b(?:cumulative upkeep|level up|station|read ahead|vanishing|fading|suspend|impending)\b/i,
-    ["counters"],
-  ],
-  [/\bbestow\b/i, ["aura"]],
-  [/\bextort\b/i, ["gain life"]],
-];
-
-const CURATED_TOKENS = new Set(CURATED_PATTERNS.map(({ token }) => token));
-for (const [keyword, tokens] of KEYWORD_TOKENS) {
-  const unknown = tokens.find((token) => !CURATED_TOKENS.has(token));
-  if (unknown) throw new Error(`KEYWORD_TOKENS: ${keyword} signals no curated token "${unknown}"`);
-}
-
-/**
- * The oracle-text patterns tokens are read with: the curated ones, each with
- * the keywords that signal its token (`KEYWORD_TOKENS`) folded in.
- */
-export const ORACLE_TEXT_PATTERNS: OracleTextPattern[] = CURATED_PATTERNS.map((entry) => {
-  const keywords = KEYWORD_TOKENS.filter(([, tokens]) => tokens.includes(entry.token)).map(
-    ([keyword]) => keyword,
-  );
-  return keywords.length === 0 ? entry : { ...entry, pattern: [entry.pattern, ...keywords].flat() };
-});
-
-const PATTERNS_BY_TOKEN = new Map(ORACLE_TEXT_PATTERNS.map((p) => [p.token, p]));
+const RULES_BY_TOKEN = new Map(TOKEN_RULES.map((rule) => [rule.token, rule]));
 
 const PARTNERS = new Map<string, Set<string>>();
-for (const { token, partners = [] } of ORACLE_TEXT_PATTERNS) {
+for (const { token, partners = [] } of TOKEN_RULES) {
   for (const partner of partners) {
     PARTNERS.set(token, (PARTNERS.get(token) ?? new Set()).add(partner));
     PARTNERS.set(partner, (PARTNERS.get(partner) ?? new Set()).add(token));
   }
 }
+
+type Signal = readonly [token: string, test: TextTest];
+
+/** What signals each token in a card's text. */
+const CARD_SIGNALS: readonly Signal[] = TOKEN_RULES.map(({ token, signal }) => [token, signal]);
+/** What signals each token in a commander's own text (`TokenRule.commander`). */
+const COMMANDER_SIGNALS: readonly Signal[] = TOKEN_RULES.flatMap(({ token, signal, commander }) =>
+  commander === "never" ? [] : [[token, commander ?? signal] as const],
+);
 
 function subtypesFromTypeLine(typeLine: string): string[] {
   const tokens = new Set<string>();
@@ -332,10 +62,6 @@ function subtypeForms(subtype: string): string[] {
     subtype.replace(/y$/, "ies"),
     ...(irregular ? [subtype[0] + irregular.slice(1)] : []),
   ];
-}
-
-function escapeRegExp(text: string): string {
-  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 export function mentionsSubtype(text: string, subtype: string): boolean {
@@ -374,23 +100,23 @@ function typesNamedIn(ownText: string): string[] {
   return [...types];
 }
 
-function matches(pattern: RegExp | RegExp[], text: string): boolean {
-  return Array.isArray(pattern) ? pattern.some((p) => p.test(text)) : pattern.test(text);
+function matches(test: TextTest, text: string): boolean {
+  return test instanceof RegExp ? test.test(text) : test.some((pattern) => pattern.test(text));
+}
+
+function signalled(text: string, signals: readonly Signal[]): string[] {
+  return signals.flatMap(([token, test]) => (matches(test, text) ? [token] : []));
 }
 
 /**
- * The tokens a text signals, read from rules text without reminder text
+ * The tokens a card's text signals: the tribes it names, its curated signals and
+ * its power conditions, read from rules text without reminder text
  * (`deck-draft/ADR-0013`) and with the card's own name read as "~", so a name
  * signals nothing.
  */
-function textThemeTokens(text: string, name: string): Set<string> {
-  const rules = withOwnName(text, { name });
-  const tokens = new Set<string>(typesNamedIn(rules));
-  for (const { token, pattern } of ORACLE_TEXT_PATTERNS) {
-    if (matches(pattern, rules)) tokens.add(token);
-  }
-  for (const condition of powerConditions(rules)) tokens.add(condition);
-  return tokens;
+function textThemeTokens(text: string, card: Card): Set<string> {
+  const own = withOwnName(text, card);
+  return new Set([...typesNamedIn(own), ...signalled(own, CARD_SIGNALS), ...powerConditions(own)]);
 }
 
 const KEYWORD_ABILITY = new RegExp(
@@ -416,7 +142,7 @@ export function themeTokens(card: Card): ReadonlySet<string> {
   const key = cardKey(card);
   let tokens = themeTokenCache.get(key);
   if (!tokens) {
-    const found = textThemeTokens(rulesText(card), card.name);
+    const found = textThemeTokens(rulesText(card), card);
     for (const subtype of subtypesFromTypeLine(card.typeLine)) found.add(subtype);
     tokens = found;
     themeTokenCache.set(key, tokens);
@@ -427,7 +153,8 @@ export function themeTokens(card: Card): ReadonlySet<string> {
 /**
  * The tokens a commander asks for: its oracle-text signals and the tribes its
  * rules text names, but not its own keyword lines or type-line subtypes, which
- * describe the commander rather than the deck it wants.
+ * describe the commander rather than the deck it wants. Its signals are read
+ * as its own effects (`asSelf`, `TokenRule.commander`).
  */
 export function commanderThemeTokens(card: Card): ReadonlySet<string> {
   const key = cardKey(card);
@@ -436,25 +163,28 @@ export function commanderThemeTokens(card: Card): ReadonlySet<string> {
     const text = rulesLines(card)
       .filter((line) => !isKeywordLine(line))
       .join("\n");
-    tokens = textThemeTokens(text, card.name);
+    const own = withOwnName(text, card);
+    tokens = new Set([
+      ...typesNamedIn(own),
+      ...signalled(asSelf(text, card), COMMANDER_SIGNALS),
+      ...powerConditions(own),
+    ]);
     commanderTokenCache.set(key, tokens);
   }
   return tokens;
 }
 
-function enablerFits(
-  { enabler, enablerTypeLine }: OracleTextPattern,
-  text: string,
-  typeLine: string,
-): boolean {
+function textFits({ fitsText }: TokenRule, text: string, typeLine: string): boolean {
   return (
-    !!enabler && matches(enabler, text) && (!enablerTypeLine || enablerTypeLine.test(typeLine))
+    !!fitsText &&
+    matches(fitsText.text, text) &&
+    (!fitsText.typeLine || fitsText.typeLine.test(typeLine))
   );
 }
 
 /**
  * The tokens a card fits: its `themeTokens`, their partners, and those it only
- * enables, such as a creature with an enters trigger for a blink deck.
+ * fits, such as a creature with an enters trigger for a blink deck.
  */
 export function cardTokens(card: Card): ReadonlySet<string> {
   const key = cardKey(card);
@@ -464,12 +194,9 @@ export function cardTokens(card: Card): ReadonlySet<string> {
     for (const token of themeTokens(card)) {
       for (const partner of PARTNERS.get(token) ?? []) found.add(partner);
     }
-    for (const pattern of ORACLE_TEXT_PATTERNS) {
-      if (
-        pattern.typeLineEnabler?.test(card.typeLine) ||
-        enablerFits(pattern, rulesText(card), card.typeLine)
-      ) {
-        found.add(pattern.token);
+    for (const rule of TOKEN_RULES) {
+      if (rule.fitsCard?.(card) || textFits(rule, rulesText(card), card.typeLine)) {
+        found.add(rule.token);
       }
     }
     tokens = found;
@@ -491,9 +218,9 @@ function clauseStrength(clause: string, repeatable: boolean): number {
 }
 
 function clauseTokens(clause: string, card: Card): Set<string> {
-  const tokens = textThemeTokens(clause, card.name);
-  for (const pattern of ORACLE_TEXT_PATTERNS) {
-    if (enablerFits(pattern, clause, card.typeLine)) tokens.add(pattern.token);
+  const tokens = textThemeTokens(clause, card);
+  for (const rule of TOKEN_RULES) {
+    if (textFits(rule, clause, card.typeLine)) tokens.add(rule.token);
   }
   return tokens;
 }
@@ -523,9 +250,17 @@ export function tokenStrengths(card: Card): ReadonlyMap<string, number> {
   return strengths;
 }
 
+function rewards({ rewards: test }: TokenRule, card: Card, text: string): boolean {
+  if (!test) return false;
+  return typeof test === "function" ? test(card) : matches(test, text);
+}
+
+const WHENEVER_CLAUSE = /\bwhenever\b[^.,]*/gi;
+
 /**
  * The tokens a card rewards, as opposed to what its rewards are: those named in
- * its "whenever …" trigger conditions, and the tribes its rules text names.
+ * its "whenever …" trigger conditions, read as its own effects (`asSelf`), the
+ * tribes its rules text names, and each token's `rewards`.
  * Hylda of the Icy Crown's "Whenever you tap an untapped creature an opponent
  * controls" yields `tap creature`, not the token, counter or card her trigger
  * gives; Lathril's "Tap ten untapped Elves you control" yields `elf`.
@@ -534,11 +269,11 @@ export function rewardedTokens(card: Card): Set<string> {
   const text = rulesText(card);
   const tokens = new Set<string>(namedCreatureTypes(text, card.name));
   for (const condition of powerConditions(text)) tokens.add(condition);
-  for (const { token, reward } of ORACLE_TEXT_PATTERNS) {
-    if (reward?.test(text)) tokens.add(token);
+  for (const rule of TOKEN_RULES) {
+    if (rewards(rule, card, text)) tokens.add(rule.token);
   }
-  for (const [clause] of text.matchAll(/\bwhenever\b[^.,]*/gi)) {
-    for (const token of textThemeTokens(clause, card.name)) tokens.add(token);
+  for (const [clause] of asSelf(text, card).matchAll(WHENEVER_CLAUSE)) {
+    for (const token of signalled(clause, COMMANDER_SIGNALS)) tokens.add(token);
   }
   return tokens;
 }
@@ -592,10 +327,10 @@ export function fitsToken(card: Card, token: string): boolean {
  * null when `token` is not one (a subtype, searched as itself).
  */
 export function tokenSearches(token: string): string[] | null {
-  const pattern = PATTERNS_BY_TOKEN.get(token);
-  if (!pattern) return null;
+  const rule = RULES_BY_TOKEN.get(token);
+  if (!rule) return null;
   const partnerSearches = [...(PARTNERS.get(token) ?? [])].flatMap(
-    (partner) => PATTERNS_BY_TOKEN.get(partner)?.search ?? [partner],
+    (partner) => RULES_BY_TOKEN.get(partner)?.search ?? [partner],
   );
-  return [...new Set([...(pattern.search ?? [token]), ...partnerSearches])];
+  return [...new Set([...(rule.search ?? [token]), ...partnerSearches])];
 }

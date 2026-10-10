@@ -6,7 +6,8 @@
 // docs/engine-upgrade.md). Game-independent: they need the card database
 // loaded but not a running game (deck-draft/ADR-0001, TDR-0001).
 
-import type { DraftCardType, TypeBalance } from "../draft/typeBalance";
+import type { DraftCardType } from "../draft/cardTypes";
+import type { TypeBalance } from "../draft/typeBalance";
 import type { BracketTarget } from "../draft/bracket";
 import type { DraftCustomization } from "../draft/customization";
 import type { ThemeProfile } from "../draft/themes";
@@ -39,6 +40,8 @@ export interface DraftCandidateData {
   typeLine: string;
   oracleText: string;
   power?: number;
+  /** The front face's mana cost holds {X} (`costHasX`). */
+  hasXCost: boolean;
   colorIdentity: string[];
 }
 
@@ -102,6 +105,7 @@ export interface CardFaceData {
     subtypes?: string[];
   };
   oracle_text?: string;
+  mana_cost?: { shards?: string[] };
   power?: { type: "Fixed"; value: number } | { type: "Variable"; value: string };
   triggers?: FaceTrigger[];
   static_abilities?: FaceStaticAbility[];

@@ -11,14 +11,8 @@ import { extractThemeProfile } from "../src/draft/themes";
 import type { CardResolver, DraftEngine } from "../src/draft/candidates";
 import { draftCandidateCard } from "../src/draft/localCandidates";
 import type { DraftCustomization } from "../src/draft/customization";
-import {
-  DRAFT_CARD_TYPES,
-  primaryType,
-  targetMix,
-  zeroCounts,
-  type DraftCardType,
-  type TypeCounts,
-} from "../src/draft/typeBalance";
+import { DRAFT_CARD_TYPES, primaryType, type DraftCardType } from "../src/draft/cardTypes";
+import { targetMix, zeroCounts, type TypeCounts } from "../src/draft/typeBalance";
 import type { Card } from "../src/lib/types";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");

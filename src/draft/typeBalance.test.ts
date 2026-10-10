@@ -1,18 +1,16 @@
 import { describe, it, expect } from "vitest";
 import type { CardFaceData } from "../engine/draftQueries";
 import { COMMANDER_WEIGHT } from "./themes";
+import { DRAFT_CARD_TYPES, type DraftCardType } from "./cardTypes";
 import {
-  DRAFT_CARD_TYPES,
   allocateSlots,
   basicLandCount,
   basicLandSplit,
   cardTypeSignals,
   isBasicLandName,
-  primaryType,
   targetMix,
   typeWeights,
   zeroCounts,
-  type DraftCardType,
   type TypeBalance,
   type TypeCounts,
 } from "./typeBalance";
@@ -76,32 +74,6 @@ describe("zeroCounts", () => {
     const first = zeroCounts();
     first.land = 5;
     expect(zeroCounts().land).toBe(0);
-  });
-});
-
-describe("primaryType", () => {
-  it.each([
-    ["Land Creature — Forest Dryad", "land"],
-    ["Artifact Creature — Golem", "creature"],
-    ["Enchantment Creature — Nymph", "creature"],
-    ["Kindred Instant — Elf", "instant"],
-    ["Legendary Planeswalker — Teferi", "planeswalker"],
-    ["Instant // Land", "instant"],
-    ["Land // Instant", "land"],
-    ["Basic Land — Island", "land"],
-    ["Artifact — Equipment", "artifact"],
-    ["Legendary Enchantment — Saga", "enchantment"],
-    ["Sorcery", "sorcery"],
-  ] as const)("maps %s to %s", (typeLine, expected) => {
-    expect(primaryType(typeLine)).toBe(expected);
-  });
-
-  it("returns null for a type outside the draft types", () => {
-    expect(primaryType("Battle — Siege")).toBeNull();
-  });
-
-  it("ignores type words that only appear in the subtypes", () => {
-    expect(primaryType("Creature — Land Mine")).toBe("creature");
   });
 });
 

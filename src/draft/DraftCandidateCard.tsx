@@ -1,7 +1,7 @@
 import type { MouseEvent as ReactMouseEvent } from "react";
 import { Plus, RefreshCw } from "lucide-react";
 import type { RankedCandidate } from "./candidates";
-import type { DraftCardType } from "./typeBalance";
+import type { DraftCardType } from "./cardTypes";
 import { useI18n } from "../i18n/I18nContext";
 import type { MsgKey } from "../i18n/messages";
 import type { Preview } from "../board/CardPreview";

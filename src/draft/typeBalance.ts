@@ -2,18 +2,7 @@ import { saturate } from "./curves";
 import type { CardFaceData } from "../engine/draftQueries";
 import type { DecklistEntry } from "../lib/types";
 import { COMMANDER_WEIGHT } from "./themes";
-
-export const DRAFT_CARD_TYPES = [
-  "land",
-  "creature",
-  "instant",
-  "sorcery",
-  "artifact",
-  "enchantment",
-  "planeswalker",
-] as const;
-
-export type DraftCardType = (typeof DRAFT_CARD_TYPES)[number];
+import { DRAFT_CARD_TYPES, type DraftCardType } from "./cardTypes";
 
 export type TypeCounts = Record<DraftCardType, number>;
 
@@ -25,16 +14,6 @@ export interface TypeBalance {
 }
 
 const NON_LAND_TYPES = DRAFT_CARD_TYPES.filter((type) => type !== "land");
-
-const PRIMARY_TYPE_ORDER: Array<[DraftCardType, RegExp]> = [
-  ["land", /\bLand\b/],
-  ["creature", /\bCreature\b/],
-  ["planeswalker", /\bPlaneswalker\b/],
-  ["instant", /\bInstant\b/],
-  ["sorcery", /\bSorcery\b/],
-  ["artifact", /\bArtifact\b/],
-  ["enchantment", /\bEnchantment\b/],
-];
 
 const BASELINE_NON_LAND: Record<Exclude<DraftCardType, "land">, number> = {
   creature: 27.4,
@@ -57,7 +36,10 @@ const MEDIUM_SIGNAL = 1;
 // colour keeps a few utility lands; the rest are basics (`deck-draft/ADR-0007`).
 const NONBASIC_LAND_SHARE_BY_COLORS = [0.75, 0.15, 0.45, 0.6, 0.65, 0.7];
 
-const NONCREATURE_SPELL_TYPES: DraftCardType[] = [
+// The slot types a commander's noncreature-spell filter leans its type balance to.
+// Planeswalkers are left out: few decks run many, and they are off by default
+// (`customization`). Prowess and its kind count them (`isNoncreatureSpell`).
+const NONCREATURE_LEAN_TYPES: DraftCardType[] = [
   "instant",
   "sorcery",
   "artifact",
@@ -96,14 +78,6 @@ function isDraftCardType(value: string): value is DraftCardType {
   return (DRAFT_CARD_TYPES as readonly string[]).includes(value);
 }
 
-export function primaryType(typeLine: string): DraftCardType | null {
-  const types = typeLine.split("//")[0].split("—")[0];
-  for (const [type, pattern] of PRIMARY_TYPE_ORDER) {
-    if (pattern.test(types)) return type;
-  }
-  return null;
-}
-
 export function isBasicLandName(name: string): boolean {
   return BASIC_LAND_NAMES.has(name.trim().toLowerCase());
 }
@@ -124,7 +98,7 @@ function filterTypes(
     const type = subtypeTypes.get(entry.Subtype.toLowerCase());
     return type ? [type] : [];
   }
-  if (entry.Non === "Creature") return NONCREATURE_SPELL_TYPES;
+  if (entry.Non === "Creature") return NONCREATURE_LEAN_TYPES;
   if (Array.isArray(entry.AnyOf)) {
     return entry.AnyOf.flatMap((inner) => filterTypes(inner, subtypeTypes));
   }

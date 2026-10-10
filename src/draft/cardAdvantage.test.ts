@@ -8,6 +8,7 @@ function card(typeLine: string, oracleText: string): Card {
     manaValue: 2,
     typeLine,
     oracleText,
+    hasXCost: false,
     colors: [],
     colorIdentity: [],
     producedMana: [],

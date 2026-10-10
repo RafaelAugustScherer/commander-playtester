@@ -12,6 +12,8 @@ export interface Card {
   oracleText: string;
   /** Printed power, only when it is a fixed number. */
   power?: number;
+  /** The front face's mana cost holds {X} (an X spell, `costHasX`). */
+  hasXCost: boolean;
   colors: string[];
   /** True MTG color identity (mana cost + rules text), from Scryfall's `color_identity`. */
   colorIdentity: string[];
@@ -53,6 +55,15 @@ export function isLand(card: Card): boolean {
 
 export function isCreature(card: Card): boolean {
   return /\bCreature\b/.test(card.typeLine);
+}
+
+/**
+ * Whether a mana cost holds {X}, from its symbols: Scryfall's ("X", "R") or the
+ * engine's shards ("X", "Red"). Only the front face's cost is read, as the
+ * engine knows a card, so a split card's other half never counts.
+ */
+export function costHasX(symbols: readonly string[]): boolean {
+  return symbols.includes("X");
 }
 
 /** Identifies a card's name, type line and rules text, for keeping what is computed from them. */

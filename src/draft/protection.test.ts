@@ -16,6 +16,7 @@ function card(overrides: Partial<Card> = {}): Card {
     manaValue: 2,
     typeLine: "Instant",
     oracleText: "",
+    hasXCost: false,
     colors: [],
     colorIdentity: [],
     producedMana: [],
@@ -100,6 +101,20 @@ describe("wantsToConnect", () => {
     ["Whenever Edgar attacks, put a +1/+1 counter on each Vampire you control.", "Edgar Markov"],
   ])("reads %j as a commander that wants to connect", (oracleText, name) => {
     expect(wantsToConnect(commander(3, oracleText, name))).toBe(true);
+  });
+
+  it("reads its own trigger written as \"this creature\"", () => {
+    expect(
+      wantsToConnect(commander(3, "Whenever this creature deals combat damage to a player, draw a card.")),
+    ).toBe(true);
+  });
+
+  it("does not read a combat trigger it grants to other creatures as wanting to connect", () => {
+    expect(
+      wantsToConnect(
+        commander(3, 'Other creatures have "Whenever this creature attacks, you may have it fight Test."'),
+      ),
+    ).toBe(false);
   });
 
   it("does not read a go-wide combat trigger as wanting to connect", () => {

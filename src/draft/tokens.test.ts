@@ -23,6 +23,7 @@ function card(overrides: Partial<Card> = {}): Card {
     manaValue: 2,
     typeLine: "Creature — Bear",
     oracleText: "",
+    hasXCost: false,
     colors: [],
     colorIdentity: [],
     producedMana: [],
@@ -44,7 +45,7 @@ describe("cardTokens", () => {
   });
 
   it("has no subtype tokens when the type line carries none", () => {
-    const tokens = cardTokens(card({ typeLine: "Enchantment" }));
+    const tokens = themeTokens(card({ typeLine: "Enchantment" }));
     expect(tokens.size).toBe(0);
   });
 
@@ -333,7 +334,8 @@ describe("rewardedTokens", () => {
           "Whenever Lathril, Blade of the Elves deals combat damage to a player, create that many 1/1 green Elf Warrior creature tokens.\n{T}, Tap ten untapped Elves you control: Each opponent loses 10 life and you gain 10 life.",
       }),
     );
-    expect([...tokens]).toEqual(["elf"]);
+    // The tribe it names, not its tokens' Warrior; untapping, for its tap ability.
+    expect([...tokens].sort()).toEqual(["elf", "untap"]);
   });
 
   it("ignores one-shot when triggers", () => {
@@ -839,5 +841,158 @@ describe("spell keywords", () => {
     expect(tokenStrengths(blustersquall).get("tap creature")).toBe(MULTIPLAYER_STRENGTH);
     expect(tokenStrengths(blustersquall).get("instant or sorcery")).toBe(MULTIPLAYER_STRENGTH);
     expect(tokenStrengths(blustersquall).get("cost reduction")).toBe(MULTIPLAYER_STRENGTH);
+  });
+});
+
+describe("mechanics from deck-draft/ADR-0014", () => {
+  it.each([
+    ["combat damage", "Whenever a creature you control deals combat damage to a player, draw a card."],
+    ["combat damage", "Whenever equipped creature deals combat damage to one of your opponents, untap it."],
+    ["evasion", "This creature can't be blocked."],
+    ["evasion", "Skulk"],
+    ["evasion", "Islandwalk"],
+    ["ninjutsu", "Ninjutsu {1}{U}"],
+    ["noncreature spell", "Whenever you cast a noncreature spell, scry 1."],
+    ["noncreature spell", "Prowess"],
+    ["second spell", "Whenever you cast your second spell each turn, draw a card."],
+    ["extra draw", "Whenever you draw your second card each turn, scry 1."],
+    ["anthem", "Creatures you control get +1/+1."],
+    ["drain", "Whenever a creature you control dies, each opponent loses 1 life."],
+    ["impulse draw", "Exile the top card of your library. Until end of turn, you may play that card."],
+    ["lands matter", "You may play lands from your graveyard."],
+    ["lands matter", "Return up to two target land cards from your graveyard to the battlefield."],
+    ["clone", "You may have this creature enter as a copy of any creature on the battlefield."],
+    ["x spell", "Whenever you cast a spell with {X} in its mana cost, double X."],
+    ["untap", "Untap target permanent."],
+    ["tutor", "Search your library for a card, put it into your hand, then shuffle."],
+    ["mutate", "Mutate {2}{G}"],
+    ["explore", "When this creature enters, it explores."],
+    ["dies", TEYSA_TEXT],
+  ])("signals %s", (token, oracleText) => {
+    expect(themeTokens(card({ oracleText }))).toContain(token);
+  });
+
+  it.each([
+    ["noncreature spell", "Counter target noncreature spell."],
+    ["noncreature spell", "Noncreature spells your opponents cast cost {1} more to cast."],
+    ["tutor", "Search your library for a basic land card, put it onto the battlefield tapped, then shuffle."],
+    ["lands matter", "Destroy target land."],
+    ["untap", "This creature doesn't untap during your untap step."],
+  ])("does not signal %s from %j", (token, oracleText) => {
+    expect(themeTokens(card({ oracleText }))).not.toContain(token);
+  });
+
+  it("fits an evasive creature to combat damage without signalling it", () => {
+    const rogue = card({ typeLine: "Creature — Rogue", oracleText: "Skulk" });
+    expect(fitsToken(rogue, "combat damage")).toBe(true);
+    expect(themeTokens(rogue)).not.toContain("combat damage");
+    expect(fitsToken(card({ typeLine: "Creature — Bird", oracleText: "Flying" }), "combat damage")).toBe(false);
+  });
+
+  it("fits every noncreature spell to a deck that casts them, but not a creature or land", () => {
+    expect(fitsToken(card({ typeLine: "Artifact" }), "noncreature spell")).toBe(true);
+    expect(fitsToken(card({ typeLine: "Instant" }), "noncreature spell")).toBe(true);
+    expect(fitsToken(card({ typeLine: "Legendary Planeswalker — Teferi" }), "noncreature spell")).toBe(true);
+    expect(fitsToken(card({ typeLine: "Artifact Creature — Golem" }), "noncreature spell")).toBe(false);
+    expect(fitsToken(card({ typeLine: "Land" }), "noncreature spell")).toBe(false);
+  });
+
+  it("fits a card with {X} in its mana cost to an X-spell deck", () => {
+    const xSpell = card({ name: "X Spell", typeLine: "Sorcery", hasXCost: true });
+    expect(fitsToken(xSpell, "x spell")).toBe(true);
+    expect(themeTokens(xSpell)).not.toContain("x spell");
+    expect(fitsToken(card({ name: "Fixed Spell", typeLine: "Sorcery" }), "x spell")).toBe(false);
+  });
+});
+
+describe("what a commander's own text seeds (deck-draft/ADR-0014)", () => {
+  const legend = (name: string, oracleText: string) =>
+    card({ name, typeLine: "Legendary Creature — Human", oracleText });
+
+  it("takes combat damage from other creatures connecting, not from the commander's own trigger", () => {
+    const own = legend(
+      "Thada Adel, Acquisitor",
+      "Whenever Thada Adel deals combat damage to a player, draw a card.",
+    );
+    expect(commanderThemeTokens(own)).not.toContain("combat damage");
+    expect(rewardedTokens(own)).not.toContain("combat damage");
+    expect(themeTokens(own)).toContain("combat damage");
+
+    const others = legend("Captain of Ninjas", "Whenever a Ninja you control deals combat damage to a player, draw a card.");
+    expect(commanderThemeTokens(others)).toContain("combat damage");
+    expect(rewardedTokens(others)).toContain("combat damage");
+  });
+
+  it.each([
+    ["Whenever this creature deals combat damage to a player, draw a card."],
+    ["Whenever Kitsune enters or deals combat damage to a player, draw a card."],
+    ["When Kitsune enters and whenever it deals combat damage to a player, create a Blood token."],
+  ])("reads %j as the commander's own trigger", (oracleText) => {
+    const own = legend("Kitsune, Dragon's Daughter", oracleText);
+    expect(commanderThemeTokens(own)).not.toContain("combat damage");
+    expect(rewardedTokens(own)).not.toContain("combat damage");
+  });
+
+  it.each([
+    ["When Derevi enters and whenever a creature you control deals combat damage to a player, untap target permanent."],
+    ["Whenever Millicent or another Spirit you control deals combat damage to a player, create a Spirit token."],
+    ['Rogues you control have "Whenever this creature deals combat damage to a player, draw a card."'],
+    ["Whenever a creature you control with a counter on it deals combat damage to a player, draw a card."],
+  ])("reads %j as other creatures connecting", (oracleText) => {
+    const commander = legend("Derevi Millicent", oracleText);
+    expect(commanderThemeTokens(commander)).toContain("combat damage");
+    expect(rewardedTokens(commander)).toContain("combat damage");
+  });
+
+  it("does not take tutoring as a theme from a commander that tutors", () => {
+    const sisay = legend(
+      "Captain Sisay",
+      "{T}: Search your library for a legendary card, reveal it, put it into your hand, then shuffle.",
+    );
+    expect(commanderThemeTokens(sisay)).not.toContain("tutor");
+    expect(themeTokens(sisay)).toContain("tutor");
+  });
+
+  it("rewards untapping for a tap ability, not for the commander's own untap effect", () => {
+    const tapper = legend("Captain Sisay", "{2}, {T}, Sacrifice a creature: Draw a card.");
+    expect(rewardedTokens(tapper)).toContain("untap");
+    const parley = legend("Selvala", "Parley — {T}: Each player draws a card.");
+    expect(rewardedTokens(parley)).toContain("untap");
+    const tapsElves = legend("Elf Lord", "Tap an untapped Elf you control, {T}: Draw a card.");
+    expect(rewardedTokens(tapsElves)).toContain("untap");
+    const manaAbility = legend("Mana Elder", "{T}: Add {G}.");
+    expect(rewardedTokens(manaAbility)).not.toContain("untap");
+    const untapper = legend("Untapper", "Whenever you cast a spell, untap target permanent.");
+    expect(commanderThemeTokens(untapper)).not.toContain("untap");
+    expect(rewardedTokens(untapper)).not.toContain("untap");
+  });
+
+  it.each([
+    ["Mutate {2}{U/B}{G}{G}", ["mutate"]],
+    ["Commander ninjutsu {U}{B}", ["ninjutsu"]],
+    ["Ninjutsu {1}{U}", ["ninjutsu"]],
+    ["Kicker {2}{G}", []],
+    ["Convoke", []],
+    ["Delve", []],
+    ["Flying", []],
+    ["Exile target creature.", []],
+  ])("rewards %j with %j, the mechanics a mutate or ninjutsu commander is built on", (oracleText, rewarded) => {
+    expect([...rewardedTokens(legend("Keyword Bearer", oracleText))]).toEqual(rewarded);
+  });
+
+  it("leaves out the commander's own evasion keyword", () => {
+    const walker = legend("Walker", "Islandwalk\nWhenever this creature attacks, draw a card.");
+    expect(commanderThemeTokens(walker)).not.toContain("evasion");
+  });
+
+  it("does not read a short name as a keyword or eat into a word with it", () => {
+    const shadow = legend("Shadow, Mysterious Assassin", "Whenever Shadow attacks, draw a card.");
+    expect(commanderThemeTokens(shadow)).not.toContain("evasion");
+    const azula = card({
+      name: "Fire Lord Azula",
+      typeLine: "Legendary Creature — Human Noble",
+      oracleText: "Firebending 2\nWhenever you cast a spell while Fire Lord Azula is attacking, copy that spell.",
+    });
+    expect(commanderThemeTokens(azula)).toContain("attacks");
   });
 });

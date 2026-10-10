@@ -9,6 +9,7 @@ function land(): Card {
     manaValue: 0,
     typeLine: "Basic Land — Forest",
     oracleText: "{T}: Add {G}.",
+    hasXCost: false,
     colors: [],
     colorIdentity: ["G"],
     producedMana: ["G"],
@@ -22,6 +23,7 @@ function spell(mv: number, ramp = false): Card {
     manaValue: mv,
     typeLine: ramp ? "Artifact" : "Creature — Bear",
     oracleText: ramp ? "{T}: Add {C}." : "Vanilla.",
+    hasXCost: false,
     colors: [],
     colorIdentity: [],
     producedMana: ramp ? ["C"] : [],
@@ -55,6 +57,7 @@ describe("analyzeComposition", () => {
       return {
         ...base,
         name: oracleText,
+        hasXCost: false,
         colors: [],
         colorIdentity: [],
         roles: classifyRoles(base),

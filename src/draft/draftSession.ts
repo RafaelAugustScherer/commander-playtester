@@ -20,9 +20,9 @@ import {
   basicLandCount,
   basicLandSplit,
   isBasicLandName,
-  type DraftCardType,
   type TypeBalance,
 } from "./typeBalance";
+import type { DraftCardType } from "./cardTypes";
 
 export type DraftPhase = "commander-selection" | "drafting";
 
