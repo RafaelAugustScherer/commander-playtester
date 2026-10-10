@@ -1,5 +1,6 @@
 import { isCreature, type Card } from "../lib/types";
 import { isLastingRamp, manaAbilityLines } from "../lib/ramp";
+import { bucketPace } from "./fundamentals";
 import { TRIBAL_SATURATION, type ThemeProfile } from "./themes";
 import { namedCreatureTypes } from "./tokens";
 
@@ -9,7 +10,6 @@ const RAMP_APPETITE_SPAN = 2;
 const RAMP_TOO_SLOW_MV = 4;
 const RAMP_CHEAP_MV = 2;
 const RAMP_TARGET = 10;
-const NONLAND_TARGET = 63;
 const RAMP_PACE_SLACK = 2;
 const TRIBAL_RAMP_STRENGTH = 1.5;
 const CREATURE_RAMP_WITHOUT_GREEN = 0.25;
@@ -25,7 +25,7 @@ export function rampFit(card: Card, profile: ThemeProfile): number {
     isCreature(card) && !profile.colorIdentity.includes("G")
       ? CREATURE_RAMP_WITHOUT_GREEN
       : 1;
-  const pace = (RAMP_TARGET * Math.min(profile.nonlandCount, NONLAND_TARGET)) / NONLAND_TARGET;
+  const pace = bucketPace(RAMP_TARGET, profile.nonlandCount);
   const room = clamp01(1 + (pace - profile.rampCount) / RAMP_PACE_SLACK);
   return RAMP_WEIGHT * need * speed * tribal * colour * room;
 }

@@ -80,13 +80,17 @@ describe("scoreCandidate", () => {
     ];
     const profile = extractThemeProfile([], others);
 
-    const drawCandidate = card({ roles: ["draw"] });
+    const fresh = extractThemeProfile([], []);
     const removalCandidate = card({ roles: ["removal"] });
 
-    const drawScore = scoreCandidate(drawCandidate, profile);
-    const removalScore = scoreCandidate(removalCandidate, profile);
+    expect(scoreCandidate(removalCandidate, fresh).roleScore).toBeGreaterThan(
+      scoreCandidate(removalCandidate, profile).roleScore,
+    );
+  });
 
-    expect(drawScore.roleScore).toBeGreaterThan(removalScore.roleScore);
+  it("leaves draw to the card-advantage bucket, not the role gap", () => {
+    const candidate = card({ roles: ["draw"], oracleText: "Draw two cards." });
+    expect(scoreCandidate(candidate, extractThemeProfile([], [])).roleScore).toBe(0);
   });
 
   it("gives no role-gap credit for the catch-all 'other' role", () => {

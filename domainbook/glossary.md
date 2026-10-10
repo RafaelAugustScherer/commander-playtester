@@ -127,8 +127,10 @@ Treasure or one-shot spells (`deck-draft/ADR-0009`).
 ## Removal
 
 A card that answers an opponent's permanent or spell — destroy, exile, counter,
-damage. Loosely, "interaction". One of the composition roles the goldfishing engine
-classifies heuristically; it is a label over card text, not a rules-accurate reading.
+damage, bounce, tuck, shrink, fight, or a board wipe. Loosely, "interaction". One of the
+composition roles the goldfishing engine classifies heuristically from rules text without
+its reminder text; it is a label over card text, not a rules-accurate reading
+(`deck-draft/ADR-0013`).
 
 - **Aliases:** interaction
 - **Status:** validated

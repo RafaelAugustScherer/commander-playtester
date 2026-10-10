@@ -84,6 +84,41 @@ describe("classifyRoles", () => {
     expect(roles).toContain("removal");
   });
 
+  it.each([
+    ["Instant", "Exile up to one target creature or planeswalker."],
+    ["Instant", "Return target nonland permanent you don't control to its owner's hand."],
+    ["Instant", "The owner of target permanent shuffles it into their library, then reveals the top card of their library."],
+    ["Sorcery", "Target creature you control fights target creature you don't control."],
+    ["Instant", "Fireball deals X damage to any target."],
+    ["Instant", "Target creature gets -3/-3 until end of turn."],
+    ["Sorcery", "Destroy all creatures. They can't be regenerated."],
+    ["Sorcery", "Return all nonland permanents to their owners' hands."],
+  ])("flags a %s worded %j as removal", (typeLine, oracleText) => {
+    expect(classifyRoles({ typeLine, oracleText, manaValue: 3, producedMana: [] })).toContain(
+      "removal",
+    );
+  });
+
+  it("does not flag returning your own creature to hand as removal", () => {
+    const roles = classifyRoles({
+      typeLine: "Instant",
+      oracleText: "Return target creature you control to its owner's hand.",
+      manaValue: 1,
+      producedMana: [],
+    });
+    expect(roles).not.toContain("removal");
+  });
+
+  it("does not read draw from a token's reminder text", () => {
+    const roles = classifyRoles({
+      typeLine: "Creature — Human",
+      oracleText: "When this creature enters, investigate. (Create a Clue token. It's an artifact with \"{2}, Sacrifice this token: Draw a card.\")",
+      manaValue: 2,
+      producedMana: [],
+    });
+    expect(roles).not.toContain("draw");
+  });
+
   it("defaults to other when nothing matches", () => {
     const roles = classifyRoles({
       typeLine: "Creature — Human Soldier",

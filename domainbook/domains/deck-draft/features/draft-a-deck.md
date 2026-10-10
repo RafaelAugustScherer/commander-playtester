@@ -398,6 +398,131 @@ Example: A rock that uses up the graveyard is not lasting ramp
   Then only "Mind Stone" gets a ramp bonus
 ```
 
+## Rule: What the 99 add to a theme levels off
+
+Each card drafted adds to the `theme token`s it carries, but what the 99 add to one token
+levels off after a handful of cards and never passes three. However many cards carry a
+broad token — making tokens, sacrificing, drawing, flying — the commander's own tokens
+(three, and eight for what it rewards) keep leading, and the theme stops growing as the
+deck fills, so the bonuses scored apart from theme keep their say all draft long
+(`deck-draft/ADR-0013`).
+
+```gherkin
+Example: A broad token does not bury what the commander rewards
+  Given a commander that rewards tapping an opponent's creature
+  And forty drafted cards with flying
+  When the deck's theme is weighed
+  Then tapping creatures still weighs more than flying
+
+Example: The theme stops growing late in the draft
+  Given a draft past its sixtieth card
+  When a round is scored
+  Then the round's theme scores are about as large as they were at its twentieth card
+```
+
+## Rule: Tokens are read from rules text, not reminder text
+
+A card's `theme token`s come from its rules text with the reminder text left out, so a
+Treasure's "Sacrifice this token" does not read as sacrificing, a Clue's "Draw a card" as
+drawing, and ward's "Whenever this creature becomes the target…" as rewarding spells that
+target. A keyword whose meaning lives in its reminder text signals what it does instead:
+persist and wither read as -1/-1 counters; undying, fabricate, amass, mentor, explore and
+the like as +1/+1 counters; afterlife, offspring, living weapon and investigate as making
+tokens; exalted, battle cry and melee as attacking; flashback, escape and disturb as
+casting from the graveyard; cycling and madness as discarding; exploit, bargain and casualty
+as sacrificing; bestow as Auras (`deck-draft/ADR-0013`).
+
+```gherkin
+Example: A Treasure maker is not a sacrifice card
+  Given a creature that creates a Treasure token when it enters
+  When its theme tokens are read
+  Then it signals Treasure and making tokens, and not sacrificing
+
+Example: A ward commander does not reward spells that target
+  Given a commander whose only trigger is ward's reminder text
+  When what it rewards is read
+  Then it rewards nothing
+
+Example: A persist creature still fits a -1/-1 counter deck
+  Given a creature with persist
+  When its theme tokens are read
+  Then it signals -1/-1 counters
+```
+
+## Rule: Protection keeps pace with what the commander needs
+
+Cards that keep your commander or creatures on the battlefield — "Lightning Greaves",
+"Swiftfoot Boots", "Heroic Intervention", "Teferi's Protection", umbras, spells that
+redirect — form a `fundamentals bucket` scored apart from theme. Every deck aims for two;
+a commander's need adds up to six more. The need is full for a commander that wants to
+connect — it triggers on attacking or on its own combat damage, or cares about Auras or
+Equipment — and otherwise grows with the commander's mana value, from none at three to full
+at six. A commander with its own hexproof, shroud, indestructible, ward or protection, or
+one that comes back without commander tax (commander ninjutsu, dash, eminence, putting
+itself onto the battlefield from the command zone), counts only a quarter of its mana
+value. With two commanders, the needier one sets the target (`deck-draft/ADR-0013`).
+
+Like ramp, the bucket keeps pace with the draft: the deck should hold its target by its
+sixty-third nonland card, in proportion along the way. At pace a protection piece earns
+the whole bonus; behind it, half again for each card the deck is short, up to three times,
+so a deck whose theme crowds out protection still catches up; ahead of it, half for each
+card ahead, never nothing. A creature's own hexproof is not protection for the deck.
+
+```gherkin
+Example: An expensive commander without protection aims for a strong base
+  Given a draft whose commander is "Etali, Primal Conqueror"
+  When the deck's protection target is set
+  Then it is eight
+
+Example: A voltron commander aims for a strong base whatever its cost
+  Given a draft whose commander is "Rafiq of the Many"
+  When the deck's protection target is set
+  Then it is eight
+
+Example: A commander that protects itself aims for less
+  Given a seven-mana commander with hexproof
+  When the deck's protection target is set
+  Then it is three and a half
+
+Example: A commander that dodges commander tax aims for less
+  Given a draft whose commander is "The Ur-Dragon"
+  When the deck's protection target is set
+  Then it is three and a half
+
+Example: A deck far behind on protection catches up
+  Given a draft past its sixty-third nonland card with no protection and a target of eight
+  When "Lightning Greaves" is scored
+  Then its protection bonus is three times the full bonus
+
+Example: Protection keeps earning a little past its target
+  Given a deck four protection pieces ahead of its pace
+  When "Lightning Greaves" is scored
+  Then its protection bonus is a sixteenth of the full bonus, not none
+```
+
+## Rule: Card advantage keeps pace with the draft
+
+Card advantage is a `fundamentals bucket` too, the same for every deck: seven, the median of
+EDHREC average decks counted the same way. A draw engine — a trigger or an activated
+ability on a permanent that draws again and again, such as "Rhystic Study" or "Skullclamp"
+— counts one; a one-shot that draws two or more, such as "Harmonize", counts a half and
+earns half the bonus; a cantrip, looting, drawing for a discard, an ability that uses the
+card itself up, and draw that goes to every player count nothing. The bonus keeps pace
+like protection's: more behind pace, less ahead of it, never nothing. Card draw left the
+role-gap term when it got its own bucket, as ramp did (`deck-draft/ADR-0013`).
+
+```gherkin
+Example: An engine counts more than a one-shot
+  Given a deck short of card advantage
+  When "Phyrexian Arena" and "Night's Whisper" are scored
+  Then "Phyrexian Arena" gets twice the card-advantage bonus
+
+Example: A cantrip is not card advantage
+  Given a deck short of card advantage
+  When "Ponder" is scored
+  Then it gets no card-advantage bonus
+```
+
 ## Rule: Tribal mode keeps creature slots on the chosen tribes
 
 In the `customization` section below the bracket target, a **Tribal** checkbox turns on

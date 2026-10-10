@@ -1,4 +1,5 @@
 import type { Card } from "../lib/types";
+import { cardAdvantageFit, protectionFit } from "./fundamentals";
 import { rampFit } from "./rampScore";
 import { TRIBAL_SATURATION, type ThemeProfile } from "./themes";
 import { fitsToken, namedTribes, servesTribe, tokenStrengths } from "./tokens";
@@ -16,6 +17,8 @@ export interface CandidateScore {
   curveScore: number;
   roleScore: number;
   rampScore: number;
+  protectionScore: number;
+  cardAdvantageScore: number;
   tribalScore: number;
   /** Tokens the candidate shares with the deck's profile, for rationale chips. */
   matchedTokens: string[];
@@ -24,23 +27,34 @@ export interface CandidateScore {
 /**
  * Score a candidate's fit against a deck's `ThemeProfile`: shared theme
  * tokens, plus a term for filling thin spots in the mana curve, plus a term
- * for filling role gaps, plus a term for ramp the deck's mana appetite calls
- * for, plus a term for rewarding a tribe the deck already has. Pure and
- * deterministic.
+ * for filling role gaps, plus terms for the ramp, protection and card
+ * advantage the deck is short of, plus a term for rewarding a tribe the deck
+ * already has. Pure and deterministic.
  */
 export function scoreCandidate(card: Card, profile: ThemeProfile): CandidateScore {
   const { themeScore, matchedTokens } = themeFit(card, profile);
   const curveScore = curveFit(card, profile);
   const roleScore = roleGapFit(card, profile);
   const rampScore = rampFit(card, profile);
+  const protectionScore = protectionFit(card, profile);
+  const cardAdvantageScore = cardAdvantageFit(card, profile);
   const tribalScore = tribalPayoffFit(card, profile);
 
   return {
-    total: themeScore + curveScore + roleScore + rampScore + tribalScore,
+    total:
+      themeScore +
+      curveScore +
+      roleScore +
+      rampScore +
+      protectionScore +
+      cardAdvantageScore +
+      tribalScore,
     themeScore,
     curveScore,
     roleScore,
     rampScore,
+    protectionScore,
+    cardAdvantageScore,
     tribalScore,
     matchedTokens,
   };
@@ -73,7 +87,8 @@ function curveFit(card: Card, profile: ThemeProfile): number {
 function roleGapFit(card: Card, profile: ThemeProfile): number {
   let roleScore = 0;
   for (const role of card.roles) {
-    if (role === "other" || role === "ramp") continue;
+    // Ramp and draw have buckets of their own (`rampFit`, `cardAdvantageFit`).
+    if (role === "other" || role === "ramp" || role === "draw") continue;
     roleScore += ROLE_GAP_WEIGHT / (profile.roleCounts[role] + 1);
   }
   return roleScore;

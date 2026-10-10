@@ -15,7 +15,7 @@ export interface OracleTextPattern {
   token: string;
   /** One phrase, or several alternatives. */
   pattern: RegExp | RegExp[];
-  enabler?: RegExp;
+  enabler?: RegExp | RegExp[];
   enablerTypeLine?: RegExp;
   typeLineEnabler?: RegExp;
   reward?: RegExp;
@@ -26,8 +26,10 @@ export interface OracleTextPattern {
 
 const PERMANENT_ETB_MULTIPLIER = /\bentering\b[^.]*\btriggers? an additional time\b/i;
 const ETB_ENABLER = /\bwhen\b(?![^.,]*\blands?\b)[^.,]*\benters\b/i;
-const ARTIFACT_TOKEN_MAKER =
-  /\bcreates?\b[^.]*\b(?:artifact|treasure|clue|food|blood|gold|powerstone|map|junk|incubator|lander)\b[^.]*\btokens?\b/i;
+const ARTIFACT_TOKEN_MAKER = [
+  /\bcreates?\b[^.]*\b(?:artifact|treasure|clue|food|blood|gold|powerstone|map|junk|incubator|lander)\b[^.]*\btokens?\b/i,
+  /\b(?:investigates?|incubates?)\b/i,
+];
 
 const INSTANT_OR_SORCERY = /\b(?:Instant|Sorcery)\b/;
 const STORM = /^storm(?:$| \()/im;
@@ -226,6 +228,52 @@ export const ORACLE_TEXT_PATTERNS: OracleTextPattern[] = [
   },
 ];
 
+/**
+ * Keywords whose meaning lives in their reminder text, which token reading
+ * skips: each signals the tokens its own effect is about, so persist still
+ * reads as -1/-1 counters while a Treasure's reminder no longer reads as
+ * sacrifice (`deck-draft/ADR-0013`).
+ */
+const KEYWORD_TOKENS: Array<[RegExp, string[]]> = [
+  [/\b(?:persist|wither)\b/i, ["-1/-1 counter"]],
+  [/\binfect\b/i, ["-1/-1 counter", "counters"]],
+  [/\btoxic\b/i, ["counters"]],
+  [
+    /\b(?:undying|megamorph|backup|bloodthirst|renown|riot|unleash|reinforce|tribute|ravenous|amplify|adapt|monstrosity|bolster|support|outlast|modular|explores?|awaken)\b/i,
+    ["+1/+1 counter"],
+  ],
+  [/\b(?:evolve|graft)\b/i, ["+1/+1 counter", "creature etb"]],
+  [/\bdevour\b/i, ["+1/+1 counter", "sacrifice"]],
+  [/\b(?:fabricate|amass)\b/i, ["+1/+1 counter", "create token"]],
+  [/\b(?:mentor|training|dethrone)\b/i, ["+1/+1 counter", "attacks"]],
+  [/\b(?:exalted|battle cry|melee|provoke|annihilator|firebending)\b/i, ["attacks"]],
+  [/\b(?:myriad|mobilize)\b/i, ["attacks", "create token"]],
+  [
+    /\b(?:afterlife|offspring|living weapon|squad|job select|populate|investigate|incubate)\b|\bfor mirrodin!/i,
+    ["create token"],
+  ],
+  [/\b(?:embalm|eternalize|encore)\b/i, ["create token", "graveyard"]],
+  [
+    /\b(?:flashback|escape|disturb|retrace|jump-start|harmonize|mayhem)\b/i,
+    ["cast from graveyard", "graveyard"],
+  ],
+  [/\b(?:unearth|scavenge|soulshift|recover)\b/i, ["graveyard"]],
+  [/\bdredge\b/i, ["mill", "graveyard"]],
+  [/\bmadness\b/i, ["discard a card", "graveyard"]],
+  [/\bcycling\b/i, ["draw a card", "discard a card"]],
+  [/\b\w+cycling\b/i, ["discard a card"]],
+  [/\bconnives?\b/i, ["draw a card", "discard a card"]],
+  [/\b(?:exploit|bargain|offering|blitz|evoke)\b/i, ["sacrifice"]],
+  [/\bcasualty\b/i, ["sacrifice", "copy spell"]],
+  [/\bepic\b/i, ["copy spell"]],
+  [
+    /\b(?:cumulative upkeep|level up|station|read ahead|vanishing|fading|suspend|impending)\b/i,
+    ["counters"],
+  ],
+  [/\bbestow\b/i, ["aura"]],
+  [/\bextort\b/i, ["gain life"]],
+];
+
 const PATTERNS_BY_TOKEN = new Map(ORACLE_TEXT_PATTERNS.map((p) => [p.token, p]));
 
 const PARTNERS = new Map<string, Set<string>>();
@@ -287,18 +335,23 @@ const CREATURE_TYPE_BY_FORM = new Map(
 );
 const CAPITALISED_WORD = /(?<![\w'-])[A-Z][\w'-]*/g;
 
+/** Rules text with the card's own name, on any face, read as "~". */
+function withoutOwnName(text: string, name: string): string {
+  let rules = text;
+  for (const face of name.split("//")) {
+    const trimmed = face.trim();
+    if (trimmed) rules = rules.split(trimmed).join("~");
+  }
+  return rules;
+}
+
 /**
  * Creature types the rules text names as a tribe to reward ("Elves you
  * control", "an Angel, Demon, or Dragon creature card"). Mentions in the card's
  * own name, in tokens it creates, and in "non-" exclusions don't count.
  */
 export function namedCreatureTypes(text: string, name: string): string[] {
-  let rules = text;
-  for (const face of name.split("//")) {
-    const trimmed = face.trim();
-    if (trimmed) rules = rules.split(trimmed).join("~");
-  }
-  rules = rules
+  const rules = withoutOwnName(text, name)
     .replace(/\bcreates?\b[^.]*?\btokens?\b/gi, "")
     .replace(/\b[Nn]on-?[A-Z][\w'-]*/g, "");
   const types = new Set<string>();
@@ -313,10 +366,19 @@ function matches(pattern: RegExp | RegExp[], text: string): boolean {
   return Array.isArray(pattern) ? pattern.some((p) => p.test(text)) : pattern.test(text);
 }
 
+/** Rules text without reminder text, which tokens are read from (`deck-draft/ADR-0013`). */
+function rulesText(card: Pick<Card, "oracleText">): string {
+  return rulesLines(card).join("\n");
+}
+
 function textThemeTokens(text: string, name: string): Set<string> {
   const tokens = new Set<string>(namedCreatureTypes(text, name));
   for (const { token, pattern } of ORACLE_TEXT_PATTERNS) {
     if (matches(pattern, text)) tokens.add(token);
+  }
+  const rules = withoutOwnName(text, name);
+  for (const [keyword, signals] of KEYWORD_TOKENS) {
+    if (keyword.test(rules)) for (const token of signals) tokens.add(token);
   }
   for (const condition of powerConditions(text)) tokens.add(condition);
   return tokens;
@@ -345,7 +407,7 @@ export function themeTokens(card: Card): ReadonlySet<string> {
   const key = cardKey(card);
   let tokens = themeTokenCache.get(key);
   if (!tokens) {
-    const found = textThemeTokens(card.oracleText, card.name);
+    const found = textThemeTokens(rulesText(card), card.name);
     for (const subtype of subtypesFromTypeLine(card.typeLine)) found.add(subtype);
     tokens = found;
     themeTokenCache.set(key, tokens);
@@ -362,8 +424,7 @@ export function commanderThemeTokens(card: Card): ReadonlySet<string> {
   const key = cardKey(card);
   let tokens = commanderTokenCache.get(key);
   if (!tokens) {
-    const text = card.oracleText
-      .split("\n")
+    const text = rulesLines(card)
       .filter((line) => !isKeywordLine(line))
       .join("\n");
     tokens = textThemeTokens(text, card.name);
@@ -377,7 +438,9 @@ function enablerFits(
   text: string,
   typeLine: string,
 ): boolean {
-  return !!enabler?.test(text) && (!enablerTypeLine || enablerTypeLine.test(typeLine));
+  return (
+    !!enabler && matches(enabler, text) && (!enablerTypeLine || enablerTypeLine.test(typeLine))
+  );
 }
 
 /**
@@ -395,7 +458,7 @@ export function cardTokens(card: Card): ReadonlySet<string> {
     for (const pattern of ORACLE_TEXT_PATTERNS) {
       if (
         pattern.typeLineEnabler?.test(card.typeLine) ||
-        enablerFits(pattern, card.oracleText, card.typeLine)
+        enablerFits(pattern, rulesText(card), card.typeLine)
       ) {
         found.add(pattern.token);
       }
@@ -434,19 +497,38 @@ function clauseTokens(clause: string, card: Card): Set<string> {
   return tokens;
 }
 
+export interface RuleClause {
+  text: string;
+  /** A trigger or activated ability on a permanent, which works turn after turn. */
+  repeats: boolean;
+}
+
+/**
+ * A card's rules lines (reminder text dropped) as clauses. A mode ("•") takes
+ * the repeatability of the line that introduces it, after a short mode label is
+ * dropped; an instant's or sorcery's clauses never repeat.
+ */
+export function ruleClauses(card: Card): RuleClause[] {
+  const oneShotCard = INSTANT_OR_SORCERY.test(card.typeLine);
+  const clauses: RuleClause[] = [];
+  let headerRepeats = false;
+  for (const line of rulesLines(card)) {
+    const isMode = line.startsWith("•");
+    const text = isMode ? line.replace(MODE_LABEL, "") : line;
+    const repeats: boolean = isRepeatable(text) || (isMode && headerRepeats);
+    if (!isMode) headerRepeats = repeats;
+    clauses.push({ text, repeats: !oneShotCard && repeats });
+  }
+  return clauses;
+}
+
 const strengthCache = new Map<string, ReadonlyMap<string, number>>();
 
 function clauseStrengths(card: Card): Map<string, number> {
   const found = new Map<string, number>();
-  const oneShotCard = INSTANT_OR_SORCERY.test(card.typeLine);
-  let headerRepeats = false;
-  for (const line of rulesLines(card)) {
-    const isMode = line.startsWith("•");
-    const clause = isMode ? line.replace(MODE_LABEL, "") : line;
-    const repeats: boolean = isRepeatable(clause) || (isMode && headerRepeats);
-    if (!isMode) headerRepeats = repeats;
-    const strength = clauseStrength(clause, !oneShotCard && repeats);
-    for (const token of clauseTokens(clause, card)) {
+  for (const { text, repeats } of ruleClauses(card)) {
+    const strength = clauseStrength(text, repeats);
+    for (const token of clauseTokens(text, card)) {
       found.set(token, Math.max(found.get(token) ?? 1, strength));
     }
   }
@@ -473,12 +555,13 @@ export function tokenStrengths(card: Card): ReadonlyMap<string, number> {
  * gives; Lathril's "Tap ten untapped Elves you control" yields `elf`.
  */
 export function rewardedTokens(card: Card): Set<string> {
-  const tokens = new Set<string>(namedCreatureTypes(card.oracleText, card.name));
-  for (const condition of powerConditions(card.oracleText)) tokens.add(condition);
+  const text = rulesText(card);
+  const tokens = new Set<string>(namedCreatureTypes(text, card.name));
+  for (const condition of powerConditions(text)) tokens.add(condition);
   for (const { token, reward } of ORACLE_TEXT_PATTERNS) {
-    if (reward?.test(card.oracleText)) tokens.add(token);
+    if (reward?.test(text)) tokens.add(token);
   }
-  for (const [clause] of card.oracleText.matchAll(/\bwhenever\b[^.,]*/gi)) {
+  for (const [clause] of text.matchAll(/\bwhenever\b[^.,]*/gi)) {
     for (const token of textThemeTokens(clause, card.name)) tokens.add(token);
   }
   return tokens;
@@ -517,7 +600,7 @@ export function servesTribe(card: Card, tribes: readonly string[]): boolean {
  * payoffs a tribal deck wants (`deck-draft/ADR-0006`).
  */
 export function namedTribes(card: Card): string[] {
-  return namedCreatureTypes(card.oracleText, card.name);
+  return namedCreatureTypes(rulesText(card), card.name);
 }
 
 /**

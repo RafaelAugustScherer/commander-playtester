@@ -342,6 +342,63 @@ describe("rewardedTokens", () => {
     );
     expect(tokens.size).toBe(0);
   });
+
+  it("does not read ward's reminder text as rewarding spells that target", () => {
+    const tokens = rewardedTokens(
+      card({
+        oracleText:
+          "Ward {2} (Whenever this creature becomes the target of a spell or ability an opponent controls, counter it unless that player pays {2}.)",
+      }),
+    );
+    expect(tokens.has("targets")).toBe(false);
+  });
+});
+
+describe("reminder text", () => {
+  it("reads no tokens from a token's reminder text", () => {
+    const treasureMaker = card({
+      oracleText:
+        "When this creature enters, create a Treasure token. (It's an artifact with \"{T}, Sacrifice this token: Add one mana of any color.\")",
+    });
+    expect(themeTokens(treasureMaker).has("treasure")).toBe(true);
+    expect(themeTokens(treasureMaker).has("sacrifice")).toBe(false);
+    const clueMaker = card({
+      oracleText: "When this creature enters, investigate. (Create a Clue token. It's an artifact with \"{2}, Sacrifice this token: Draw a card.\")",
+    });
+    expect(themeTokens(clueMaker).has("draw a card")).toBe(false);
+    expect(themeTokens(clueMaker).has("clue")).toBe(true);
+  });
+
+  it.each([
+    ["Persist (When this creature dies, if it had no -1/-1 counters on it, return it.)", "-1/-1 counter"],
+    ["Undying (When this creature dies, if it had no +1/+1 counters on it, return it.)", "+1/+1 counter"],
+    ["Fabricate 2 (When this creature enters, put two +1/+1 counters on it or create two 1/1 Servo tokens.)", "create token"],
+    ["Afterlife 1 (When this creature dies, create a 1/1 white and black Spirit creature token with flying.)", "create token"],
+    ["Exalted (Whenever a creature you control attacks alone, that creature gets +1/+1.)", "attacks"],
+    ["Flashback {2}{B} (You may cast this card from your graveyard for its flashback cost. Then exile it.)", "cast from graveyard"],
+    ["Cycling {2} ({2}, Discard this card: Draw a card.)", "discard a card"],
+    ["Madness {R} (If you discard this card, discard it into exile.)", "discard a card"],
+    ["Bestow {4}{W} (If you cast this card for its bestow cost, it's an Aura spell.)", "aura"],
+  ])("keeps the signal of a keyword worded %j", (oracleText, token) => {
+    expect(themeTokens(card({ oracleText })).has(token)).toBe(true);
+  });
+
+  it("does not read a keyword in the card's own name", () => {
+    const named = card({
+      name: "Chronomantic Escape",
+      typeLine: "Sorcery",
+      oracleText: "Until your next turn, creatures can't attack you. Exile Chronomantic Escape with three time counters on it.",
+    });
+    expect(themeTokens(named).has("cast from graveyard")).toBe(false);
+  });
+
+  it("drops what a keyword's reminder only mentions on the way", () => {
+    const flashback = card({
+      typeLine: "Sorcery",
+      oracleText: "Draw two cards.\nFlashback {2}{U} (You may cast this card from your graveyard for its flashback cost. Then exile it.)",
+    });
+    expect(themeTokens(flashback).has("exile")).toBe(false);
+  });
 });
 
 const ZINNIA_TEXT =

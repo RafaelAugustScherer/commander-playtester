@@ -1,6 +1,7 @@
 import type { Card, CardRole } from "./types";
 import { isLand } from "./types";
 import { rampKind } from "./ramp";
+import { rulesLines } from "./rulesText";
 
 /**
  * Infer card roles from type line + oracle text. These are deliberately
@@ -14,7 +15,7 @@ export function classifyRoles(input: {
   producedMana: string[];
 }): CardRole[] {
   const roles: CardRole[] = [];
-  const text = input.oracleText.toLowerCase();
+  const text = rulesLines(input).join("\n").toLowerCase();
   const typeLine = input.typeLine;
 
   const land = /\bLand\b/.test(typeLine);
@@ -47,14 +48,30 @@ function isDraw(text: string): boolean {
   return /draw (a|one|two|three|four|five|\d+|x) cards?/.test(text);
 }
 
+const REMOVAL = [
+  // Destroy or exile, one target or up to a few.
+  /\b(?:destroy|exile) (?:up to (?:one|two|three|x) )?(?:other )?target\b/,
+  /\bcounter target\b/,
+  /\bdeals? (?:\d+|x) damage to (?:any target|(?:up to \w+ )?(?:other )?target)/,
+  /\b(?:each|target) (?:opponent|player) sacrifices\b/,
+  // Bounce, tuck and shrink, aimed away from your own things.
+  /\breturn (?:up to \w+ )?target (?:nonland )?(?:creature|permanent|artifact|enchantment|planeswalker)s?\b(?![^.]*\byou control\b)[^.]* to (?:its|their) owner's hand\b/,
+  /\b(?:shuffles?|puts?) target (?:nonland )?(?:creature|permanent|artifact|enchantment)\b[^.]* (?:into|on (?:the )?(?:top|bottom) of) (?:its|their) owner's library\b/,
+  /\bthe owner of target (?:nonland )?(?:creature|permanent)\b[^.]* shuffles it into\b/,
+  /\btarget creature (?:an opponent controls )?gets -(?:\d+|x)\/-(?:\d+|x)\b/,
+  // Fight and bite.
+  /\bfights? (?:up to one |another )?target\b/,
+  /\bdeals damage equal to its power to (?:up to one |another )?target\b/,
+  // Board wipes.
+  /\b(?:destroy|exile) all\b/,
+  /\beach (?:other )?creature gets -/,
+  /\bdeals? (?:\d+|x) damage to each creature\b/,
+  /\breturn all (?:nonland )?(?:creatures|permanents)\b/,
+  /\beach player sacrifices\b/,
+];
+
 function isRemoval(text: string): boolean {
-  return (
-    /destroy target/.test(text) ||
-    /exile target/.test(text) ||
-    /counter target/.test(text) ||
-    /deals? \d+ damage to (target|any target)/.test(text) ||
-    /(each|target) (opponent|player) sacrifices/.test(text)
-  );
+  return REMOVAL.some((pattern) => pattern.test(text));
 }
 
 /** Convenience: does a resolved card have a given role? */
