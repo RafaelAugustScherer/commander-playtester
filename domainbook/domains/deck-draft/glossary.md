@@ -172,9 +172,13 @@ from rules text without its reminder text; a keyword whose meaning lives in its 
 text signals what it does instead ("Persist" reads as `-1/-1 counter`, "Flashback" as `cast
 from graveyard`), so a Treasure's reminder no longer reads as `sacrifice`
 (`deck-draft/ADR-0013`). The set of tokens
-the heuristic recognises sets its ceiling. A card that only *enables* a token — an enters
+the heuristic recognises sets its ceiling. Since `deck-draft/ADR-0014` it includes common
+commander mechanics: `combat damage`, `evasion`, `ninjutsu`, `noncreature spell`, `second
+spell`, `extra draw`, `anthem`, `drain`, `impulse draw`, `lands matter`, `clone`, `x spell`,
+`untap`, `tutor`, `mutate` and `explore`. A card that only *enables* a token — an enters
 trigger for `etb` (and, on a creature, `creature etb`), a legendary type line for
-`legendary` — fits it without adding it to the deck's theme (`deck-draft/ADR-0005`).
+`legendary`, evasion on a creature for `combat damage`, {X} in a mana cost for `x spell` —
+fits it without adding it to the deck's theme (`deck-draft/ADR-0005`).
 
 - **Aliases:** theme signal
 - **Status:** draft
@@ -188,7 +192,13 @@ tribes its text names — counts for more again (`deck-draft/ADR-0005`). The com
 keyword lines and type-line creature types are not part of what it counts
 (`deck-draft/ADR-0010`). What the 99 add to a token levels off after a handful of cards
 and never passes three, so however many cards carry a broad token, the commander's tokens
-keep leading (`deck-draft/ADR-0013`).
+keep leading (`deck-draft/ADR-0013`). A few tokens read a commander's own text
+differently (`deck-draft/ADR-0014`):
+
+- its trigger on its own combat damage is not a `combat damage` theme;
+- tutoring is never a theme it seeds;
+- a non-mana tap ability rewards `untap`, and its own untap effect does not seed it;
+- a mechanic it carries as its own keyword ability ("Mutate {2}{U/B}{G}{G}") is rewarded.
 
 - **Status:** draft
 - **Example:** With an Elf commander, Elf-tribal candidates outrank cards that only match

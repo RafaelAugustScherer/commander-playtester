@@ -88,6 +88,7 @@ export function candidateData(
     typeLine: cardTypeLine(face.card_type),
     oracleText: face.oracle_text ?? "",
     power: face.power?.type === "Fixed" ? face.power.value : undefined,
+    hasXCost: face.mana_cost?.shards?.includes("X") ?? false,
     colorIdentity: card.color_identity,
   };
 }

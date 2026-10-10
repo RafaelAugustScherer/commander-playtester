@@ -32,6 +32,7 @@ function buildCandidateCard(candidate: DraftCandidateData): Card {
     name: candidate.name,
     ...input,
     power: candidate.power,
+    hasXCost: candidate.hasXCost,
     colors: [],
     colorIdentity: candidate.colorIdentity,
     roles: classifyRoles(input),

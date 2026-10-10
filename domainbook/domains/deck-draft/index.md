@@ -90,6 +90,16 @@ whole card pool by heart.
   protection), and `card advantage`, aiming at EDHREC's median of seven. Each bucket's bonus
   grows while the deck is behind its pace and halves for every card it gets ahead, with no
   hard cap (`deck-draft/ADR-0013`).
+- Common commander mechanics have `theme token`s:
+  - combat damage to a player, evasion and ninjutsu;
+  - noncreature spells and second spells, plus second-card draw;
+  - anthems, drain, impulse draw and lands matter;
+  - clones, X spells, untapping, tutors, mutate and explore.
+
+  Evasive creatures fit combat damage, and an {X} mana cost fits X spells. A commander's
+  trigger on its own combat damage, or its own tutoring, does not seed a theme. A tap
+  ability rewards untapping, and a mechanic the commander carries as a keyword ability is
+  rewarded (`deck-draft/ADR-0014`).
 - Each round's three slots go to the card types the deck is shortest of against a
   commander-set `type balance`, and each slot's pool adds the most-printed cards of its
   type, so a spellslinger is offered spells and an enchantress enchantments. Basic lands
@@ -148,9 +158,13 @@ whole card pool by heart.
   one dropped, or simply walk the global ranking.
 - Whether to hard-filter unsupported cards (`coverage`) out of suggestions or only
   surface them, mirroring `deck library`'s open question.
-- Mechanics no `theme token` reads yet — combat damage to a player (about 260 commanders),
-  "can't be blocked" (180), noncreature spells and prowess (115), anthems (80) — and the 454
-  commanders that produce no curated token at all (`deck-draft/ADR-0013`).
+- Mechanics no `theme token` reads yet: casting any spell or a creature spell, becoming
+  tapped, being dealt damage, the Ring tempting you, committing a crime, and keywords such
+  as cascade, foretell and morph. 395 commanders still produce no token of their own
+  (`deck-draft/ADR-0014`).
+- Some commanders' own effects seed a token their decks don't follow. Derevi's decks are
+  stax and tutors, not combat-damage payoffs. Lathril's ten-Elves drain pulls drain cards
+  over mana rocks and Elves. Zaxara's X spells push out ramp staples (`deck-draft/ADR-0014`).
 - Card advantage overshoots its target (about 12 per drafted deck against 7), because many
   offered cards draw on the side; a `fundamentals bucket` only adds, so it cannot pull that
   down (`deck-draft/ADR-0013`).

@@ -12,6 +12,26 @@ depth live there. A purely-internal PR that touches no product or architecture m
 skip its version with a `Skip-Docs: <reason>` trailer instead. There are no
 per-domain changelogs; this file is the single timeline (`ADR-0007`).
 
+## [0.40.0] - 2026-10-10
+
+### Added
+
+- Draft suggestions read common commander mechanics: combat damage to a player, evasion,
+  ninjutsu, noncreature spells, second spells and second-card draw, anthems, drain, impulse
+  draw, lands matter, clones, X spells, untapping, tutors, mutate and explore
+  (`deck-draft/ADR-0014`).
+
+### Changed
+
+- A commander's own combat-damage trigger or tutoring no longer seeds a theme. A tap ability
+  rewards untapping, and a mechanic the commander carries as a keyword ability, such as
+  mutate, is rewarded (`deck-draft/ADR-0014`).
+
+### Fixed
+
+- A commander's own evasion keyword (fear, skulk, landwalk) no longer reads as a theme, as
+  flying already did not (`deck-draft/ADR-0014`).
+
 ## [0.39.0] - 2026-10-10
 
 ### Added

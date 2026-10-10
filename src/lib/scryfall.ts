@@ -14,6 +14,7 @@ const BATCH_SIZE = 75; // Scryfall's documented max identifiers per request.
 interface ScryfallCard {
   name: string;
   cmc?: number;
+  mana_cost?: string;
   type_line?: string;
   oracle_text?: string;
   power?: string;
@@ -22,6 +23,7 @@ interface ScryfallCard {
   produced_mana?: string[];
   image_uris?: { normal?: string };
   card_faces?: Array<{
+    mana_cost?: string;
     type_line?: string;
     oracle_text?: string;
     power?: string;
@@ -58,6 +60,7 @@ export function toCard(sc: ScryfallCard): Card {
   const colorIdentity = sc.color_identity ?? [];
   const producedMana = sc.produced_mana ?? [];
   const manaValue = sc.cmc ?? 0;
+  const hasXCost = /\{X\}/.test(sc.mana_cost ?? sc.card_faces?.[0]?.mana_cost ?? "");
   const imageUrl =
     sc.image_uris?.normal ?? sc.card_faces?.[0]?.image_uris?.normal;
 
@@ -67,6 +70,7 @@ export function toCard(sc: ScryfallCard): Card {
     typeLine,
     oracleText,
     power,
+    hasXCost,
     colors,
     colorIdentity,
     producedMana,

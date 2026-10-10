@@ -18,7 +18,15 @@ export interface OracleTextPattern {
   enabler?: RegExp | RegExp[];
   enablerTypeLine?: RegExp;
   typeLineEnabler?: RegExp;
+  /** Fits the token from card data rather than text, such as an {X} mana cost. */
+  cardEnabler?: (card: Card) => boolean;
   reward?: RegExp;
+  /**
+   * What seeds the token from a commander's own text, read with its short name
+   * as "~", when that differs from `pattern`; empty when a commander's own
+   * effect never does (`deck-draft/ADR-0014`).
+   */
+  commanderPattern?: RegExp | RegExp[];
   /** Free-text searches that together reach every match; defaults to the token. */
   search?: string[];
   partners?: string[];
@@ -32,6 +40,20 @@ const ARTIFACT_TOKEN_MAKER = [
 ];
 
 const INSTANT_OR_SORCERY = /\b(?:Instant|Sorcery)\b/;
+// A noncreature, nonland spell: the front face's types before its subtypes.
+const NONCREATURE_SPELL =
+  /^(?![^—/]*\b(?:Creature|Land)\b)[^—/]*\b(?:Instant|Sorcery|Artifact|Enchantment|Planeswalker|Battle)\b/;
+// Evasion a creature carries: a keyword that keeps blockers off, or being unblockable.
+const EVASIVE = [
+  /(?:^|, )(?:fear|intimidate|shadow|skulk|horsemanship)\b/im,
+  /\b(?:island|swamp|forest|mountain|plains|desert|land)walk\b/i,
+  /\bcan't be blocked\b/i,
+];
+// Spells cast or copied by you, not countered, targeted or taxed.
+const NOT_YOUR_SPELL = String.raw`(?<!\b(?:counter|targets|can't cast|opponents? casts?)\b[^.,]{0,40})`;
+const COMBAT_DAMAGE_TO_A_PLAYER = String.raw`deals? combat damage to (?:a player|an opponent|(?:one of )?your opponents|one or more (?:players|opponents)|that player|defending player)\b`;
+// A non-mana activated ability with {T} in its cost ("{2}, {T}, Sacrifice …: …").
+const TAP_ABILITY = /^(?:(?:\{[^}]+\})+, )?\{T\}(?:, [^:\n]+)?: (?!add\b)/im;
 const STORM = /^storm(?:$| \()/im;
 const KICKER = /^(?:multi)?kicker\b/im;
 const OVERLOAD = /^overload\b/im;
@@ -44,7 +66,8 @@ const COMBAT_KEYWORDS = [
 ];
 const FLASH = "flash";
 const DEFENDER = "defender";
-const RULES_KEYWORDS = [...COMBAT_KEYWORDS, FLASH, DEFENDER, "reach"];
+const EVASION_KEYWORDS = ["fear", "intimidate", "shadow", "skulk", "horsemanship", String.raw`\w+walk`];
+const RULES_KEYWORDS = [...COMBAT_KEYWORDS, FLASH, DEFENDER, "reach", ...EVASION_KEYWORDS];
 
 function keywordEntry(keyword: string): OracleTextPattern {
   return { token: keyword, pattern: new RegExp(`\\b${keyword}\\b`, "i") };
@@ -153,8 +176,9 @@ const CURATED_PATTERNS: OracleTextPattern[] = [
   },
   {
     token: "dies",
-    pattern: /\bwhenever (?:a|an|another|one or more)\b[^.,]*\bdie(?:s)?\b/i,
+    pattern: [/\bwhenever (?:a|an|another|one or more)\b[^.,]*\bdie(?:s)?\b/i, /\bcreature dying\b/i],
     enabler: /\bwhen\b[^.,]*\bdies\b/i,
+    reward: /\bdying causes\b/i,
     search: ["dies"],
   },
   {
@@ -226,6 +250,95 @@ const CURATED_PATTERNS: OracleTextPattern[] = [
     typeLineEnabler: /\bLegendary\b/,
     search: ["legendary", "historic"],
   },
+  // Mechanics added in `deck-draft/ADR-0014`.
+  {
+    token: "combat damage",
+    pattern: new RegExp(String.raw`\b${COMBAT_DAMAGE_TO_A_PLAYER}`, "i"),
+    // A commander's own trigger asks for protection (`protectionTarget`), not for payoffs.
+    commanderPattern: new RegExp(String.raw`(?<!~ )\b${COMBAT_DAMAGE_TO_A_PLAYER}`, "i"),
+    enabler: EVASIVE,
+    enablerTypeLine: /\bCreature\b/,
+    partners: ["evasion"],
+    search: ["combat damage"],
+  },
+  {
+    token: "evasion",
+    pattern: /\bcan't be blocked\b/i,
+    search: ["can't be blocked"],
+  },
+  { token: "ninjutsu", pattern: /\bninjutsu\b/i, partners: ["evasion"] },
+  {
+    token: "noncreature spell",
+    pattern: new RegExp(String.raw`${NOT_YOUR_SPELL}\bnoncreature spells?\b(?![^.]*\bcosts? \{\d+\} more\b)`, "i"),
+    typeLineEnabler: NONCREATURE_SPELL,
+    search: ["noncreature"],
+  },
+  {
+    token: "second spell",
+    pattern: /\bsecond spell\b/i,
+    partners: ["cost reduction"],
+    search: ["second spell"],
+  },
+  {
+    token: "extra draw",
+    pattern: /\bsecond card\b/i,
+    partners: ["draw a card"],
+    search: ["second card"],
+  },
+  {
+    token: "anthem",
+    pattern: /\b(?:creatures|creature tokens|tokens) you control get \+(?:\d+|x)\/\+(?:\d+|x)/i,
+    partners: ["create token"],
+    search: ["you control get"],
+  },
+  {
+    token: "drain",
+    pattern: [
+      /\b(?:each opponent|target opponent|each other player|target player|that player|defending player) loses? (?:\d+|x|that much|half their) life\b/i,
+      /\bloses? life equal to\b/i,
+    ],
+    search: ["loses life", "lose life"],
+  },
+  {
+    token: "impulse draw",
+    pattern: [/\bexile the top\b[^\n]*\byou may (?:play|cast)\b/i, /\b(?:play|cast)s? (?:a card|cards|a spell|spells) from exile\b/i],
+    search: ["exile the top", "from exile"],
+  },
+  {
+    token: "lands matter",
+    pattern: [/\blands you control\b/i, /\bland cards? from your graveyard\b/i, /\bplay lands? from\b/i],
+    partners: ["landfall"],
+    search: ["lands you control", "land cards"],
+  },
+  {
+    token: "clone",
+    pattern: [/\bcopy of (?:target|another|a|any|up to \w+ target)\b[^.]*\bcreature\b/i, /\btokens? that's a copy\b/i],
+    search: ["copy"],
+  },
+  {
+    token: "x spell",
+    pattern: /\{X\} in (?:its|their) mana costs?\b|\bspells? with \{X\}/i,
+    cardEnabler: (card) => !!card.hasXCost,
+    search: ["X"],
+  },
+  {
+    token: "untap",
+    pattern: /\buntap (?:target|all|another|each|up to \w+|two|three|x)\b/i,
+    // Untapping pays off a commander's tap ability, not its own untap effect.
+    commanderPattern: [],
+    reward: TAP_ABILITY,
+    search: ["untap"],
+  },
+  {
+    token: "tutor",
+    pattern:
+      /\bsearch your library for (?:an?|up to \w+|any number of) (?!(?:basic )?(?:land|forest|plains|island|swamp|mountain))[^.]*\bcards?\b/i,
+    // A commander that tutors is the tutor its deck wants, as ramp is (`deck-draft/ADR-0009`).
+    commanderPattern: [],
+    search: ["search your library"],
+  },
+  { token: "mutate", pattern: /\bmutates?\b/i },
+  { token: "explore", pattern: /\bexplores?\b/i },
 ];
 
 /**
@@ -272,6 +385,9 @@ const KEYWORD_TOKENS: Array<[RegExp, string[]]> = [
   ],
   [/\bbestow\b/i, ["aura"]],
   [/\bextort\b/i, ["gain life"]],
+  [/\bprowess\b/i, ["noncreature spell"]],
+  [new RegExp(String.raw`\b(?:${EVASION_KEYWORDS.join("|")})\b`, "i"), ["evasion"]],
+  [/\bimprovise\b/i, ["artifact"]],
 ];
 
 const CURATED_TOKENS = new Set(CURATED_PATTERNS.map(({ token }) => token));
@@ -381,13 +497,15 @@ function matches(pattern: RegExp | RegExp[], text: string): boolean {
 /**
  * The tokens a text signals, read from rules text without reminder text
  * (`deck-draft/ADR-0013`) and with the card's own name read as "~", so a name
- * signals nothing.
+ * signals nothing. A commander's text is read with each `commanderPattern`.
  */
-function textThemeTokens(text: string, name: string): Set<string> {
-  const rules = withOwnName(text, { name });
+function textThemeTokens(text: string, card: Card, asCommander = false): Set<string> {
+  const rules = withOwnName(text, card);
+  const commanderRules = asCommander ? withOwnName(text, card, true) : rules;
   const tokens = new Set<string>(typesNamedIn(rules));
-  for (const { token, pattern } of ORACLE_TEXT_PATTERNS) {
-    if (matches(pattern, rules)) tokens.add(token);
+  for (const { token, pattern, commanderPattern } of ORACLE_TEXT_PATTERNS) {
+    const own = asCommander ? commanderPattern : undefined;
+    if (own ? matches(own, commanderRules) : matches(pattern, rules)) tokens.add(token);
   }
   for (const condition of powerConditions(rules)) tokens.add(condition);
   return tokens;
@@ -416,7 +534,7 @@ export function themeTokens(card: Card): ReadonlySet<string> {
   const key = cardKey(card);
   let tokens = themeTokenCache.get(key);
   if (!tokens) {
-    const found = textThemeTokens(rulesText(card), card.name);
+    const found = textThemeTokens(rulesText(card), card);
     for (const subtype of subtypesFromTypeLine(card.typeLine)) found.add(subtype);
     tokens = found;
     themeTokenCache.set(key, tokens);
@@ -436,7 +554,7 @@ export function commanderThemeTokens(card: Card): ReadonlySet<string> {
     const text = rulesLines(card)
       .filter((line) => !isKeywordLine(line))
       .join("\n");
-    tokens = textThemeTokens(text, card.name);
+    tokens = textThemeTokens(text, card, true);
     commanderTokenCache.set(key, tokens);
   }
   return tokens;
@@ -467,6 +585,7 @@ export function cardTokens(card: Card): ReadonlySet<string> {
     for (const pattern of ORACLE_TEXT_PATTERNS) {
       if (
         pattern.typeLineEnabler?.test(card.typeLine) ||
+        pattern.cardEnabler?.(card) ||
         enablerFits(pattern, rulesText(card), card.typeLine)
       ) {
         found.add(pattern.token);
@@ -491,7 +610,7 @@ function clauseStrength(clause: string, repeatable: boolean): number {
 }
 
 function clauseTokens(clause: string, card: Card): Set<string> {
-  const tokens = textThemeTokens(clause, card.name);
+  const tokens = textThemeTokens(clause, card);
   for (const pattern of ORACLE_TEXT_PATTERNS) {
     if (enablerFits(pattern, clause, card.typeLine)) tokens.add(pattern.token);
   }
@@ -525,7 +644,8 @@ export function tokenStrengths(card: Card): ReadonlyMap<string, number> {
 
 /**
  * The tokens a card rewards, as opposed to what its rewards are: those named in
- * its "whenever …" trigger conditions, and the tribes its rules text names.
+ * its "whenever …" trigger conditions, the tribes its rules text names, and the
+ * mechanics it carries as keyword abilities (`ownMechanics`).
  * Hylda of the Icy Crown's "Whenever you tap an untapped creature an opponent
  * controls" yields `tap creature`, not the token, counter or card her trigger
  * gives; Lathril's "Tap ten untapped Elves you control" yields `elf`.
@@ -538,9 +658,25 @@ export function rewardedTokens(card: Card): Set<string> {
     if (reward?.test(text)) tokens.add(token);
   }
   for (const [clause] of text.matchAll(/\bwhenever\b[^.,]*/gi)) {
-    for (const token of textThemeTokens(clause, card.name)) tokens.add(token);
+    for (const token of textThemeTokens(clause, card, true)) tokens.add(token);
   }
+  for (const mechanic of ownMechanics(card)) tokens.add(mechanic);
   return tokens;
+}
+
+// A keyword ability alone on its line, with its mana cost if it has one.
+const KEYWORD_WITH_COST = /^(?:commander )?(\w+)(?: (?:\{[^}]+\})+)?$/i;
+
+/**
+ * The mechanics a card carries as keyword abilities named after a token
+ * ("Mutate {2}{U/B}{G}{G}", "Commander ninjutsu {U}{B}"), leaving out those that
+ * only describe it: a commander built on one rewards it (`deck-draft/ADR-0014`).
+ */
+function ownMechanics(card: Card): string[] {
+  return rulesLines(card).flatMap((line) => {
+    const keyword = KEYWORD_WITH_COST.exec(line)?.[1].toLowerCase();
+    return keyword && CURATED_TOKENS.has(keyword) && !isKeywordLine(line) ? [keyword] : [];
+  });
 }
 
 /** The creature types on a card's creature faces, lowercased. */

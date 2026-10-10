@@ -39,6 +39,8 @@ export interface DraftCandidateData {
   typeLine: string;
   oracleText: string;
   power?: number;
+  /** The mana cost holds {X}. */
+  hasXCost?: boolean;
   colorIdentity: string[];
 }
 
@@ -102,6 +104,7 @@ export interface CardFaceData {
     subtypes?: string[];
   };
   oracle_text?: string;
+  mana_cost?: { shards?: string[] };
   power?: { type: "Fixed"; value: number } | { type: "Variable"; value: string };
   triggers?: FaceTrigger[];
   static_abilities?: FaceStaticAbility[];
