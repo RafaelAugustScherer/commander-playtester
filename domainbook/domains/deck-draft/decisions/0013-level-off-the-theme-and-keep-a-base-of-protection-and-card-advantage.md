@@ -76,18 +76,14 @@ scanned. Five findings:
 
 The author chose each of the following.
 
-### What the 99 add to a token levels off
-
-A token's weight is still the commander's (`COMMANDER_WEIGHT` 3, and 5 more for what it
+**What the 99 add to a token levels off.** A token's weight is still the commander's (`COMMANDER_WEIGHT` 3, and 5 more for what it
 rewards), but the 99 now add `K × (1 − e^(−count / S))`, the same shape as the tribal payoff
 (`deck-draft/ADR-0006`). Here `count` is the number of the 99 carrying the token. With K 3
 and S 3, three cards reach about two thirds of the cap and twenty reach it. A broad token
 can no longer outgrow what the commander asks for (8 or 11). The fixed terms keep their
 say for the whole draft. K and S were calibrated (below).
 
-### Tokens are read without reminder text
-
-Theme tokens, enablers, what a commander rewards, and named tribes are all read from rules
+**Tokens are read without reminder text.** Theme tokens, enablers, what a commander rewards, and named tribes are all read from rules
 text without its reminder text. Keywords whose meaning lives in the reminder signal what
 they do (`KEYWORD_TOKENS` in `src/draft/tokens.ts`):
 
@@ -127,9 +123,7 @@ still make a card an artifact enabler. The change also:
   `deck-draft/ADR-0010`'s "reminder text stays on every other line";
 - replaces `deck-draft/ADR-0005`'s "reminder text counts like rules text".
 
-### The removal role counts what answers a threat
-
-Besides destroy, exile, counter, numbered damage and edicts, removal now counts:
+**The removal role counts what answers a threat.** Besides destroy, exile, counter, numbered damage and edicts, removal now counts:
 
 - X damage and "up to one target";
 - bounce and tuck of what you don't control, and shrink;
@@ -139,9 +133,7 @@ Besides destroy, exile, counter, numbered damage and edicts, removal now counts:
 Roles are read from reminder-free text too. Goldfishing reads the same roles, so its removal
 and draw counts change with them.
 
-### Protection and card advantage are fundamentals buckets
-
-Each is scored apart from theme, like ramp. It has a target for the whole deck, and the
+**Protection and card advantage are fundamentals buckets.** Each is scored apart from theme, like ramp. It has a target for the whole deck, and the
 target keeps pace with the draft: the deck should hold all of it by its sixty-third nonland
 card, in proportion along the way (`bucketPace`, now shared with ramp).
 
@@ -188,9 +180,7 @@ whether to also grow the bonus while the deck is behind. Growing it measured clo
 targets at the same EDHREC alignment, so it does: half again per card behind, up to three
 times. Ramp keeps its own rule (`deck-draft/ADR-0009`).
 
-### Calibration
-
-Measured as in `deck-draft/ADR-0011`. The twelve commanders of that ADR are each seeded with
+**Calibration.** Measured as in `deck-draft/ADR-0011`. The twelve commanders of that ADR are each seeded with
 their two most-included non-ramp EDHREC cards.
 
 - **Top** counts the top four suggestions of each nonland type that are among the
