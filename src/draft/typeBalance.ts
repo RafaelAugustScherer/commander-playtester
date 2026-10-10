@@ -1,3 +1,4 @@
+import { saturate } from "./curves";
 import type { CardFaceData } from "../engine/draftQueries";
 import type { DecklistEntry } from "../lib/types";
 import { COMMANDER_WEIGHT } from "./themes";
@@ -225,10 +226,6 @@ export function typeWeights(
   return weights;
 }
 
-function signalStrength(weight: number, scale: number): number {
-  return 1 - Math.exp(-weight / scale);
-}
-
 function largestRemainder(shares: number[], total: number): number[] {
   const raw = shares.map((share) => share * total);
   const counts = raw.map(Math.floor);
@@ -251,7 +248,7 @@ export function targetMix(
   planeswalkers: boolean,
 ): { counts: TypeCounts; nonbasicLands: number } {
   const lands = Math.round(
-    BASE_LANDS + LAND_BONUS_MAX * signalStrength(weights.land, LAND_SIGNAL_SCALE),
+    BASE_LANDS + LAND_BONUS_MAX * saturate(weights.land, LAND_SIGNAL_SCALE),
   );
   const nonLandSlots = Math.max(0, deckSize - lands);
   const types = planeswalkers
@@ -261,7 +258,7 @@ export function targetMix(
   const baselineTotal = types.reduce((sum, type) => sum + BASELINE_NON_LAND[type], 0);
   const focusTotal = types.reduce((sum, type) => sum + weights[type], 0);
   const strongest = Math.max(...types.map((type) => weights[type]));
-  const focus = focusTotal > 0 ? FOCUS_MAX * signalStrength(strongest, FOCUS_SIGNAL_SCALE) : 0;
+  const focus = focusTotal > 0 ? FOCUS_MAX * saturate(strongest, FOCUS_SIGNAL_SCALE) : 0;
 
   const shares = types.map(
     (type) =>

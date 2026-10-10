@@ -249,7 +249,12 @@ those that weight both buckets.
   one.
 - `src/draft/tokens.test.ts` ("reminder text"): token reminders, the keyword map, and the
   ward fix.
-- `src/lib/roles.test.ts`: the new removal wordings and reminder-free draw.
+- `src/lib/roles.test.ts`: the new removal wordings, answers aimed at your own things
+  (tucking your own creature, exiling your own graveyard) not counting, and reminder-free
+  draw.
+- `src/lib/rulesText.test.ts` and `src/lib/draw.test.ts`: the shared readings every
+  classifier uses — own names (legends by short name), activation costs after an ability
+  word, clauses, and draw wordings.
 - `npm run draft-balance` still passes its type-lean assertions.
 
 ## More Information

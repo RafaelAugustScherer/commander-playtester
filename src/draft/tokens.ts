@@ -1,7 +1,7 @@
 import { cardKey, isCreature, type Card } from "../lib/types";
 import { CREATURE_TYPES } from "./creatureTypes";
 import { fitsPowerCondition, powerConditions } from "./powerTokens";
-import { rulesLines, withoutReminder } from "../lib/rulesText";
+import { ruleClauses, rulesLines, rulesText, withOwnName, withoutReminder } from "../lib/rulesText";
 
 /**
  * One curated oracle-text signal. Matching `pattern` contributes `token` to the
@@ -67,7 +67,7 @@ const OTHER_COUNTER_KINDS = [
  * oracle-text phrases mapped to the theme token they signal. Case-insensitive,
  * no `g` flag (so `.test()` stays stateless across cards).
  */
-export const ORACLE_TEXT_PATTERNS: OracleTextPattern[] = [
+const CURATED_PATTERNS: OracleTextPattern[] = [
   { token: "+1/+1 counter", pattern: /\+1\/\+1 counters?\b/i },
   { token: "-1/-1 counter", pattern: /-1\/-1 counters?\b/i },
   { token: "sacrifice", pattern: /\bsacrifice[sd]?\b/i },
@@ -274,6 +274,23 @@ const KEYWORD_TOKENS: Array<[RegExp, string[]]> = [
   [/\bextort\b/i, ["gain life"]],
 ];
 
+const CURATED_TOKENS = new Set(CURATED_PATTERNS.map(({ token }) => token));
+for (const [keyword, tokens] of KEYWORD_TOKENS) {
+  const unknown = tokens.find((token) => !CURATED_TOKENS.has(token));
+  if (unknown) throw new Error(`KEYWORD_TOKENS: ${keyword} signals no curated token "${unknown}"`);
+}
+
+/**
+ * The oracle-text patterns tokens are read with: the curated ones, each with
+ * the keywords that signal its token (`KEYWORD_TOKENS`) folded in.
+ */
+export const ORACLE_TEXT_PATTERNS: OracleTextPattern[] = CURATED_PATTERNS.map((entry) => {
+  const keywords = KEYWORD_TOKENS.filter(([, tokens]) => tokens.includes(entry.token)).map(
+    ([keyword]) => keyword,
+  );
+  return keywords.length === 0 ? entry : { ...entry, pattern: [entry.pattern, ...keywords].flat() };
+});
+
 const PATTERNS_BY_TOKEN = new Map(ORACLE_TEXT_PATTERNS.map((p) => [p.token, p]));
 
 const PARTNERS = new Map<string, Set<string>>();
@@ -335,23 +352,18 @@ const CREATURE_TYPE_BY_FORM = new Map(
 );
 const CAPITALISED_WORD = /(?<![\w'-])[A-Z][\w'-]*/g;
 
-/** Rules text with the card's own name, on any face, read as "~". */
-function withoutOwnName(text: string, name: string): string {
-  let rules = text;
-  for (const face of name.split("//")) {
-    const trimmed = face.trim();
-    if (trimmed) rules = rules.split(trimmed).join("~");
-  }
-  return rules;
-}
-
 /**
  * Creature types the rules text names as a tribe to reward ("Elves you
  * control", "an Angel, Demon, or Dragon creature card"). Mentions in the card's
  * own name, in tokens it creates, and in "non-" exclusions don't count.
  */
 export function namedCreatureTypes(text: string, name: string): string[] {
-  const rules = withoutOwnName(text, name)
+  return typesNamedIn(withOwnName(text, { name }));
+}
+
+/** `namedCreatureTypes` of text whose own name is already read as "~". */
+function typesNamedIn(ownText: string): string[] {
+  const rules = ownText
     .replace(/\bcreates?\b[^.]*?\btokens?\b/gi, "")
     .replace(/\b[Nn]on-?[A-Z][\w'-]*/g, "");
   const types = new Set<string>();
@@ -366,21 +378,18 @@ function matches(pattern: RegExp | RegExp[], text: string): boolean {
   return Array.isArray(pattern) ? pattern.some((p) => p.test(text)) : pattern.test(text);
 }
 
-/** Rules text without reminder text, which tokens are read from (`deck-draft/ADR-0013`). */
-function rulesText(card: Pick<Card, "oracleText">): string {
-  return rulesLines(card).join("\n");
-}
-
+/**
+ * The tokens a text signals, read from rules text without reminder text
+ * (`deck-draft/ADR-0013`) and with the card's own name read as "~", so a name
+ * signals nothing.
+ */
 function textThemeTokens(text: string, name: string): Set<string> {
-  const tokens = new Set<string>(namedCreatureTypes(text, name));
+  const rules = withOwnName(text, { name });
+  const tokens = new Set<string>(typesNamedIn(rules));
   for (const { token, pattern } of ORACLE_TEXT_PATTERNS) {
-    if (matches(pattern, text)) tokens.add(token);
+    if (matches(pattern, rules)) tokens.add(token);
   }
-  const rules = withoutOwnName(text, name);
-  for (const [keyword, signals] of KEYWORD_TOKENS) {
-    if (keyword.test(rules)) for (const token of signals) tokens.add(token);
-  }
-  for (const condition of powerConditions(text)) tokens.add(condition);
+  for (const condition of powerConditions(rules)) tokens.add(condition);
   return tokens;
 }
 
@@ -472,16 +481,8 @@ export function cardTokens(card: Card): ReadonlySet<string> {
 export const REPEATABLE_STRENGTH = 2;
 export const MULTIPLAYER_STRENGTH = 1.5;
 
-const TRIGGERED_CLAUSE = /^(?:whenever\b|at the beginning of (?!(?:the |your )?next\b))/i;
-const ACTIVATED_CLAUSE = /^[^:."—•]*:/;
 const MULTIPLAYER_CLAUSE =
   /\b(?:each opponent|your opponents|all opponents|each other player|whenever an opponent|at the beginning of each)\b/i;
-
-const MODE_LABEL = /^•\s*(?:[^—.]{1,30}—\s*)?/;
-
-function isRepeatable(clause: string): boolean {
-  return TRIGGERED_CLAUSE.test(clause.trimStart()) || ACTIVATED_CLAUSE.test(clause);
-}
 
 function clauseStrength(clause: string, repeatable: boolean): number {
   let strength = repeatable ? REPEATABLE_STRENGTH : 1;
@@ -495,31 +496,6 @@ function clauseTokens(clause: string, card: Card): Set<string> {
     if (enablerFits(pattern, clause, card.typeLine)) tokens.add(pattern.token);
   }
   return tokens;
-}
-
-export interface RuleClause {
-  text: string;
-  /** A trigger or activated ability on a permanent, which works turn after turn. */
-  repeats: boolean;
-}
-
-/**
- * A card's rules lines (reminder text dropped) as clauses. A mode ("•") takes
- * the repeatability of the line that introduces it, after a short mode label is
- * dropped; an instant's or sorcery's clauses never repeat.
- */
-export function ruleClauses(card: Card): RuleClause[] {
-  const oneShotCard = INSTANT_OR_SORCERY.test(card.typeLine);
-  const clauses: RuleClause[] = [];
-  let headerRepeats = false;
-  for (const line of rulesLines(card)) {
-    const isMode = line.startsWith("•");
-    const text = isMode ? line.replace(MODE_LABEL, "") : line;
-    const repeats: boolean = isRepeatable(text) || (isMode && headerRepeats);
-    if (!isMode) headerRepeats = repeats;
-    clauses.push({ text, repeats: !oneShotCard && repeats });
-  }
-  return clauses;
 }
 
 const strengthCache = new Map<string, ReadonlyMap<string, number>>();

@@ -1,5 +1,6 @@
-import { rulesLines } from "../lib/rulesText";
-import { isLand, type Card } from "../lib/types";
+import { aimsAtOpponents, rulesText, sentences, withOwnName } from "../lib/rulesText";
+import { isLand, memoizeByCard, type Card } from "../lib/types";
+import { linearStep } from "./curves";
 import { commanderThemeTokens } from "./tokens";
 
 const KEEPS_ALIVE = String.raw`\b(?:hexproof|shroud|indestructible|protection from)\b`;
@@ -28,7 +29,6 @@ const PROTECTS = [
 ];
 
 const PHASES_OUT = /\bphases? out\b/i;
-const NOT_YOURS = /\b(?:an opponent controls|you don't control|target opponent|each opponent)\b/i;
 
 const SELF_PROTECTED = /\b(?:hexproof|shroud|indestructible|ward|protection from)\b/i;
 
@@ -58,45 +58,20 @@ export const PROTECTION_FLOOR = 2;
 /** Protection pieces a deck adds on top of the floor at full need. */
 export const PROTECTION_EXTRA = 6;
 
-function rulesText(card: Pick<Card, "oracleText">): string {
-  return rulesLines(card).join("\n");
-}
-
-const NOT_A_SHORT_NAME = new Set(["The", "A", "An"]);
-
-/**
- * Rules text with the card's own name read as "~": in full, before its comma
- * ("Kroxa"), or by first name, as Oracle text now shortens legends ("Edgar").
- */
-function selfReferencing(card: Card): string {
-  let text = rulesText(card);
-  for (const face of card.name.split("//")) {
-    const full = face.trim();
-    const firstName = full.split(/[\s,]/)[0];
-    const names = [full, full.split(",")[0]];
-    if (!NOT_A_SHORT_NAME.has(firstName)) names.push(firstName);
-    for (const name of names) {
-      if (name) text = text.split(name).join("~");
-    }
-  }
-  return text;
-}
-
 /** Whether a nonland card keeps your commander or creatures on the battlefield. */
-export function isProtection(card: Card): boolean {
+export const isProtection = memoizeByCard((card: Card): boolean => {
   if (isLand(card)) return false;
   const text = rulesText(card);
   if (PROTECTS.some((pattern) => pattern.test(text))) return true;
   // Phasing your own things out, not an opponent's.
-  return text
-    .split(/[.\n]/)
-    .some((sentence) => PHASES_OUT.test(sentence) && !NOT_YOURS.test(sentence));
-}
+  return sentences(text).some((sentence) => PHASES_OUT.test(sentence) && !aimsAtOpponents(sentence));
+});
 
 /** Whether a commander wants to connect: voltron, Auras, Equipment, attack triggers. */
 export function wantsToConnect(commander: Card): boolean {
   const tokens = commanderThemeTokens(commander);
-  return CONNECTS.test(selfReferencing(commander)) || CONNECT_TOKENS.some((t) => tokens.has(t));
+  const text = withOwnName(rulesText(commander), commander, true);
+  return CONNECTS.test(text) || CONNECT_TOKENS.some((t) => tokens.has(t));
 }
 
 /**
@@ -106,10 +81,7 @@ export function wantsToConnect(commander: Card): boolean {
  * tax.
  */
 export function commanderCostNeed(commander: Card): number {
-  const cost = Math.max(
-    0,
-    Math.min(1, (commander.manaValue - CHEAP_COMMANDER_MV) / (PRICEY_COMMANDER_MV - CHEAP_COMMANDER_MV)),
-  );
+  const cost = linearStep(commander.manaValue, CHEAP_COMMANDER_MV, PRICEY_COMMANDER_MV);
   const text = rulesText(commander);
   const shielded = SELF_PROTECTED.test(text) || TAX_FREE.some((pattern) => pattern.test(text));
   return shielded ? cost * SHIELDED_NEED : cost;

@@ -48,6 +48,19 @@ describe("cardAdvantageValue", () => {
     expect(cardAdvantageValue(card(typeLine, oracleText))).toBe(0);
   });
 
+  it("reads a discard cost after an ability word as card selection", () => {
+    const channel = card("Creature — Spirit", "Channel — {1}{U}, Discard this card: Draw two cards.");
+    expect(cardAdvantageValue(channel)).toBe(0);
+  });
+
+  it("reads a legend sacrificing itself by its short name as a one-shot", () => {
+    const lantern = {
+      ...card("Legendary Artifact", "{2}, {T}, Sacrifice Lantern: Draw two cards."),
+      name: "Lantern, Relic of Ages",
+    };
+    expect(cardAdvantageValue(lantern)).toBe(0.5);
+  });
+
   it("counts an ability that sacrifices the card by name as a one-shot", () => {
     const rock = card("Artifact", "{T}: Add {C}.\n{1}, {T}, Sacrifice Test Card: Draw a card.");
     expect(cardAdvantageValue(rock)).toBe(0);

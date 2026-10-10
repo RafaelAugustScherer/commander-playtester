@@ -99,6 +99,16 @@ describe("classifyRoles", () => {
     );
   });
 
+  it.each([
+    ["Instant", "Put target creature you control on top of its owner's library."],
+    ["Sorcery", "Exile all cards from your graveyard. You gain 1 life for each card exiled this way."],
+    ["Sorcery", "Reveal the top five cards of your library. Put one into your hand and exile all other cards revealed this way."],
+  ])("does not flag a %s worded %j as removal", (typeLine, oracleText) => {
+    expect(classifyRoles({ typeLine, oracleText, manaValue: 2, producedMana: [] })).not.toContain(
+      "removal",
+    );
+  });
+
   it("does not flag returning your own creature to hand as removal", () => {
     const roles = classifyRoles({
       typeLine: "Instant",

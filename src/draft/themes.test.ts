@@ -139,16 +139,10 @@ describe("extractThemeProfile", () => {
     expect(profile.curve.reduce((a, b) => a + b, 0)).toBe(3);
   });
 
-  it("counts roles from the resolved cards", () => {
-    const others = [
-      card({ roles: ["ramp"] }),
-      card({ roles: ["ramp"] }),
-      card({ roles: ["draw"] }),
-    ];
-    const profile = extractThemeProfile([], others);
-    expect(profile.roleCounts.ramp).toBe(2);
-    expect(profile.roleCounts.draw).toBe(1);
-    expect(profile.roleCounts.removal).toBe(0);
+  it("counts removal from the resolved cards, commanders included", () => {
+    const commander = card({ roles: ["removal"] });
+    const others = [card({ roles: ["removal"] }), card({ roles: ["draw"] })];
+    expect(extractThemeProfile([commander], others).removalCount).toBe(2);
   });
 
   it("derives color identity from the commanders' colorIdentity only, not colors", () => {
@@ -183,7 +177,7 @@ describe("extractThemeProfile", () => {
       const rock = card({ manaValue: 1, roles: ["ramp"], oracleText: "{T}: Add {C}{C}." });
       const profile = extractThemeProfile([], [rock, card({ manaValue: 4 })]);
       expect(profile.manaAppetite).toBe(4);
-      expect(profile.rampCount).toBe(1);
+      expect(profile.buckets.ramp.count).toBe(1);
       expect(profile.nonlandCount).toBe(2);
     });
 

@@ -383,6 +383,14 @@ describe("reminder text", () => {
     expect(themeTokens(card({ oracleText })).has(token)).toBe(true);
   });
 
+  it("does not read a token from the card's own name", () => {
+    const named = card({
+      name: "Sacrifice Engine",
+      oracleText: "Whenever Sacrifice Engine attacks, scry 1.",
+    });
+    expect(themeTokens(named).has("sacrifice")).toBe(false);
+  });
+
   it("does not read a keyword in the card's own name", () => {
     const named = card({
       name: "Chronomantic Escape",

@@ -7,6 +7,7 @@ import init, { init_panic_hook, load_card_database } from "../src/engine/vendor/
 import { draftQueries, type SearchCardRow } from "../src/engine/draftQueries";
 import { candidateData, createDraftRanker, type DraftRanker } from "../src/engine/draftRanking";
 import { DraftSession } from "../src/draft/draftSession";
+import { extractThemeProfile } from "../src/draft/themes";
 import type { CardResolver, DraftEngine } from "../src/draft/candidates";
 import { draftCandidateCard } from "../src/draft/localCandidates";
 import type { DraftCustomization } from "../src/draft/customization";
@@ -209,7 +210,7 @@ describe.skipIf(!ENABLED)("draft type balance against EDHREC average decks", () 
       const start = ranker.rankCardCandidates({
         commanders: [name],
         mainboard: [],
-        profile: { tokenWeights: [], curve: [], roleCounts: { land: 0, ramp: 0, draw: 0, removal: 0, other: 0 }, colorIdentity: identity, creatureTypes: [], creatureCount: 0, tribes: [], manaAppetite: 0, nonlandCount: 0, rampCount: 0, protectionTarget: 0, protectionCount: 0, cardAdvantageCount: 0 },
+        profile: { ...extractThemeProfile([], []), tokenWeights: [], creatureTypes: [], colorIdentity: identity },
         target: "focused",
         customization: EVERYTHING_SUGGESTED,
         exclude: [name.toLowerCase()],

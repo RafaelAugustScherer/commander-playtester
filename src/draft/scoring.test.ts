@@ -72,7 +72,7 @@ describe("scoreCandidate", () => {
     expect(thinScore.curveScore).toBeGreaterThan(crowdedScore.curveScore);
   });
 
-  it("favors a candidate filling a role the deck is short on", () => {
+  it("favors removal while the deck is short of it", () => {
     const others = [
       card({ roles: ["removal"] }),
       card({ roles: ["removal"] }),
@@ -83,20 +83,20 @@ describe("scoreCandidate", () => {
     const fresh = extractThemeProfile([], []);
     const removalCandidate = card({ roles: ["removal"] });
 
-    expect(scoreCandidate(removalCandidate, fresh).roleScore).toBeGreaterThan(
-      scoreCandidate(removalCandidate, profile).roleScore,
+    expect(scoreCandidate(removalCandidate, fresh).removalScore).toBeGreaterThan(
+      scoreCandidate(removalCandidate, profile).removalScore,
     );
   });
 
-  it("leaves draw to the card-advantage bucket, not the role gap", () => {
+  it("leaves draw to the card-advantage bucket, not the removal gap", () => {
     const candidate = card({ roles: ["draw"], oracleText: "Draw two cards." });
-    expect(scoreCandidate(candidate, extractThemeProfile([], [])).roleScore).toBe(0);
+    expect(scoreCandidate(candidate, extractThemeProfile([], [])).removalScore).toBe(0);
   });
 
-  it("gives no role-gap credit for the catch-all 'other' role", () => {
+  it("gives no removal-gap credit to a card that is not removal", () => {
     const profile = extractThemeProfile([], [card({ roles: ["other"] })]);
     const candidate = card({ roles: ["other"] });
-    expect(scoreCandidate(candidate, profile).roleScore).toBe(0);
+    expect(scoreCandidate(candidate, profile).removalScore).toBe(0);
   });
 
   it("does not throw scoring against an empty deck profile", () => {
@@ -205,7 +205,7 @@ describe("scoreCandidate", () => {
           [card({ name: "Commander", manaValue: commanderMv, colorIdentity })],
           others,
         ),
-      ).rampScore;
+      ).bucketScores.ramp;
 
     it("gives nothing while the deck's mana appetite is low", () => {
       expect(rampScoreIn(2)).toBe(0);
@@ -297,9 +297,9 @@ describe("scoreCandidate", () => {
       expect(rampScoreIn(7, rock, [], ["B"])).toBe(RAMP_WEIGHT);
     });
 
-    it("leaves ramp out of the role-gap term", () => {
+    it("leaves ramp out of the removal-gap term", () => {
       const profile = extractThemeProfile([card({ name: "Commander", manaValue: 7 })], []);
-      expect(scoreCandidate(dork, profile).roleScore).toBe(0);
+      expect(scoreCandidate(dork, profile).removalScore).toBe(0);
     });
   });
 });

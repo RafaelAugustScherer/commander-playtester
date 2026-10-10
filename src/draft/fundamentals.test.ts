@@ -8,8 +8,8 @@ import {
   PROTECTION_WEIGHT,
   bucketPace,
   bucketRoom,
-  cardAdvantageFit,
-  protectionFit,
+  bucketFit,
+  type BucketName,
 } from "./fundamentals";
 import { extractThemeProfile, type ThemeProfile } from "./themes";
 import type { Card } from "../lib/types";
@@ -40,9 +40,13 @@ const study = card({
 });
 const harmonize = card({ name: "Harmonize", typeLine: "Sorcery", oracleText: "Draw three cards." });
 
-function profile(overrides: Partial<ThemeProfile>): ThemeProfile {
-  return { ...extractThemeProfile([], []), ...overrides };
+/** A profile with `nonlandCount` and one bucket set; the other buckets are empty. */
+function profile(nonlandCount: number, name: BucketName, target: number, count: number): ThemeProfile {
+  const base = extractThemeProfile([], []);
+  return { ...base, nonlandCount, buckets: { ...base.buckets, [name]: { target, count } } };
 }
+const protectionFit = (card: Card, p: ThemeProfile) => bucketFit("protection", card, p);
+const cardAdvantageFit = (card: Card, p: ThemeProfile) => bucketFit("cardAdvantage", card, p);
 
 describe("bucketPace", () => {
   it("reaches the whole target by the 63rd nonland card, and stays there", () => {
@@ -67,42 +71,42 @@ describe("bucketRoom", () => {
   });
 });
 
-describe("protectionFit", () => {
+describe("protection bucket", () => {
   it("rewards protection while the deck is short of its target, more the further behind", () => {
-    const atPace = protectionFit(greaves, profile({ protectionTarget: 8, nonlandCount: 0, protectionCount: 0 }));
-    const behind = protectionFit(greaves, profile({ protectionTarget: 8, nonlandCount: 63, protectionCount: 2 }));
+    const atPace = protectionFit(greaves, profile(0, "protection", 8, 0));
+    const behind = protectionFit(greaves, profile(63, "protection", 8, 2));
     expect(atPace).toBe(PROTECTION_WEIGHT);
     expect(behind).toBe(PROTECTION_WEIGHT * BUCKET_CATCH_UP_CAP);
   });
 
   it("fades as the deck gets ahead of its protection pace", () => {
-    const behind = protectionFit(greaves, profile({ protectionTarget: 2, nonlandCount: 63, protectionCount: 1 }));
-    const ahead = protectionFit(greaves, profile({ protectionTarget: 2, nonlandCount: 63, protectionCount: 4 }));
+    const behind = protectionFit(greaves, profile(63, "protection", 2, 1));
+    const ahead = protectionFit(greaves, profile(63, "protection", 2, 4));
     expect(ahead).toBeLessThan(behind);
     expect(ahead).toBeGreaterThan(0);
   });
 
   it("gives nothing before there is a commander, or to a card that protects nothing", () => {
-    expect(protectionFit(greaves, profile({ protectionTarget: 0 }))).toBe(0);
-    expect(protectionFit(harmonize, profile({ protectionTarget: 8 }))).toBe(0);
+    expect(protectionFit(greaves, profile(30, "protection", 0, 0))).toBe(0);
+    expect(protectionFit(harmonize, profile(30, "protection", 8, 0))).toBe(0);
   });
 });
 
-describe("cardAdvantageFit", () => {
+describe("card-advantage bucket", () => {
   it("gives an engine the full bonus and a one-shot half of it", () => {
-    const empty = profile({ nonlandCount: 0, cardAdvantageCount: 0 });
+    const empty = profile(0, "cardAdvantage", CARD_ADVANTAGE_TARGET, 0);
     expect(cardAdvantageFit(study, empty)).toBe(CARD_ADVANTAGE_WEIGHT);
     expect(cardAdvantageFit(harmonize, empty)).toBe(CARD_ADVANTAGE_WEIGHT / 2);
   });
 
   it("fades once the deck holds its card advantage target", () => {
-    const full = profile({ nonlandCount: 63, cardAdvantageCount: CARD_ADVANTAGE_TARGET + 2 });
+    const full = profile(63, "cardAdvantage", CARD_ADVANTAGE_TARGET, CARD_ADVANTAGE_TARGET + 2);
     expect(cardAdvantageFit(study, full)).toBe(CARD_ADVANTAGE_WEIGHT / 4);
   });
 
   it("counts the 99's card advantage and protection in the profile", () => {
     const counted = extractThemeProfile([], [greaves, study, harmonize]);
-    expect(counted.protectionCount).toBe(1);
-    expect(counted.cardAdvantageCount).toBe(1.5);
+    expect(counted.buckets.protection.count).toBe(1);
+    expect(counted.buckets.cardAdvantage.count).toBe(1.5);
   });
 });
