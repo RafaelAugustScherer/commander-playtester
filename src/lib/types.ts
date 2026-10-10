@@ -12,6 +12,8 @@ export interface Card {
   oracleText: string;
   /** Printed power, only when it is a fixed number. */
   power?: number;
+  /** The mana cost holds {X} (an X spell). */
+  hasXCost?: boolean;
   colors: string[];
   /** True MTG color identity (mana cost + rules text), from Scryfall's `color_identity`. */
   colorIdentity: string[];

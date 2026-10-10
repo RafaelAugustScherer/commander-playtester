@@ -26,6 +26,18 @@ describe("toCard", () => {
     ).toBe(1);
   });
 
+  it("marks an {X} in the mana cost, from the card or its front face", () => {
+    expect(toCard({ name: "Blaze", cmc: 1, mana_cost: "{X}{R}", type_line: "Sorcery" }).hasXCost).toBe(true);
+    expect(
+      toCard({
+        name: "Front // Back",
+        cmc: 2,
+        card_faces: [{ mana_cost: "{X}{X}{G}", type_line: "Sorcery" }, { mana_cost: "{2}", type_line: "Instant" }],
+      }).hasXCost,
+    ).toBe(true);
+    expect(toCard({ name: "Bear", cmc: 2, mana_cost: "{1}{G}", type_line: "Creature — Bear" }).hasXCost).toBe(false);
+  });
+
   it("leaves power unset when it is not a fixed number", () => {
     expect(toCard({ name: "Star", cmc: 3, type_line: "Creature — Elemental", power: "*" }).power).toBeUndefined();
     expect(toCard({ name: "Sol Ring", cmc: 1, type_line: "Artifact" }).power).toBeUndefined();

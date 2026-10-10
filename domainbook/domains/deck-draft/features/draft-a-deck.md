@@ -449,6 +449,70 @@ Example: A persist creature still fits a -1/-1 counter deck
   Then it signals -1/-1 counters
 ```
 
+## Rule: Common commander mechanics have tokens
+
+Mechanics many commanders build around each have a `theme token`:
+
+- combat damage to a player, which evasive creatures fit;
+- evasion ("can't be blocked", fear, skulk, landwalk and the like);
+- ninjutsu;
+- noncreature spells, with prowess, which every noncreature spell fits;
+- a second spell or second card drawn each turn;
+- anthems ("creatures you control get +1/+1");
+- drain (opponents losing life);
+- impulse draw (exiling cards to play them);
+- lands matter;
+- clones;
+- X spells, which a card with {X} in its mana cost fits;
+- untapping;
+- tutors;
+- mutate;
+- explore.
+
+Partners fit each other: evasion with combat damage and ninjutsu, making tokens with anthems, landfall with lands
+matter (`deck-draft/ADR-0014`).
+
+A commander's own text is read with four refinements (`deck-draft/ADR-0014`):
+
+- A commander's trigger on its own combat damage is not a combat-damage theme. It raises
+  the commander's protection need instead. A trigger on other creatures connecting is a
+  theme.
+- A commander that tutors is not a tutor theme, as a commander that ramps is not a ramp
+  theme. Tutors enter the theme only through the 99.
+- Untapping pays off a commander's non-mana tap ability, not its own untap effect.
+- A mechanic the commander carries as its own keyword ability ("Mutate {2}{U/B}{G}{G}",
+  "Commander ninjutsu {U}{B}") is one it rewards. Its own evasion keywords describe it, as
+  flying does, and are not its theme.
+
+```gherkin
+Example: A ninja commander is offered ninjas and evasive creatures
+  Given a draft whose commander is "Yuriko, the Tiger's Shadow"
+  When a creature slot is ranked
+  Then creatures with ninjutsu, or that can't be blocked, rank above others of equal strength
+
+Example: A commander's own combat trigger asks for protection, not payoffs
+  Given a draft whose commander is "Thada Adel, Acquisitor"
+  When the deck's theme is weighed
+  Then combat damage to a player is not part of it
+  And the deck's protection target is eight
+
+Example: A commander that tutors is not offered tutors for it
+  Given a draft whose commander is "Captain Sisay"
+  When the deck's theme is weighed
+  Then tutoring is not part of it
+  And untapping is rewarded, for her tap ability
+
+Example: A mutate commander rewards mutate
+  Given a draft whose commander is "Brokkos, Apex of Forever"
+  When what the commander rewards is read
+  Then it rewards mutate
+
+Example: An X spell fits an X-spell deck by its mana cost
+  Given a draft whose commander is "Zaxara, the Exemplary"
+  When "Hydroid Krasis" is scored
+  Then it fits the X-spell theme
+```
+
 ## Rule: Protection keeps pace with what the commander needs
 
 Cards that keep your commander or creatures on the battlefield — "Lightning Greaves",

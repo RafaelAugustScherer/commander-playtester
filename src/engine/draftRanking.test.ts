@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { DEFAULT_CUSTOMIZATION, type DraftCustomization } from "../draft/customization";
-import { createDraftRanker } from "./draftRanking";
+import { candidateData, createDraftRanker } from "./draftRanking";
 import type { CardFaceData, DraftQueryExports, SearchCardRow } from "./draftQueries";
 import { extractThemeProfile } from "../draft/themes";
 import { draftCandidateCard } from "../draft/localCandidates";
@@ -401,5 +401,27 @@ describe("createDraftRanker customization", () => {
     expect(candidates.map((c) => c.name).sort()).toEqual(
       [DELVER.name, TAPPER.name, WALKER.name].sort(),
     );
+  });
+});
+
+describe("candidateData", () => {
+  it("marks an {X} among the mana cost's shards", () => {
+    const { queries } = fakeEngine([TAPPER]);
+    const row: SearchCardRow = {
+      name: TAPPER.name,
+      oracle_id: TAPPER.name,
+      mana_value: 2,
+      color_identity: ["W"],
+      legalities: { commander: "legal" },
+    };
+    expect(candidateData(queries, row)?.hasXCost).toBe(false);
+    const withX: DraftQueryExports = {
+      ...queries,
+      get_card_face_data: (name) => {
+        const data = queries.get_card_face_data(name);
+        return data ? { ...data, mana_cost: { shards: ["X", "W"] } } : null;
+      },
+    };
+    expect(candidateData(withX, row)?.hasXCost).toBe(true);
   });
 });
