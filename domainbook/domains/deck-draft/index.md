@@ -36,16 +36,15 @@ whole card pool by heart.
   card database (narrowed by `search_cards_js`); the *ordering* is a self-built
   heuristic over card text and types, because the engine has no card-fit signal to lean
   on (`deck-draft/ADR-0001`).
-- Steering context: a selectable `bracket target` (default Focused) tilts the ranking
-  using the engine's `estimate_bracket_for_deck`, so a draft aimed at a casual table and
-  one aimed at cEDH pull different cards.
+- Reporting context: the engine's `estimate_bracket_for_deck` and `classify_deck_js` label
+  the deck's bracket and archetype in the draft summary. They report; they do not steer the
+  ranking (`deck-draft/ADR-0015`).
 
 ## Inbound Communication
 
 | Message             | Collaborator | Type    |
 | ------------------- | ------------ | ------- |
 | `StartDraft`        | user         | Command |
-| `SetBracketTarget`  | user         | Command |
 | `RequestSuggestions`| user         | Command |
 | `RefreshSuggestion` | user         | Command |
 | `AddCard`           | user         | Command |
@@ -106,9 +105,9 @@ whole card pool by heart.
   come from one **Fill basic lands** step that completes the land count, rather than from
   rounds; a one-colour deck is offered only a few utility lands (`deck-draft/ADR-0003`,
   `deck-draft/ADR-0007`).
-- A `bracket target` (Focused by default, or Optimized or cEDH) steers the ranking through
-  the engine's bracket estimate; a card that would push the deck past the target is
-  penalised, not hidden — the user stays in control (`ADR-0009`, `deck-draft/ADR-0006`).
+- The draft has no bracket target: a card is never ranked down for the bracket it would push
+  the deck to. The engine's bracket and archetype show as live labels in the summary
+  (`deck-draft/ADR-0015`).
 - Lords and other `tribal payoff`s rise with their tribe's share of the deck; `tribal mode`
   goes further and keeps creature slots on tribes the author picks by hand
   (`deck-draft/ADR-0006`).
@@ -153,7 +152,7 @@ whole card pool by heart.
 - How large and how curated the oracle-text `theme token` list should be — it is the
   main lever of synergy quality, and too broad a list dilutes the score.
 - Whether the engine `bracket` folds into analysis's contemplated "power score" or stays
-  a draft-only steering signal (`analysis` open questions).
+  a draft-only summary label (`analysis` open questions).
 - Whether a `refresh` should replace a card with the closest remaining candidate to the
   one dropped, or simply walk the global ranking.
 - Whether to hard-filter unsupported cards (`coverage`) out of suggestions or only
@@ -168,5 +167,3 @@ whole card pool by heart.
 - Card advantage overshoots its target (about 12 per drafted deck against 7), because many
   offered cards draw on the side; a `fundamentals bucket` only adds, so it cannot pull that
   down (`deck-draft/ADR-0013`).
-- Whether the `bracket target` tilt (−2 per tier past the target) is large enough to steer
-  against any theme.

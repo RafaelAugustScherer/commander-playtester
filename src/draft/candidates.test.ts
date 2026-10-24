@@ -30,12 +30,11 @@ function fixedBalance(): TypeBalance {
 }
 
 function ranking(
-  names: Array<{ name: string; bracketTilt?: number; slotType?: DraftCardType }>,
+  names: Array<{ name: string; slotType?: DraftCardType }>,
 ): RankCardCandidatesResult {
   return {
-    candidates: names.map(({ name, bracketTilt = 0, slotType = "creature" }) => ({
+    candidates: names.map(({ name, slotType = "creature" }) => ({
       name,
-      bracketTilt,
       slotType,
     })),
     balance: fixedBalance(),
@@ -114,7 +113,6 @@ describe("suggestCandidates", () => {
           return baseResolver.resolve(names);
         },
       },
-      target: "focused",
       exclude: new Set(["Shown Elf"]),
     });
     expect(results).toHaveLength(3);
@@ -123,29 +121,6 @@ describe("suggestCandidates", () => {
       expect.arrayContaining(["commander elf", "in deck elf", "shown elf"]),
     );
     expect(rankedInputs[0].profile.tokenWeights).toEqual([...profile.tokenWeights]);
-  });
-
-  it("includes the locally computed bracket tilt in the displayed total", async () => {
-    const engine: DraftEngine = {
-      commanderCandidates: async () => [],
-      rankCardCandidates: async () =>
-        ranking([
-          { name: "In Identity Elf", bracketTilt: 0 },
-          { name: "Bracket Heavy Elf", bracketTilt: -4 },
-        ]),
-      resolveCards: async () => [],
-    };
-    const { candidates: results } = await suggestCandidates(deck, profile, {
-      engine,
-      customization: DEFAULT_CUSTOMIZATION,
-      resolver,
-      target: "focused",
-    });
-    const plain = results.find((r) => r.card.name === "In Identity Elf")!;
-    const heavy = results.find((r) => r.card.name === "Bracket Heavy Elf")!;
-    expect(heavy.bracketTilt).toBe(-4);
-    expect(heavy.total).toBe(heavy.score.total - 4);
-    expect(plain.total).toBe(plain.score.total);
   });
 
   it("passes the requested slot types through to the engine input", async () => {
@@ -162,7 +137,6 @@ describe("suggestCandidates", () => {
       engine,
       customization: DEFAULT_CUSTOMIZATION,
       resolver,
-      target: "focused",
       slotTypes: ["instant", "land", "creature"],
     });
     expect(rankedInputs[0].slotTypes).toEqual(["instant", "land", "creature"]);
@@ -181,7 +155,6 @@ describe("suggestCandidates", () => {
     await suggestCandidates(deck, profile, {
       engine,
       resolver,
-      target: "focused",
       customization: DEFAULT_CUSTOMIZATION,
     });
     expect(rankedInputs[0].slotTypes).toBeUndefined();
@@ -202,7 +175,6 @@ describe("suggestCandidates", () => {
       engine,
       customization: DEFAULT_CUSTOMIZATION,
       resolver,
-      target: "focused",
     });
     expect(candidates.map((c) => [c.card.name, c.slotType])).toEqual([
       ["In Identity Elf", "instant"],
@@ -222,7 +194,6 @@ describe("suggestCandidates", () => {
       engine,
       customization: DEFAULT_CUSTOMIZATION,
       resolver,
-      target: "focused",
     });
     expect(round.balance).toBe(balance);
     expect(round.candidates).toEqual([]);
@@ -242,7 +213,6 @@ describe("suggestCandidates", () => {
       engine,
       customization: DEFAULT_CUSTOMIZATION,
       resolver,
-      target: "focused",
     });
     expect(candidates.map((c) => c.card.name)).toEqual(["In Identity Elf"]);
   });

@@ -12,7 +12,6 @@ import {
   type CardResolver,
   type RankedCandidate,
 } from "./candidates";
-import { DEFAULT_BRACKET_TARGET, type BracketTarget } from "./bracket";
 import { DEFAULT_CUSTOMIZATION, type DraftCustomization } from "./customization";
 import { draftCandidateCard } from "./localCandidates";
 import { canPairAsCommanders, hasChooseABackground } from "./partners";
@@ -64,7 +63,7 @@ export interface DraftSessionDeps {
 
 /**
  * The in-progress `draft session` state machine (`draft-a-deck`): base cards,
- * commander, bracket target, the deck so far, and the current suggestion
+ * commander, the deck so far, and the current suggestion
  * round. Engine/resolver access is injected so the whole pipeline runs
  * offline against fakes in tests.
  */
@@ -73,7 +72,6 @@ export class DraftSession {
   commander: Card | null = null;
   /** The second commander paired with `commander` (Partner, Background, …), if any. */
   partner: Card | null = null;
-  target: BracketTarget = DEFAULT_BRACKET_TARGET;
   /**
    * Tribal mode: when on, creature slots offer only creatures of `tribes` and
    * cards that name them rank higher. The tribes are kept while it is off.
@@ -171,7 +169,6 @@ export class DraftSession {
         engine: this.deps.engine,
         resolver: this.deps.resolver,
         customization: this.customization,
-        target: this.target,
         exclude: this.blacklist,
       });
       this.pool = round.candidates;
@@ -206,7 +203,6 @@ export class DraftSession {
               engine: this.deps.engine,
               resolver: this.deps.resolver,
               customization: this.customization,
-              target: this.target,
               exclude,
               slotTypes: slotType ? Array<DraftCardType>(ROUND_SIZE).fill(slotType) : undefined,
             })
@@ -232,7 +228,6 @@ export class DraftSession {
   async start(
     baseCardNames: string[],
     commanderName: string | null = null,
-    target: BracketTarget = DEFAULT_BRACKET_TARGET,
     tribal: TribalMode = { enabled: false, tribes: [] },
     customization: DraftCustomization = DEFAULT_CUSTOMIZATION,
     partnerName: string | null = null,
@@ -244,7 +239,6 @@ export class DraftSession {
       throw new DraftSessionError("too-few-base-cards");
     }
 
-    this.target = target;
     const resolved = await this.deps.engine.resolveCards(uniqueNames);
     const baseCards = resolved.map(draftCandidateCard);
     this.rememberResolved(baseCards);
@@ -415,11 +409,6 @@ export class DraftSession {
   async setCustomization(customization: DraftCustomization): Promise<void> {
     this.customization = customization;
     if (this.phase === "drafting") await this.openRound();
-  }
-
-  /** Re-steer subsequent suggestion rounds toward a different bracket target. */
-  setBracketTarget(target: BracketTarget): void {
-    this.target = target;
   }
 
   /** The deck so far as paste-able decklist text (round-trips the parser). */

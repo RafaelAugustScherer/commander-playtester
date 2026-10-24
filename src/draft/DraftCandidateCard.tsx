@@ -35,7 +35,7 @@ export function DraftCandidateCard({
   preview: Preview | null;
 }) {
   const { t } = useI18n();
-  const { card, score, bracketTilt, slotType } = candidate;
+  const { card, score, slotType } = candidate;
 
   function enter(e: ReactMouseEvent) {
     onHover({
@@ -89,11 +89,6 @@ export function DraftCandidateCard({
             </span>
           ))}
         </div>
-      )}
-      {bracketTilt < 0 && (
-        <p className="hint" style={{ color: "var(--warn)" }}>
-          {t("draft.round.tiltNote")}
-        </p>
       )}
       <div className="draft-card__actions">
         <button

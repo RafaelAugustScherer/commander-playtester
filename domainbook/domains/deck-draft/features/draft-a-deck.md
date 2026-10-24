@@ -600,7 +600,7 @@ Example: A cantrip is not card advantage
 
 ## Rule: Tribal mode keeps creature slots on the chosen tribes
 
-In the `customization` section below the bracket target, a **Tribal** checkbox turns on
+In the `customization` section, a **Tribal** checkbox turns on
 `tribal mode`. While it is on, the
 author picks one or more creature types by hand, typing to get suggestions from the full
 list of creature types. Every creature slot then offers only creatures of those types — a
@@ -698,7 +698,7 @@ Example: A staple outranks a vanilla card of equal theme fit
 ## Rule: A round offers three cards, each refreshable, with no repeats in the round
 
 Each `suggestion round` shows exactly three cards whenever at least three legal candidates
-exist in the card database. Candidates are narrowed, scored, bracket-adjusted, and ranked
+exist in the card database. Candidates are narrowed, scored and ranked
 locally before only the three selected cards are fetched for display. Any one can be refreshed
 on its own, replaced by the closest remaining candidate of the same `slot type` that has not
 appeared in this round. The replaced card joins the `blacklist` and is never suggested again
@@ -838,22 +838,17 @@ Example: Filling twice does not stack
   Then the earlier basics are replaced by a new split
 ```
 
-## Rule: Suggestions stay legal and follow the bracket target
+## Rule: Suggestions stay legal
 
-Every suggested card is within the commander's `color identity` and legal in Commander. A
-selectable `bracket target` — Focused (the default), Optimized or cEDH — steers the
-ranking; a card that would push the deck past the target is pushed down, not hidden.
+Every suggested card is within the commander's `color identity` and legal in Commander. There
+is no bracket target: a card is never pushed down for the bracket it would take the deck to
+(`deck-draft/ADR-0015`).
 
 ```gherkin
 Example: Out-of-identity cards are never offered
   Given a mono-red commander
   When any round is suggested
   Then no suggestion has a color identity outside red
-
-Example: The bracket target shifts what is offered
-  Given a draft with the bracket target set to Focused
-  When the target is raised to cEDH
-  Then higher-powered cards the previous target held back now rank up
 ```
 
 ## Rule: A draft can be left at any point with its deck kept

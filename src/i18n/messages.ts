@@ -870,7 +870,6 @@ export const messages = {
   },
   "draft.entry.removeCard": { pt: "Remover carta", en: "Remove card" },
   "draft.entry.addCard": { pt: "+ Adicionar carta", en: "+ Add another card" },
-  "draft.entry.bracketLabel": { pt: "Bracket alvo", en: "Bracket target" },
   "draft.entry.start": { pt: "Iniciar draft", en: "Start draft" },
   "draft.entry.checking": { pt: "Verificando cartas…", en: "Checking cards…" },
   "draft.entry.starting": {
@@ -916,7 +915,6 @@ export const messages = {
   "draft.summary.colorIdentity": { pt: "Identidade: {list}", en: "Identity: {list}" },
   "draft.summary.archetype": { pt: "Arquétipo: {name}", en: "Archetype: {name}" },
   "draft.summary.bracket": { pt: "Bracket: {tier}", en: "Bracket: {tier}" },
-  "draft.summary.bracketTarget": { pt: "Bracket alvo", en: "Bracket target" },
   "draft.customization.label": { pt: "Personalização", en: "Customization" },
   "draft.customization.planeswalkers": {
     pt: "Sugerir planeswalkers",
@@ -941,10 +939,6 @@ export const messages = {
   "draft.tribal.empty": {
     pt: "Escolha ao menos uma tribo para o modo Tribal filtrar as sugestões.",
     en: "Pick at least one tribe for tribal mode to filter suggestions.",
-  },
-  "draft.summary.targetHint": {
-    pt: "Vale a partir da próxima rodada de sugestões.",
-    en: "Applies starting with the next round of suggestions.",
   },
 
   "draft.balance.title": { pt: "Equilíbrio de tipos", en: "Type balance" },
@@ -975,15 +969,11 @@ export const messages = {
     en: "Fetching the next round…",
   },
   "draft.round.empty": {
-    pt: "Nenhuma sugestão disponível agora. Tente atualizar ou mudar o bracket alvo.",
-    en: "No suggestions available right now. Try refreshing or changing the bracket target.",
+    pt: "Nenhuma sugestão disponível agora. Tente atualizar ou mudar a personalização.",
+    en: "No suggestions available right now. Try refreshing or changing the customization.",
   },
   "draft.round.add": { pt: "Adicionar", en: "Add" },
   "draft.round.refresh": { pt: "Atualizar", en: "Refresh" },
-  "draft.round.tiltNote": {
-    pt: "Passaria do bracket alvo — por isso rankeada mais abaixo.",
-    en: "Would push past the bracket target — ranked lower for it.",
-  },
   "draft.round.actionFailed": {
     pt: "Não foi possível completar a ação. Tente novamente.",
     en: "Couldn't complete that action. Try again.",

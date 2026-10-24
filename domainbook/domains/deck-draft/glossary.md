@@ -96,8 +96,7 @@ strengthened when a repeatable or every-opponent clause carries it,
 the deck's removal gap and mana curve, plus a bonus from each `fundamentals bucket` the
 card fills while the deck is short of it — ramp set by its `mana appetite`
 (`deck-draft/ADR-0009`), `protection` and `card advantage` (`deck-draft/ADR-0013`) —
-plus a `tribal payoff` bonus, plus the `bracket
-target` tilt, plus a small tilt toward more-played cards by reprint count
+plus a `tribal payoff` bonus, plus a small tilt toward more-played cards by reprint count
 (`deck-draft/ADR-0002`). The engine supplies
 no such score; this context owns it (`deck-draft/ADR-0001`).
 
@@ -203,16 +202,6 @@ damage` theme, and tutoring is never a theme it seeds. A non-mana tap ability re
   a non-commander theme of equal strength. Hylda of the Icy Crown's `tap creature` outweighs
   the `create token` her trigger only pays out.
 
-## Bracket target
-
-The power level (Focused, Optimized or cEDH) the user aims the draft at, defaulting to
-Focused. The engine's lower tiers (Exhibition, Core) still show in its estimate but are not
-offered as targets (`deck-draft/ADR-0006`). It steers the ranking through the engine's
-`estimate_bracket_for_deck`; a card that would push the deck past the target is penalised.
-
-- **Aliases:** target bracket
-- **Status:** draft
-
 ## Tribal payoff
 
 A card whose rules text names a creature type the deck already has ("Other Elves you
@@ -240,7 +229,7 @@ the tribes by hand; turning it off keeps them for later (`deck-draft/ADR-0006`).
 
 ## Customization
 
-The draft's section below the `bracket target` for what the author wants offered, as
+The draft's section for what the author wants offered, as
 checkboxes: `tribal mode`, **Suggest planeswalkers** and **Suggest dungeon mechanics**, both
 off by default, and **Suggest ramp**, on by default. With a checkbox off, those cards are
 never offered, commander round included.
@@ -252,8 +241,7 @@ never offered, commander round included.
 
 ## Draft session
 
-The in-progress draft state: the `base cards`, the chosen `bracket target` and `tribal
-mode`, the deck so
+The in-progress draft state: the `base cards`, the chosen `tribal mode`, the deck so
 far, and the current `suggestion round`. It is not a saved `deck` until the user saves or
 copies it out.
 

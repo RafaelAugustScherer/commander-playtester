@@ -139,9 +139,8 @@ Build a deck from scratch with help. The user seeds at least three cards (option
 flagged as the commander) and the app offers rounds of up to three synergistic cards to
 add, each refreshable, all within the commander's color identity. Candidates come from the
 engine's own card database (`search_cards_js`); a self-built heuristic ranks them by
-synergy with the commander weighted higher; a selectable bracket target (default Focused)
-steers the ranking through the engine's bracket estimate (`ADR-0009`,
-`deck-draft/ADR-0001`). The draft can be left at any point and copied out or saved — a
+synergy with the commander weighted higher; the engine's bracket and archetype show as live
+labels in the summary (`ADR-0009`, `deck-draft/ADR-0001`, `deck-draft/ADR-0015`). The draft can be left at any point and copied out or saved — a
 partial deck is flagged and blocked from play (`deck-library/ADR-0002`). This is the
 project's first step from *measuring* a deck to *helping build* one.
 

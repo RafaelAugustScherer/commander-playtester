@@ -99,7 +99,6 @@ function makeEngine({
         return {
           candidates: available.slice(0, 3).map((c) => ({
             name: c.name,
-            bracketTilt: 0,
             slotType: primaryType(c.typeLine) ?? "creature",
           })),
           balance,
@@ -112,7 +111,7 @@ function makeEngine({
         );
         if (!match) return [];
         taken.add(match.name);
-        return [{ name: match.name, bracketTilt: 0, slotType }];
+        return [{ name: match.name, slotType }];
       });
       return { candidates, balance };
     },
@@ -257,7 +256,7 @@ describe("DraftSession", () => {
         inputs.push(input);
         return {
           candidates: [
-            { name: picks[inputs.length - 1], bracketTilt: 0, slotType: "creature" },
+            { name: picks[inputs.length - 1], slotType: "creature" },
           ],
           balance: fixedBalance(),
         };
@@ -280,13 +279,6 @@ describe("DraftSession", () => {
     const firstElfWeight = new Map(inputs[0].profile.tokenWeights).get("elf") ?? 0;
     const nextElfWeight = new Map(inputs[1].profile.tokenWeights).get("elf") ?? 0;
     expect(nextElfWeight).toBeGreaterThan(firstElfWeight);
-  });
-
-  it("setBracketTarget updates the target used for subsequent rounds", async () => {
-    const session = makeSession();
-    await session.start(BASE_NAMES, null);
-    session.setBracketTarget("cedh");
-    expect(session.target).toBe("cedh");
   });
 
   it("exportText round-trips through the decklist parser", async () => {
@@ -353,7 +345,7 @@ describe("DraftSession tribal mode", () => {
   it("sends the tribes chosen at the start, lowercased and deduplicated", async () => {
     const inputs: RankCardCandidatesInput[] = [];
     const session = new DraftSession({ engine: makeEngine({ inputs }), resolver: makeResolver() });
-    await session.start(BASE, COMMANDER, "focused", {
+    await session.start(BASE, COMMANDER, {
       enabled: true,
       tribes: ["Elf", "elf", " Druid "],
     });
@@ -372,7 +364,7 @@ describe("DraftSession tribal mode", () => {
   it("keeps the tribes but stops steering by them while off", async () => {
     const inputs: RankCardCandidatesInput[] = [];
     const session = new DraftSession({ engine: makeEngine({ inputs }), resolver: makeResolver() });
-    await session.start(BASE, COMMANDER, "focused", { enabled: true, tribes: ["elf"] });
+    await session.start(BASE, COMMANDER, { enabled: true, tribes: ["elf"] });
     await session.setTribal({ enabled: false, tribes: ["elf"] });
     expect(session.tribal.tribes).toEqual(["elf"]);
     expect(inputs[inputs.length - 1].profile.tribes).toEqual([]);
@@ -803,7 +795,6 @@ describe("DraftSession second commander", () => {
     await session.start(
       baseCards.map((c) => c.name),
       partnerCommander.name,
-      "focused",
       undefined,
       undefined,
       background.name,
@@ -872,7 +863,6 @@ describe("DraftSession second commander", () => {
     await session.start(
       baseCards.map((c) => c.name),
       whitePartner.name,
-      "focused",
       undefined,
       undefined,
       blackPartner.name,
@@ -894,7 +884,6 @@ describe("DraftSession second commander", () => {
       session.start(
         baseCards.map((c) => c.name),
         whitePartner.name,
-        "focused",
         undefined,
         undefined,
         partnerCommander.name,
