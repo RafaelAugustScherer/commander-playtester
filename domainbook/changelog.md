@@ -12,6 +12,15 @@ depth live there. A purely-internal PR that touches no product or architecture m
 skip its version with a `Skip-Docs: <reason>` trailer instead. There are no
 per-domain changelogs; this file is the single timeline (`ADR-0007`).
 
+## [0.41.0] - 2026-10-24
+
+### Removed
+
+- The draft's bracket target (Focused, Optimized, cEDH) and the ranking penalty for cards that
+  push the deck past it. A card is no longer ranked down for its bracket, and the ranker no
+  longer asks the engine for a bracket estimate per candidate. The summary still shows the
+  deck's bracket and archetype (`deck-draft/ADR-0015`).
+
 ## [0.40.0] - 2026-10-10
 
 ### Added

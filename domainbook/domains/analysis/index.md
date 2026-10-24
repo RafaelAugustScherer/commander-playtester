@@ -84,5 +84,5 @@ Answer "how good is this deck" two ways: **consistency** now, from the deck alon
 - Which telemetry beyond winner / turn / mulligans is worth surfacing.
 - Whether consistency and strength later fold into one score (the old roadmap's
   "power score"). The engine's `estimate_bracket_for_deck` is now a third "how good" lens,
-  but it lives in `deck draft` as a build-time steering signal (`ADR-0009`); whether it
+  but it lives in `deck draft` as a live summary label (`deck-draft/ADR-0015`); whether it
   belongs here as a reported measure is open.

@@ -9,7 +9,6 @@ import { fetchCardsCached } from "../lib/scryfallCache";
 import { frontFace } from "../lib/cardName";
 import { extractThemeProfile, type ThemeProfile } from "./themes";
 import { scoreCandidate, type CandidateScore } from "./scoring";
-import type { BracketTarget } from "./bracket";
 import { isSuggestable, type DraftCustomization } from "./customization";
 import { draftCandidateCard } from "./localCandidates";
 import { hasChooseABackground, isBackground } from "./partners";
@@ -43,12 +42,11 @@ export const scryfallCardResolver: CardResolver = {
 export interface RankedCandidate {
   card: Card;
   score: CandidateScore;
-  bracketTilt: number;
   total: number;
   slotType?: DraftCardType;
 }
 
-/** The deck-so-far's card names, for exclusion and bracket-estimate calls. */
+/** The deck-so-far's card names, for exclusion. */
 export interface DraftDeckNames {
   commanders: string[];
   mainboard: string[];
@@ -71,7 +69,6 @@ export function singleBackgroundAmong(cards: Card[]): Card | null {
 export interface SuggestCandidatesOptions {
   engine: DraftEngine;
   resolver: CardResolver;
-  target: BracketTarget;
   customization: DraftCustomization;
   /** Names to leave out beyond the deck's own cards (e.g. shown-this-round), lowercase or not. */
   exclude?: Set<string>;
@@ -88,7 +85,7 @@ export async function suggestCandidates(
   profile: ThemeProfile,
   opts: SuggestCandidatesOptions,
 ): Promise<SuggestedRound> {
-  const { engine, resolver, target, customization } = opts;
+  const { engine, resolver, customization } = opts;
   const excluded = new Set(
     [...deck.commanders, ...deck.mainboard, ...(opts.exclude ?? [])].map((n) =>
       n.toLowerCase(),
@@ -102,7 +99,6 @@ export async function suggestCandidates(
       tokenWeights: [...profile.tokenWeights],
       creatureTypes: [...profile.creatureTypes],
     },
-    target,
     customization,
     exclude: [...excluded],
     slotTypes: opts.slotTypes,
@@ -110,11 +106,11 @@ export async function suggestCandidates(
   const resolved = await resolver.resolve(candidates.map(({ name }) => name));
   return {
     balance,
-    candidates: candidates.flatMap(({ name, bracketTilt, slotType }) => {
+    candidates: candidates.flatMap(({ name, slotType }) => {
       const card = resolved.get(name.toLowerCase());
       if (!card) return [];
       const score = scoreCandidate(card, profile);
-      return [{ card, score, bracketTilt, total: score.total + bracketTilt, slotType }];
+      return [{ card, score, total: score.total, slotType }];
     }),
   };
 }
@@ -182,7 +178,6 @@ export async function suggestCommanders(
       return {
         card,
         score,
-        bracketTilt: 0,
         total: score.total - extraColors * EXTRA_COMMANDER_COLOR_PENALTY,
       };
     })

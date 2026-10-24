@@ -8,7 +8,6 @@
 
 import type { DraftCardType } from "../draft/cardTypes";
 import type { TypeBalance } from "../draft/typeBalance";
-import type { BracketTarget } from "../draft/bracket";
 import type { DraftCustomization } from "../draft/customization";
 import type { ThemeProfile } from "../draft/themes";
 import * as engineWasm from "./vendor/engine_wasm.js";
@@ -69,7 +68,6 @@ export interface RankCardCandidatesInput {
   commanders: string[];
   mainboard: string[];
   profile: EngineThemeProfile;
-  target: BracketTarget;
   customization: DraftCustomization;
   exclude: string[];
   slotTypes?: DraftCardType[];
@@ -77,7 +75,6 @@ export interface RankCardCandidatesInput {
 
 export interface RankedCardName {
   name: string;
-  bracketTilt: number;
   slotType: DraftCardType;
 }
 

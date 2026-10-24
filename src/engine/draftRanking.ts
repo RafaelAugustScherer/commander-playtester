@@ -10,7 +10,6 @@ import type {
 } from "./draftQueries";
 import { frontFace } from "../lib/cardName";
 import { costHasX } from "../lib/types";
-import { bracketTilt } from "../draft/bracket";
 import {
   draftCandidateCard,
   rankLocalCandidates,
@@ -40,7 +39,6 @@ const THEME_COUNT = 8;
 const TOKEN_MATCH_SCAN = 100_000;
 const THEME_CANDIDATES_PER_TOKEN = 250;
 const TYPE_CANDIDATES_PER_TYPE = 250;
-const BRACKET_SHORTLIST_SIZE = 12;
 const ROUND_SIZE = 3;
 // How hard reprint frequency (our only in-data popularity proxy) tilts the
 // ranking. Applied to log2(1 + printings), so it nudges ties toward staples
@@ -361,29 +359,20 @@ export function createDraftRanker(
   ): RankedCardName | null {
     const identity = input.profile.colorIdentity;
     const tribes = input.profile.tribes ?? [];
-    const shortlist = ranked
-      .filter(
-        ({ card }) =>
-          !taken.has(card.name.toLowerCase()) &&
-          isDraftableAs(card.typeLine, slotType) &&
-          (slotType !== "creature" || tribes.length === 0 || isOfTribe(card, tribes)) &&
-          // A one-colour deck has nothing to fix: only lands that do something else.
-          (slotType !== "land" || identity.length > 1 || isUtilityLand(card)),
-      )
-      .map((candidate) => ({ card: candidate.card, fit: slotFit(candidate, slotType, identity) }))
-      .sort((a, b) => b.fit - a.fit)
-      .slice(0, BRACKET_SHORTLIST_SIZE);
-    let best: { name: string; tilt: number; total: number } | null = null;
-    for (const { card, fit } of shortlist) {
-      const estimate = queries.estimate_bracket_for_deck({
-        commander: input.commanders.map(frontFace),
-        main_deck: [...input.mainboard, card.name].map(frontFace),
-      });
-      const tilt = bracketTilt(estimate, input.target);
-      const total = fit + tilt;
-      if (!best || total > best.total) best = { name: card.name, tilt, total };
+    let best: { name: string; fit: number } | null = null;
+    for (const candidate of ranked) {
+      const { card } = candidate;
+      const eligible =
+        !taken.has(card.name.toLowerCase()) &&
+        isDraftableAs(card.typeLine, slotType) &&
+        (slotType !== "creature" || tribes.length === 0 || isOfTribe(card, tribes)) &&
+        // A one-colour deck has nothing to fix: only lands that do something else.
+        (slotType !== "land" || identity.length > 1 || isUtilityLand(card));
+      if (!eligible) continue;
+      const fit = slotFit(candidate, slotType, identity);
+      if (!best || fit > best.fit) best = { name: card.name, fit };
     }
-    return best ? { name: best.name, bracketTilt: best.tilt, slotType } : null;
+    return best ? { name: best.name, slotType } : null;
   }
 
   function rankCardCandidates(input: RankCardCandidatesInput): RankCardCandidatesResult {

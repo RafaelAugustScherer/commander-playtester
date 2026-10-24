@@ -136,7 +136,6 @@ describe.skipIf(!ENABLED)("draft type balance against EDHREC average decks", () 
     await session.start(
       [commander, ...SEED_CARDS],
       commander,
-      "focused",
       undefined,
       EVERYTHING_SUGGESTED,
     );
@@ -205,7 +204,6 @@ describe.skipIf(!ENABLED)("draft type balance against EDHREC average decks", () 
         commanders: [name],
         mainboard: [],
         profile: { ...extractThemeProfile([], []), tokenWeights: [], creatureTypes: [], colorIdentity: identity },
-        target: "focused",
         customization: EVERYTHING_SUGGESTED,
         exclude: [name.toLowerCase()],
       });
